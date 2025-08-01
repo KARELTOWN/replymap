@@ -1,0 +1,45 @@
+{
+  "name": "cocontalents",
+  "version": "1.0.0",
+  "description": "Plateforme de mise en relation entre professionnels et Personnes physiques et/ou morales",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon index.js",
+    "start": "node index.js",
+    "db:seed": "node seeders/DatabaseSeeder.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "cocontalents"
+  },
+  "author": "Karel TOWANOU",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/s3-request-presigner": "^3.855.0",
+    "@elastic/elasticsearch": "^9.1.0",
+    "bcrypt": "^6.0.0",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "express-validator": "^7.2.1",
+    "lodash": "^4.17.21",
+    "moment": "^2.30.1",
+    "mongoose": "^8.16.3",
+    "morgan": "^1.10.0",
+    "multer": "^2.0.1",
+    "multer-s3": "^3.0.1",
+    "nodemailer": "^7.0.5",
+    "nodemon": "^3.1.10",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+    "pug": "^3.0.3",
+    "redis": "^5.6.0",
+    "rrweb": "^2.0.0-alpha.4",
+    "user-agent": "^1.0.4",
+    "uuid": "^11.1.0",
+    "validator": "^13.15.15"
+  }
+}

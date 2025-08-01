@@ -1,0 +1,29 @@
+DOCTYPE HTML
+html 
+body 
+title Nouvelle candidature
+h2 Nouvelle candidature
+p Nouvelle Candidature sur COCON TALENTS
+p Les informations : 
+p   
+    strong Nom du candidat : #{lastname} #{firstname}
+    br
+    strong Email : #{email}
+    br
+    strong Téléphone : #{phone}
+    br
+    if job_offer === true
+        strong Poste : #{post}
+        br
+        strong Description : #{description}
+        br
+        strong Deadline : #{application_deadline}
+        br
+        strong Contrat : #{contract_type}
+        br
+        strong Expérience : #{experience_level}
+        br
+        strong Lieu : #{location}
+    else 
+        br
+        strong Poste : #{post}
