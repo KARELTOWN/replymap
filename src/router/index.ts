@@ -1,0 +1,123 @@
+import { createRouter, createWebHistory } from 'vue-router'
+
+const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL),
+  scrollBehavior(to, from, savedPosition) {
+    return savedPosition || { left: 0, top: 0 }
+  },
+  routes: [
+    {
+      path: '/',
+      name: 'Dashboard.vue',
+      component: () => import('../views/Dashboard.vue'),
+      meta: {
+        title: 'Dashboard',
+        requiredAuth: true,
+      },
+    },
+    {
+      path: '/projets',
+      name: 'Projets',
+      component: () => import('../views/Pages/Project.vue'),
+      meta: {
+        title: 'Projets',
+        requiredAuth: true,
+      },
+    },
+    {
+      path: '/sessions',
+      name: 'Sessions',
+      component: () => import('../views/Pages/Session.vue'),
+      meta: {
+        title: 'Sessions',
+        requiredAuth: true,
+      },
+    },
+    {
+      path: '/session/detail',
+      name: 'Session-detail',
+      component: () => import('../views/Pages/SessionDetail.vue'),
+      meta: {
+        title: 'Session Detail',
+        requiredAuth: true,
+      },
+    },
+    {
+      path: '/profile',
+      name: 'Profile',
+      component: () => import('../views/Others/UserProfile.vue'),
+      meta: {
+        title: 'Profile',
+        requiredAuth: true,
+      },
+    },
+    {
+      path: '/error-404',
+      name: '404 Error',
+      component: () => import('../views/Errors/FourZeroFour.vue'),
+      meta: {
+        title: '404 Error',
+        requiredAuth: true,
+      },
+    },
+    {
+      path: '/signin',
+      name: 'Signin',
+      component: () => import('../views/Auth/Signin.vue'),
+      meta: {
+        title: 'Signin',
+      },
+    },
+    {
+      path: '/signup',
+      name: 'Signup',
+      component: () => import('../views/Auth/Signup.vue'),
+      meta: {
+        title: 'Signup',
+      },
+    },
+    {
+      path: '/confirmation',
+      name: 'Confirmation',
+      component: () => import('../views/Auth/ConfirmationCode.vue'),
+      meta: {
+        title: 'Confirmation',
+      },
+    },
+    {
+      path: '/reset-password',
+      name: 'ResetPassword',
+      component: () => import('../views/Auth/ResetPassword.vue'),
+      meta: {
+        title: 'ResetPassword',
+      },
+    },
+    {
+      path: '/new-password',
+      name: 'NewPassword',
+      component: () => import('../views/Auth/NewPassword.vue'),
+      meta: {
+        title: 'NewPassword',
+      },
+    },
+  ],
+})
+
+export default router
+
+router.beforeEach((to, from, next) => {
+  document.title = `${to.meta.title} | Replay MAP`
+  const replay_map_token = localStorage.getItem('replay_map_token')
+  console.log('replay_map_token', replay_map_token)
+  const data = replay_map_token !== null ? JSON.parse(replay_map_token) : null
+    console.log('replay_map_data', data)
+
+  const token = data?.token
+
+  if (to.meta.requiredAuth && !token) {
+    return next('/signin')
+  } else if (!to.meta.requiredAuth && token) {
+    return next('/')
+  }
+  return next()
+})
