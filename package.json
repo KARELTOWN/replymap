@@ -1,0 +1,21 @@
+{
+  "name": "record",
+  "version": "1.0.0",
+  "main": "record.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vite --port 5174"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@rrweb/rrweb-plugin-console-record": "^2.0.0-alpha.18",
+    "fetch-intercept": "^2.4.0",
+    "lodash": "^4.17.21",
+    "rrweb": "^2.0.0-alpha.4",
+    "uuid": "^11.1.0",
+    "vite": "^7.0.6"
+  },
+  "type": "module"
+}
