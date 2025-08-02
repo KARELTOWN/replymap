@@ -44,8 +44,8 @@ import { getReplayConsolePlugin } from '@rrweb/rrweb-plugin-console-replay';
 import rrwebPlayer from 'rrweb-player';
 import { onMounted } from 'vue';
 import { ref } from 'vue';
-const session = ref('')
-const project = ref('')
+const session_id = ref('')
+const project_id = ref('')
 const route = useRoute()
 const loading = ref(false)
 const errorMessage = ref('')
@@ -54,31 +54,26 @@ const errorMessage = ref('')
 import { sessionStore } from "@/stores/session/sessionStore";
 import { storeToRefs } from "pinia";
 const store = sessionStore()
-const { errors,
-    sessions,
-    total,
-    page,
-    limit,
-    totalPages } = storeToRefs(store)
+const { events } = storeToRefs(store)
 
 const { showSession } = store
 
 onMounted(async () => {
     try {
-        session.value = route.query.session
-        project.value = route.query.project
+        session_id.value = route.query.session
+        project_id.value = route.query.project
 
-        if (!session.value || !project.value) {
+        if (!session_id.value || !project_id.value) {
             errorMessage.value = "Impossible de charger la session"
             return
         }
         loading.value = true
-        const result = await showSession({ session_id: session.value, project_id: project.value })
-        if (result && result.events && result.session) {
+        await showSession({ session_id: session_id.value, project_id: project_id.value })
+        if (events.value.length >= 2) {
             new rrwebPlayer({
                 target: document.getElementById("player"), // customizable root element
                 props: {
-                    events: result.events,
+                    events: events.value,
                     autoPlay: false,
                     width: 850
                 },

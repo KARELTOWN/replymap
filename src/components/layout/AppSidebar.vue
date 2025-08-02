@@ -243,7 +243,7 @@ const menuGroups = [
     items: [
       {
         icon: GridIcon,
-        name: "Dashboard",
+        name: "Tableau de bord",
         subItems: [{ name: "Statistiques", path: "/", pro: false }],
       },
       {
