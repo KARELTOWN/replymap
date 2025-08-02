@@ -62,7 +62,7 @@
               Fermer
             </button>
 
-            <button type="submit"
+            <button type="submit" :disabled="disableBtn"
               class="btn btn-success btn-update-event flex w-full justify-center rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 sm:w-auto">
               {{ selectProject ? 'Modifier' : 'Ajouter' }}
             </button>
@@ -82,7 +82,7 @@ import { projectStore } from "@/stores/project/projectStore";
 import { storeToRefs } from "pinia";
 const store = projectStore()
 const { errors,
-  projects,
+  projectSuccess,
   tracking_code } = storeToRefs(store)
 const { createProject } = store
 const isOpen = ref(false)
@@ -120,25 +120,35 @@ const resetModalFields = () => {
   link.value = ''
 }
 
+const disableBtn = ref(false)
+
 const handleSubmit = async () => {
   try {
+    disableBtn.value = true
     await createProject({
       libelle: libelle.value,
       link: link.value
     })
+    disableBtn.value = false
+
+    if (projectSuccess.value === true) {
+      libelle.value = ''
+      link.value = ''
+    }
 
   } catch (err) {
+    disableBtn.value = false
     console.log('Erreur ', err)
   }
 }
 const copyText = ref('')
 
 const copyScript = (data) => {
-    navigator.clipboard.writeText(data)
-    copyText.value = 'Copier!'
-    setTimeout(() => {
-        copyText.value = ''
-    }, 1000)
+  navigator.clipboard.writeText(data)
+  copyText.value = 'Copier!'
+  setTimeout(() => {
+    copyText.value = ''
+  }, 1000)
 }
 
 </script>

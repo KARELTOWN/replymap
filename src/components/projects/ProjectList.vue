@@ -84,6 +84,7 @@ const copyScript = (data, index) => {
 import { projectStore } from "@/stores/project/projectStore";
 import { storeToRefs } from "pinia";
 import moment from 'moment';
+import { errorNotify, successNotify } from '@/utils/notification';
 const store = projectStore()
 const { errors,
     projects,

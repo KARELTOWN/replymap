@@ -13,7 +13,7 @@ export const projectStore = defineStore('project-store', () => {
   const page = ref(1)
   const limit = ref(15)
   const totalPages = ref(0)
-
+  const projectSuccess = ref(false)
   const updatePagination = () => {
     total.value += 1
     totalPages.value = Math.ceil(total.value / limit.value)
@@ -39,6 +39,8 @@ export const projectStore = defineStore('project-store', () => {
 
   const createProject = async (data) => {
     try {
+      projectSuccess.value = false
+      tracking_code.value = ''
       errors.value = {}
       const schemaProject = validateCreate()
       const data_result = await schemaProject.validate(data, { abortEarly: false })
@@ -50,7 +52,7 @@ export const projectStore = defineStore('project-store', () => {
         }
       } else {
         if (response?.data) {
-          console.log('projects', projects.value)
+          projectSuccess.value = true
           projects.value.unshift(response.data.project)
           tracking_code.value = response.data.project.tracking_code
           updatePagination()
@@ -75,5 +77,6 @@ export const projectStore = defineStore('project-store', () => {
     page,
     limit,
     totalPages,
+    projectSuccess
   }
 })

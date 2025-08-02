@@ -759,10 +759,10 @@ span.flatpickr-weekday,
   @apply flex w-full items-center justify-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 lg:inline-flex lg:w-auto;
 }
 
-.toast__icon {
-  z-index: 1000;
+.Toastify__toast-container--top-right {
+  top: 5em !important;
 }
-.v-toast.v-toast--top, .v-toast.v-toast--bottom
+.Toastify__toast-container.Toastify__toast-container--top-right 
 {
-    z-index: 1000;
+  z-index: 999999 !important;
 }
