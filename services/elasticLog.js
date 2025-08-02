@@ -1,5 +1,6 @@
 // import { v4 as uuidv4 } from "uuid";
 // import { elastiClient } from "../index.js";
+import { redisDeleteMultipleKeys } from "../config/redis.js";
 import ClientError from "../models/ClientError.js";
 
 // export const createInterceptRequestLog = async (data) => {
@@ -71,7 +72,7 @@ export const displayInterceptRequestLogs = async (data, limit = 100) => {
     })
       .select(["timezone", "general", "response"])
       .exec();
-      console.log('displayInterceptRequestLogs', response)
+    console.log("displayInterceptRequestLogs", response);
     return response;
   } catch (error) {
     console.error("Error retrieving logs from Elasticsearch:", error);

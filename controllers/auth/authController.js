@@ -65,36 +65,37 @@ export default function authController() {
         );
         if (!user) {
           res.status(403).json({ message: "Le compte n'existe pas" });
-        }
-        if (user.email_verified === false) {
-          res.status(403).json({ message: "Compte non vérifié" });
-        }
-        if (user.is_active === false) {
-          res.status(403).json({ message: "Compte désactivé" });
-        }
-        console.log("result.password", result.password);
-        console.log("user.password", user.password);
-
-        const confirm = await bcrypt.compare(result.password, user.password);
-
-        if (confirm) {
-          const token = jwt.sign(
-            { id: user._id, email: user.email },
-            process.env.SECRET_KEY,
-            {
-              expiresIn: "2h",
-            }
-          );
-          const refresh_token = generateRefreshToken(user);
-          res.status(200).json({
-            message: "Connexion réussie",
-            data: {
-              token: token,
-              refreshToken: refresh_token,
-            },
-          });
         } else {
-          res.status(403).json({ message: "Identifiants invalides" });
+          if (user.email_verified === false) {
+            res.status(403).json({ message: "Compte non vérifié" });
+          }
+          if (user.is_active === false) {
+            res.status(403).json({ message: "Compte désactivé" });
+          }
+          console.log("result.password", result.password);
+          console.log("user.password", user.password);
+
+          const confirm = await bcrypt.compare(result.password, user.password);
+
+          if (confirm) {
+            const token = jwt.sign(
+              { id: user._id, email: user.email },
+              process.env.SECRET_KEY,
+              {
+                expiresIn: "2h",
+              }
+            );
+            const refresh_token = generateRefreshToken(user);
+            res.status(200).json({
+              message: "Connexion réussie",
+              data: {
+                token: token,
+                refreshToken: refresh_token,
+              },
+            });
+          } else {
+            res.status(403).json({ message: "Identifiants invalides" });
+          }
         }
       }
     } catch (error) {

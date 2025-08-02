@@ -1,9 +1,11 @@
 import { matchedData, validationResult } from "express-validator";
 // import mailing, { mailToAdmin } from "../../config/mailer";
-import { redisClient } from "../../config/redis.js";
+import {
+  redisDeleteAllkey,
+  redisGetKey,
+  redisSetKey,
+} from "../../config/redis.js";
 import Project from "../../models/Project.js";
-import projectService from "../../services/projectService.js";
-const { getProjectScript } = projectService();
 import crypto from "crypto";
 
 export default function projectController() {
@@ -21,7 +23,7 @@ export default function projectController() {
       data.tracking_id = crypto.randomUUID();
       let project = new Project({ ...data, user_id: req.user._id });
       await project.save();
-      await redisClient.del("projects_page_*");
+      await redisDeleteAllkey("projects_page_*");
 
       res.status(200).json({
         message: "Projet créé",
@@ -50,7 +52,7 @@ export default function projectController() {
       let project;
       console.log("data", data);
       let cache_key = `project_${data.id}`;
-      let cached_project = await redisClient.get(cache_key);
+      let cached_project = await redisGetKey(cache_key);
       if (cached_project) {
         project = JSON.parse(cached_project);
       } else {
@@ -58,18 +60,17 @@ export default function projectController() {
       }
       if (!project) {
         res.status(403).json({ message: "Projet non trouvé" });
+      } else {
+        redisSetKey(cache_key, project);
+        res.status(200).json({
+          message: "Projet récupéré",
+          data: {
+            libelle: project.libelle,
+            link: project.link,
+            active: project.active,
+          },
+        });
       }
-      await redisClient.set(cache_key, JSON.stringify(project), {
-        EX: process.env.REDIS_DEFAULT_CACHE_EXPIRATION || 3600,
-      });
-      res.status(200).json({
-        message: "Projet récupéré",
-        data: {
-          libelle: project.libelle,
-          link: project.link,
-          active: project.active,
-        },
-      });
     } catch (error) {
       next(error);
     }
@@ -81,7 +82,7 @@ export default function projectController() {
       let project;
       let total_project;
       let cache_key = `projects_page_${page}_limit_${limit}`;
-      let cached_job_offers = await redisClient.get(cache_key);
+      let cached_job_offers = await redisGetKey(cache_key);
       if (cached_job_offers) {
         project = JSON.parse(cached_job_offers);
       } else {
@@ -91,9 +92,7 @@ export default function projectController() {
           .skip(skip)
           .limit(limit)
           .exec();
-        await redisClient.set(cache_key, JSON.stringify(project), {
-          EX: process.env.REDIS_DEFAULT_CACHE_EXPIRATION || 3600,
-        });
+        redisSetKey(cache_key, project);
       }
 
       res.status(200).json({

@@ -1,7 +1,10 @@
 import { matchedData, validationResult } from "express-validator";
-import { redisClient } from "../../config/redis.js";
+import {
+  redisDeleteAllkey,
+  redisGetKey,
+  redisSetKey,
+} from "../../config/redis.js";
 import Session from "../../models/Session.js";
-import User from "../../models/User.js";
 import eventService from "../../services/eventService.js";
 import Project from "../../models/Project.js";
 const { getSessionChunks } = eventService();
@@ -15,7 +18,7 @@ export default function projectController() {
       }
       const data = matchedData(req);
       let session = await Session.insertOne(data);
-      await redisClient.del("all_sessions_page_*");
+      await redisDeleteAllkey("all_sessions_page_*");
       res.status(200).json({
         message: "Session créé",
         data: { session_id: session._id },
@@ -54,7 +57,7 @@ export default function projectController() {
       let sessions;
       let total_sessions;
       cache_key = `project_${req.project_id}_sessions_page_${page}_limit_${limit}`;
-      let cached_job_sessions_by_project = await redisClient.get(cache_key);
+      let cached_job_sessions_by_project = await redisGetKey(cache_key);
       if (cached_job_sessions_by_project) {
         sessions = JSON.parse(cached_job_sessions_by_project);
       } else {
@@ -64,9 +67,7 @@ export default function projectController() {
           .skip(skip)
           .limit(limit)
           .exec();
-        await redisClient.set(cache_key, JSON.stringify(sessions), {
-          EX: process.env.REDIS_DEFAULT_CACHE_EXPIRATION || 3600,
-        });
+        await redisSetKey(cache_key, sessions);
       }
 
       res.status(200).json({
@@ -88,7 +89,7 @@ export default function projectController() {
       let sessions;
       let total_sessions;
       let cache_key = `all_sessions_page_${page}_limit_${limit}`;
-      let cached_job_sessions = await redisClient.get(cache_key);
+      let cached_job_sessions = await redisGetKey(cache_key);
       if (cached_job_sessions) {
         sessions = JSON.parse(cached_job_sessions);
       } else {
@@ -103,9 +104,7 @@ export default function projectController() {
           .skip(skip)
           .limit(limit)
           .exec();
-        await redisClient.set(cache_key, JSON.stringify(sessions), {
-          EX: process.env.REDIS_DEFAULT_CACHE_EXPIRATION || 3600,
-        });
+        await redisSetKey(cache_key, sessions);
       }
 
       res.status(200).json({
@@ -135,8 +134,8 @@ export default function projectController() {
       let cache_key = `session_${data.session_id}_data`;
       let cache_key_events = `session_${data.session_id}_events`;
 
-      let cached_session = await redisClient.get(cache_key);
-      let cached_events = await redisClient.get(cache_key_events);
+      let cached_session = await redisGetKey(cache_key);
+      let cached_events = await redisGetKey(cache_key_events);
 
       if (cached_session && cached_events) {
         session = JSON.parse(cached_session);
@@ -146,13 +145,8 @@ export default function projectController() {
         events = await getSessionChunks(data.session_id);
       }
 
-      await redisClient.set(cache_key, JSON.stringify(session), {
-        EX: process.env.REDIS_DEFAULT_CACHE_EXPIRATION || 3600,
-      });
-
-      await redisClient.set(cache_key_events, JSON.stringify(events), {
-        EX: process.env.REDIS_DEFAULT_CACHE_EXPIRATION || 3600,
-      });
+      await redisSetKey(cache_key, session, 180);
+      await redisSetKey(cache_key_events, events, 180);
 
       res.status(200).json({
         message: "Session récupérée",

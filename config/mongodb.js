@@ -1,9 +1,9 @@
 import mongoose from "mongoose";
 import { configDotenv } from "dotenv";
 configDotenv();
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_CLUSTER_URL}/${process.env.DB_CLUSTER}?retryWrites=true`;
+const uri = `mongodb://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_CLUSTER_URL}/${process.env.DB_CLUSTER}?authSource=admin`;
 const clientOptions = {
-  serverApi: { version: "1", strict: true, deprecationErrors: true },
+  serverApi: { version: "1", strict: false, deprecationErrors: true },
 };
 
 async function connectDB() {
@@ -31,11 +31,9 @@ async function connectDB() {
     }
   }
 
-  const finalError = new Error(
+  throw new Error(
     "Nombre maximum de tentatives de connexion à MongoDB atteint. Impossible de se connecter."
   );
-  console.error(finalError.message);
-  throw finalError; // Lance une erreur pour que le processus de démarrage puisse la gérer
 }
 
 await connectDB().catch((error) => {
@@ -43,8 +41,6 @@ await connectDB().catch((error) => {
     "Échec critique de la connexion à la base de données au démarrage:",
     error
   );
-  // Crucial: Exit the process if the database connection fails after all retries.
-  // This prevents your application from running in a broken state.
   process.exit(1);
 });
 export default mongoose;

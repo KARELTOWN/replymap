@@ -1,5 +1,5 @@
 import { matchedData, validationResult } from "express-validator";
-import { redisClient } from "../../config/redis.js";
+import { redisClient, redisGetKey, redisSetKey } from "../../config/redis.js";
 import {
   createInterceptRequestLog,
   displayInterceptRequestLogs,
@@ -18,15 +18,13 @@ export default function interceptController() {
       let logs;
       let cache_key;
       cache_key = `project_${data.project}_session_${data.session}_logs_limit_${limit}`;
-      let cached_logs = await redisClient.get(cache_key);
+      let cached_logs = await redisGetKey(cache_key);
       if (cached_logs) {
         logs = JSON.parse(cached_logs);
       } else {
         logs = await displayInterceptRequestLogs(data, limit);
         if (logs) {
-          await redisClient.set(cache_key, JSON.stringify(logs), {
-            EX: process.env.REDIS_DEFAULT_CACHE_EXPIRATION || 3600,
-          });
+          redisSetKey(cache_key, logs, 180);
         }
       }
 
