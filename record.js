@@ -21,7 +21,7 @@ async function initializeRecord() {
   let stopRecording = null;
   const maxRetryCreateSession = 5;
   let retryCreateSession = 0;
-  const INACTIVITY_LIMIT = 2 * 60 * 1000;
+  const INACTIVITY_LIMIT = 3 * 60 * 1000;
   let inactivityTimeout = null;
 
   session_id = JSON.parse(sessionStorage.getItem("track_bug_session_id"));
