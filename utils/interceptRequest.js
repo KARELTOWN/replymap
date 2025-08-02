@@ -1,11 +1,11 @@
 import _ from "lodash";
 import { fetchPost } from "./request";
 import { project_id, session_id } from "../record";
+let intercepts =
+  JSON.parse(sessionStorage.getItem("replay_map_intercepts_errors")) || [];
 
 export default function interceptRequest() {
   const originalFetch = window.fetch;
-  const intercepts =
-    JSON.parse(sessionStorage.getItem("replay_map_intercepts_errors")) || [];
 
   window.fetch = async (...args) => {
     try {
@@ -45,8 +45,9 @@ export default function interceptRequest() {
         };
 
         intercepts.push({
+          project: project_id,
           session: session_id,
-          timestamp: Date.now(),
+          timeStamp: Date.now(),
           general: request_general,
           response: request_response,
         });
@@ -54,7 +55,7 @@ export default function interceptRequest() {
           "replay_map_intercepts_errors",
           JSON.stringify(intercepts)
         );
-        if (intercepts.length >= 10) {
+        if (intercepts.length > 0) {
           sendInterceptData();
         }
       }
@@ -64,24 +65,23 @@ export default function interceptRequest() {
       console.error("error", error);
     }
   };
-
-  const sendInterceptData = _.debounce(async () => {
-    try {
-      const data = JSON.parse(
-        sessionStorage.getItem("replay_map_intercepts_errors")
-      );
-      if (data && data.length > 0) {
-        const response = await fetchPost("intercept_error", {
-          project: project_id,
-          data: data,
-        });
-        if (response.ok) {
-          intercepts = [];
-          sessionStorage.removeItem("replay_map_intercepts_errors");
-        }
-      }
-    } catch (error) {
-      console.log("Request save error", error);
-    }
-  }, 5000);
 }
+
+const sendInterceptData = _.debounce(async () => {
+  try {
+    const data = JSON.parse(
+      sessionStorage.getItem("replay_map_intercepts_errors")
+    );
+    if (data && data.length > 0) {
+      const response = await fetchPost("intercept_error", {
+        data: data,
+      });
+      if (response.ok) {
+        intercepts = [];
+        sessionStorage.removeItem("replay_map_intercepts_errors");
+      }
+    }
+  } catch (error) {
+    console.log("Request save error", error);
+  }
+}, 5000);

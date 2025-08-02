@@ -1,25 +1,27 @@
 // import { getRecordConsolePlugin } from "@rrweb/rrweb-plugin-console-record";
-import _ from "lodash"
+import _ from "lodash";
 import { v4 as uuidV4 } from "uuid";
 import * as rrweb from "rrweb";
 import { fetchPost } from "./utils/request";
-import interceptRequest from "./utils/interceptRequest";
 import { getIpAdress } from "./utils/ipAdress";
 import { getProject } from "./utils/project";
-interceptRequest();
+
 export let project_id = null;
 export let session_id = null;
 const session_events =
   JSON.parse(sessionStorage.getItem("replay_map_events")) || [];
 
-export default async function initializeRecord() {
+import interceptRequest from "./utils/interceptRequest";
+interceptRequest();
+
+async function initializeRecord() {
   const script = document.getElementById("rrweb-init");
   let sessionCreate = false;
   let events = [];
   let stopRecording = null;
   const maxRetryCreateSession = 5;
   let retryCreateSession = 0;
-  const INACTIVITY_LIMIT = 5 * 60 * 1000;
+  const INACTIVITY_LIMIT = 2 * 60 * 1000;
   let inactivityTimeout = null;
 
   session_id = JSON.parse(sessionStorage.getItem("track_bug_session_id"));
@@ -29,10 +31,10 @@ export default async function initializeRecord() {
     console.error("Impossible d'initialiser RETRY MAP");
     return;
   }
-
-  await getProject();
-
-  await startSession();
+  const res = await getProject(project_id);
+  if (!res || res !== true) {
+    return;
+  }
 
   const setInactivityTimeout = () => {
     return setTimeout(async () => {
@@ -43,6 +45,7 @@ export default async function initializeRecord() {
       if (session_id !== null) {
         await stopSession(session_id);
       }
+      session_id = null;
       await startSession();
     }, INACTIVITY_LIMIT);
   };
@@ -54,6 +57,81 @@ export default async function initializeRecord() {
     inactivityTimeout = setInactivityTimeout();
   };
 
+  const uploadChunk = async (chunks) => {
+    if (!project_id) {
+      return;
+    }
+    const payload = {
+      project_id: project_id,
+      events: chunks,
+    };
+
+    fetchPost("chunk/store", payload)
+      .then((res) => res.json())
+      .then(async (result) => {
+        console.log("chunk store result", result);
+        console.log("chunk store");
+        sessionStorage.removeItem("replay_map_events");
+        events = [];
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  };
+  const saveChunk = _.debounce(() => {
+    const data = JSON.parse(sessionStorage.getItem("replay_map_events"));
+    if (data) {
+      if (data.length > 0) {
+        uploadChunk(data);
+      }
+    }
+  }, 5000);
+
+  const record = () => {
+    try {
+      console.log("initialize ");
+      stopRecording = rrweb.record({
+        emit(event) {
+          console.log("events.type", event.type);
+
+          resetInactivityTimeout();
+          events.push(event);
+
+          if (events.length >= 10) {
+            session_events.push({
+              session_id: session_id,
+              events: events,
+              timestamp: Date.now(),
+              uniqueId: uuidV4(),
+            });
+            events = [];
+            sessionStorage.setItem(
+              "replay_map_events",
+              JSON.stringify(session_events)
+            );
+            saveChunk();
+          }
+        },
+        maskInputOptions: { password: true },
+        recordCanvas: true,
+        // plugins: [
+        //   getRecordConsolePlugin({
+        //     level: ["info", "log", "warn", "error"],
+        //     lengthThreshold: 10000,
+        //     stringifyOptions: {
+        //       stringLengthLimit: 1000,
+        //       numOfKeysLimit: 100,
+        //       depthOfLimit: 1,
+        //     },
+        //     logger: window.console,
+        //   }),
+        // ],
+      });
+    } catch (error) {
+      console.error("Erreur record ", error);
+    }
+  };
+
   const startSession = async () => {
     if (session_id) {
       record();
@@ -63,11 +141,10 @@ export default async function initializeRecord() {
         project_id,
         startedAt: Date.now(),
         metadata: {
-          url: window.location.href,
           user_agent: navigator.userAgent,
-          language: navigator.language,
-          height: window.screen.availHeight,
-          width: window.screen.availWidth,
+          // language: navigator.language,
+          // height: window.screen.availHeight,
+          // width: window.screen.availWidth,
           localization: localization,
         },
       };
@@ -106,79 +183,6 @@ export default async function initializeRecord() {
     }
   };
 
-  const record = () => {
-    try {
-      stopRecording = rrweb.record({
-        emit(event) {
-          resetInactivityTimeout();
-          // console.log("events.type", event.type);
-          events.push(event);
-
-          if (events.length >= 10) {
-            session_events.push({
-              session_id: session_id,
-              events: events,
-              timestamp: Date.now(),
-              uniqueId: uuidV4()
-            });
-            events = [];
-            sessionStorage.setItem(
-              "replay_map_events",
-              JSON.stringify(session_events)
-            );
-            saveChunk();
-          }
-        },
-        maskInputOptions: { password: true },
-        recordCanvas: true,
-        // plugins: [
-        //   getRecordConsolePlugin({
-        //     level: ["info", "log", "warn", "error"],
-        //     lengthThreshold: 10000,
-        //     stringifyOptions: {
-        //       stringLengthLimit: 1000,
-        //       numOfKeysLimit: 100,
-        //       depthOfLimit: 1,
-        //     },
-        //     logger: window.console,
-        //   }),
-        // ],
-      });
-    } catch (error) {
-      console.error("Erreur record ", error);
-    }
-  };
-
-  const saveChunk = _.debounce(() => {
-    const data = JSON.parse(sessionStorage.getItem("replay_map_events"));
-    if (data) {
-      if (data.length > 0) {
-        uploadChunk(data);
-      }
-    }
-  }, 5000);
-
-  const uploadChunk = async (chunks) => {
-    if (!project_id) {
-      return;
-    }
-    const payload = {
-      project_id: project_id,
-      events: chunks,
-    };
-
-    fetchPost("chunk/store", payload)
-      .then((res) => res.json())
-      .then(async (result) => {
-        console.log("chunk store");
-        sessionStorage.removeItem("replay_map_events");
-        events = [];
-      })
-      .catch((error) => {
-        console.error(error);
-      });
-  };
-
   const stopSession = async (session) => {
     let payload = {
       session_id: session,
@@ -193,5 +197,7 @@ export default async function initializeRecord() {
         console.error(error);
       });
   };
+
+  await startSession();
 }
 await initializeRecord();
