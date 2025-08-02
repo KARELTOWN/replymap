@@ -15,7 +15,7 @@ export default function projectController() {
       }
       const data = matchedData(req);
       let session = await Session.insertOne(data);
-
+      await redisClient.del("all_sessions_page_*");
       res.status(200).json({
         message: "Session créé",
         data: { session_id: session._id },
@@ -99,7 +99,6 @@ export default function projectController() {
             model: Project,
             select: "_id libelle link",
           })
-          .select(["_id", "project_id", "startedAt", "endedAt"])
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limit)
@@ -131,9 +130,30 @@ export default function projectController() {
     }
     const data = matchedData(req);
     try {
-      let session = await Session.findById(data.session_id).populate("user_id");
-      const events = await getSessionChunks(data.session_id);
-      console.log("session events", events);
+      let session;
+      let events;
+      let cache_key = `session_${data.session_id}_data`;
+      let cache_key_events = `session_${data.session_id}_events`;
+
+      let cached_session = await redisClient.get(cache_key);
+      let cached_events = await redisClient.get(cache_key_events);
+
+      if (cached_session && cached_events) {
+        session = JSON.parse(cached_session);
+        events = JSON.parse(cached_events);
+      } else {
+        session = await Session.findById(data.session_id).populate("user_id");
+        events = await getSessionChunks(data.session_id);
+      }
+
+      await redisClient.set(cache_key, JSON.stringify(session), {
+        EX: process.env.REDIS_DEFAULT_CACHE_EXPIRATION || 3600,
+      });
+
+      await redisClient.set(cache_key_events, JSON.stringify(events), {
+        EX: process.env.REDIS_DEFAULT_CACHE_EXPIRATION || 3600,
+      });
+
       res.status(200).json({
         message: "Session récupérée",
         data: { session: session, events: events },

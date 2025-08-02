@@ -1,4 +1,4 @@
-import { body, query } from "express-validator";
+import { body, param, query } from "express-validator";
 import User from "../../models/User.js";
 import Project from "../../models/Project.js";
 
@@ -10,5 +10,5 @@ export const validateProject = [
 ];
 
 export const validateShowProject = [
-  body("project_id").notEmpty().withMessage("Le projet est obligatoire"),
+  param("id").notEmpty().withMessage("Le projet est obligatoire"),
 ];

@@ -1,90 +1,106 @@
-import { v4 as uuidv4 } from "uuid";
-import { elastiClient } from "../index.js";
+// import { v4 as uuidv4 } from "uuid";
+// import { elastiClient } from "../index.js";
+import ClientError from "../models/ClientError.js";
+
+// export const createInterceptRequestLog = async (data) => {
+//   try {
+//     const body = data.flatMap((item) => [
+//       {
+//         index: { _index: "replay_map_clients_app_logs_errors", _id: uuidv4() },
+//       },
+//       item,
+//     ]);
+//     await elastiClient.bulk({ refresh: true, body });
+//     console.log("Log added successfully!");
+//   } catch (error) {
+//     console.log("Erreur de création d'un index ElasticSearch");
+//   }
+// };
 
 export const createInterceptRequestLog = async (data) => {
   try {
-    
-    const exists = await elastiClient.indices.exists({
-      index: `replay_map_${data.project}_logs_errors`,
-    });
-    if (!exists) {
-      await elastiClient.indices.create({
-        index: `replay_map_${data.project}_logs_errors`,
-        mappings: {
-          properties: {
-            session: { type: "text" },
-            timeStamp: { type: "text" },
-            data: { type: "Object" },
-          },
-        },
-      });
-      console.log("Création du nouvel index");
-    }
-    await elastiClient.index({
-      index: `replay_map_${project}_logs_errors`,
-      id: uuidv4(),
-      document: {
-        ...data.data,
-      },
-    });
+    const result = await ClientError.insertMany(data);
     console.log("Log added successfully!");
+    return true;
   } catch (error) {
-    console.log("Erreur de création d'un index ElasticSearch");
+    console.log("Erreur de création", error);
   }
 };
 
-export const createAppLog = async (data) => {
-  try {
-    const exists = await elastiClient.indices.exists({
-      index: `replay_map_app_logs`,
-    });
-    if (!exists) {
-      await elastiClient.indices.create({
-        index: `replay_map_app_logs`,
-        mappings: {
-          properties: {
-            message: { type: "text" },
-            level: { type: "text" },
-            stackTrace: { type: "text" },
-            timeStamp: { type: "text" },
-            path: { type: "text" },
-            method: { type: "text" },
-          },
-        },
-      });
-      console.log("Création de l'index de l'application");
-    }
-    await elastiClient.index({
-      index: `replay_map_app_logs`,
-      id: uuidv4(),
-      document: {
-        ...data,
-      },
-    });
-    console.log("App log added successfully!");
-  } catch (error) {
-    console.log("Erreur de création d'un index ElasticSearch");
-  }
-};
+// export const createAppLog = async (data) => {
+//   try {
+//     await elastiClient.index({
+//       index: `replay_map_admin_logs`,
+//       id: uuidv4(),
+//       document: data,
+//     });
+//     console.log("App log added successfully!");
+//   } catch (error) {
+//     console.log("Erreur de création d'un index ElasticSearch");
+//   }
+// };
 
-export const displayInterceptRequestLogs = async (data, limit) => {
+// export const displayInterceptRequestLogs = async (data, limit = 100) => {
+//   try {
+//     const response = await elastiClient.search({
+//       index: `replay_map_clients_app_logs_errors`,
+//       body: {
+//         size: limit,
+//         query: {
+//           bool: {
+//             must: [
+//               { match: { session: data.session } },
+//               { match: { project: data.project } },
+//             ],
+//           },
+//         },
+//       },
+//     });
+
+//     return response.hits.hits.map((hit) => hit._source);
+//   } catch (error) {
+//     console.error("Error retrieving logs from Elasticsearch:", error);
+//   }
+// };
+
+export const displayInterceptRequestLogs = async (data, limit = 100) => {
   try {
-    const response = await elastiClient.search({
-      index: `replay_map_${data.project}_logs_errors`,
-      body: {
-        size: limit,
-      },
-    });
-    let logs = [];
-    response.hits.hits.forEach((hit) => {
-      if (hit._source.session) {
-        if (hit._source.session == data.session) {
-          logs.push(hit._source);
-        }
-      }
-    });
-    return logs;
+    const response = await ClientError.find({
+      session: data.session,
+      project: data.project,
+    })
+      .select(["timezone", "general", "response"])
+      .exec();
+      console.log('displayInterceptRequestLogs', response)
+    return response;
   } catch (error) {
     console.error("Error retrieving logs from Elasticsearch:", error);
+  }
+};
+
+// export const errorPerSession = async (session) => {
+//   try {
+//     const response = await elastiClient.count({
+//       index: `replay_map_clients_app_logs_errors`,
+//       body: {
+//         query: {
+//           match: { session },
+//         },
+//       },
+//     });
+
+//     return response.count;
+//   } catch (error) {
+//     console.error("Error retrieving error count from Elasticsearch:", error);
+//   }
+// };
+
+export const errorPerSession = async (session) => {
+  try {
+    const count = await ClientError.find({}).countDocuments();
+    console.log("count", count);
+    return count;
+  } catch (error) {
+    console.error("Error retrieving error count from DB:", error);
   }
 };

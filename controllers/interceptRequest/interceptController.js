@@ -16,20 +16,23 @@ export default function interceptController() {
       const limit = req.query.limit;
 
       let logs;
+      let cache_key;
       cache_key = `project_${data.project}_session_${data.session}_logs_limit_${limit}`;
       let cached_logs = await redisClient.get(cache_key);
       if (cached_logs) {
         logs = JSON.parse(cached_logs);
       } else {
         logs = await displayInterceptRequestLogs(data, limit);
-        await redisClient.set(cache_key, JSON.stringify(logs), {
-          EX: process.env.REDIS_DEFAULT_CACHE_EXPIRATION || 3600,
-        });
+        if (logs) {
+          await redisClient.set(cache_key, JSON.stringify(logs), {
+            EX: process.env.REDIS_DEFAULT_CACHE_EXPIRATION || 3600,
+          });
+        }
       }
 
       res.status(200).json({
         message: "Logs récupérées",
-        data: logs,
+        data: logs || [],
       });
     } catch (error) {
       next(error);
@@ -43,8 +46,10 @@ export default function interceptController() {
         res.status(422).json({ errors: errors.array() });
       }
       const data = matchedData(req);
-      await createInterceptRequestLog(data);
-      res.status(200).json({ message: "Logs enregistrés" });
+      const response = await createInterceptRequestLog(data.data);
+      if (response === true) {
+        res.status(200).json({ message: "Logs enregistrés" });
+      }
     } catch (error) {
       next(error);
     }

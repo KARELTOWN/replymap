@@ -18,10 +18,10 @@ export default function projectController() {
       if (exist_link) {
         res.status(403).json({ message: "Le lien existe déjà" });
       }
-      console.log("dfdvdvvb", req);
       data.tracking_id = crypto.randomUUID();
       let project = new Project({ ...data, user_id: req.user._id });
       await project.save();
+      await redisClient.del("projects_page_*");
 
       res.status(200).json({
         message: "Projet créé",
@@ -48,16 +48,20 @@ export default function projectController() {
       }
       const data = matchedData(req);
       let project;
-      let cache_key = `project_${data.project_id}`;
+      console.log("data", data);
+      let cache_key = `project_${data.id}`;
       let cached_project = await redisClient.get(cache_key);
       if (cached_project) {
         project = JSON.parse(cached_project);
       } else {
-        project = await Project.find({ _id: data.project_id }).exec();
+        project = await Project.findOne({ _id: data.id }).exec();
       }
       if (!project) {
-        res.status(404).json({ message: "Projet non trouvé" });
+        res.status(403).json({ message: "Projet non trouvé" });
       }
+      await redisClient.set(cache_key, JSON.stringify(project), {
+        EX: process.env.REDIS_DEFAULT_CACHE_EXPIRATION || 3600,
+      });
       res.status(200).json({
         message: "Projet récupéré",
         data: {

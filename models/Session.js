@@ -2,6 +2,7 @@ import { SchemaTypes } from "mongoose";
 import mongoose from "../config/mongodb.js";
 import Project from "./Project.js";
 import User from "./User.js";
+import { errorPerSession } from "../services/elasticLog.js";
 
 const SessionSchema = new mongoose.Schema(
   {
@@ -42,6 +43,14 @@ const SessionSchema = new mongoose.Schema(
 SessionSchema.statics.count = async function () {
   return await this.countDocuments();
 };
+
+// SessionSchema.post("find", async (sessions) => {
+//   await Promise.all(
+//     sessions.map(async (session) => {
+//       session.countError = await errorPerSession(session._id);
+//     })
+//   );
+// });
 
 const Session = mongoose.model("Session", SessionSchema);
 export default Session;

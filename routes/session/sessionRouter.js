@@ -18,7 +18,7 @@ import { validatePaginationQuery } from "../../validator/generalValidator.js";
 import isauthentificate from "../../middleware/isAuthentificate.js";
 
 SessionRouter.post("/create", validateCreateSession, createSession);
-SessionRouter.get("/end", validateUpdateEndAt, updateEndAt);
+SessionRouter.post("/end", validateUpdateEndAt, updateEndAt);
 SessionRouter.get(
   "getByProject",
   isauthentificate,

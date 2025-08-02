@@ -18,12 +18,15 @@ export const validateStoreChunk = [
   body("events").custom(async (value) => {
     if (Array.isArray(value) && value.length > 0) {
       for (const event of value) {
-        let session_exist = await Session.findById(event.session_id);
+        const session_exist = await Session.findById(event.session_id);
         if (!session_exist) {
-          throw new Error("La session n'existe pas");
+          throw new Error(
+            `La session avec l'ID ${event.session_id} n'existe pas.`
+          );
         }
-        if (!validator.isUUID(value.uniqueId)) {
-          throw new Error("Identifiant d'évenement invalide");
+
+        if (!event.uniqueId || !validator.isUUID(event.uniqueId)) {
+          throw new Error("Identifiant d'événement invalide.");
         }
       }
       return true;

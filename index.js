@@ -5,9 +5,9 @@ import morgan from "morgan";
 import path from "path";
 import { fileURLToPath } from "url";
 import bodyParser from "body-parser";
-import initializeElasticsearch from "./config/elasticClient.js";
-export const { client: elastiClient } = await initializeElasticsearch();
-import { createAppLog } from "./services/elasticLog.js";
+// import initializeElasticsearch from "./config/elasticClient.js";
+// export const { client: elastiClient } = await initializeElasticsearch();
+// import { createAppLog } from "./services/elasticLog.js";
 
 import redisConnection from "./config/redis.js";
 import cors from "cors";
