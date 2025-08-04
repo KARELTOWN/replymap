@@ -7,6 +7,7 @@ import {
 } from "../../config/redis.js";
 import Project from "../../models/Project.js";
 import crypto from "crypto";
+import moment from "moment";
 
 export default function projectController() {
   const createProject = async (req, res, next) => {
@@ -110,9 +111,64 @@ export default function projectController() {
     }
   };
 
+  const filterProjects = async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(422).json({ errors: errors.array() });
+      }
+      const data = matchedData(req);
+
+      const { limit, skip, page } = req.pagination;
+      let project;
+      let total_project;
+      let search_libelle, search_link, search_date;
+      let query = {};
+
+      search_libelle = { libelle: { $regex: data.search, $options: "i" } };
+      search_link = { link: { $regex: data.search, $options: "i" } };
+      query.$or = [search_libelle, search_link];
+
+      let start_date, end_date;
+      if (data.start_date && data.end_date) {
+        start_date = moment(data.start_date).toDate();
+        end_date = moment(data.end_date).toDate();
+        query.createdAt = { $gte: start_date, $lte: end_date };
+      } else if (data.start_date && !data.end_date) {
+        start_date = moment(data.start_date).toDate();
+        query.createdAt = { $gte: start_date };
+      } else if (!data.start_date && data.end_date) {
+        end_date = moment(data.end_date).toDate();
+        query.createdAt = { $lte: end_date };
+      }
+
+      project = await Project.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .exec();
+
+      total_project = await Project.countDocuments(query).exec();
+
+      res.status(200).json({
+        message: "Projets filtrés",
+        data: {
+          projects: project,
+          total: total_project,
+          page: page,
+          limit: limit,
+          totalPages: Math.ceil(total_project / limit),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   return {
     createProject,
     getProjects,
     showProject,
+    filterProjects,
   };
 }

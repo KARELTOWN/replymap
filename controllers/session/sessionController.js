@@ -128,25 +128,26 @@ export default function projectController() {
       res.status(422).json({ errors: errors.array() });
     }
     const data = matchedData(req);
+    const { limit, skip } = req.query;
     try {
       let session;
       let events;
-      let cache_key = `session_${data.session_id}_data`;
-      let cache_key_events = `session_${data.session_id}_events`;
+      // let cache_key = `session_${data.session_id}_data`;
+      // let cache_key_events = `session_${data.session_id}_events`;
 
-      let cached_session = await redisGetKey(cache_key);
-      let cached_events = await redisGetKey(cache_key_events);
+      // let cached_session = await redisGetKey(cache_key);
+      // let cached_events = await redisGetKey(cache_key_events);
 
-      if (cached_session && cached_events) {
-        session = JSON.parse(cached_session);
-        events = JSON.parse(cached_events);
-      } else {
-        session = await Session.findById(data.session_id).populate("user_id");
-        events = await getSessionChunks(data.session_id);
-      }
+      // if (cached_session && cached_events) {
+      //   session = JSON.parse(cached_session);
+      //   events = JSON.parse(cached_events);
+      // } else {
+      session = await Session.findById(data.session_id).populate("user_id");
+      events = await getSessionChunks(data.session_id, skip, limit);
+      // }
 
-      await redisSetKey(cache_key, session, 180);
-      await redisSetKey(cache_key_events, events, 180);
+      // await redisSetKey(cache_key, session, 180);
+      // await redisSetKey(cache_key_events, events, 180);
 
       res.status(200).json({
         message: "Session récupérée",

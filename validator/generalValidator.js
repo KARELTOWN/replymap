@@ -21,3 +21,15 @@ export const validateLimitQuery = [
     .isInt({ gt: 0 })
     .withMessage("La limite doit être un entier"),
 ];
+
+export const validateChunkQuery = [
+  query("limit")
+    .notEmpty()
+    .withMessage("La limite est obligatoire")
+    .isInt({ gt: 0 })
+    .withMessage("La limite doit être un entier"),
+  query("skip")
+    .notEmpty()
+    .withMessage("SKIP est obligatoire")
+    .withMessage("SKIP doit être un entier"),
+];

@@ -56,12 +56,12 @@ export default function eventWorker() {
     return `https://${process.env.AWS_BUCKET}.s3.${process.env.AWS_DEFAULT_REGION}.amazonaws.com/${key}`;
   }
 
-  const getSessionChunks = async (session_id, project_id) => {
+  const getSessionChunks = async (session_id, skip, limit) => {
     const chunks = await Chunk.find({
       session_id: session_id,
     }).sort({
       timestamp: 1,
-    });
+    }).skip(skip).limit(limit);
     let events = [];
 
     for (const chunk of chunks) {

@@ -13,6 +13,7 @@ import generateUsername from "../../helpers/generateUsername.js";
 import { generateOTP } from "../../helpers/OTPCode.js";
 import Role from "../../models/Role.js";
 import mongoose from "../../config/mongodb.js";
+import { redisClient } from "../../config/redis.js";
 
 export default function authController() {
   const generateRefreshToken = (user) => {
@@ -363,6 +364,22 @@ export default function authController() {
     }
   };
 
+  const deconnect = async (req, res, next) => {
+    const token = req.headers.authorization.split(" ")[1];
+    jwt.verify(token, process.env.SECRET_KEY, async (err, decoded) => {
+      if (err) {
+        res.status(403).json({ message: "Token invalide" });
+      } else {
+        const expire = decoded.exp - Math.floor(Date.now() / 1000);
+        await redisClient.set(token, "blacklist", {
+          EX: expire, // Blacklist jusqu'à l'expiration réel
+          NX: true,
+        });
+        res.status(200).json({ message: "Success" });
+      }
+    });
+  };
+
   return {
     forgotPassword,
     login,
@@ -371,5 +388,6 @@ export default function authController() {
     desapprove,
     resetPassword,
     confirmRegister,
+    deconnect
   };
 }

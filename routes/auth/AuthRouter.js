@@ -1,5 +1,6 @@
 import express from "express";
 const AuthRouter = express.Router();
+import jwt from "jsonwebtoken";
 
 import {
   validateLogin,
@@ -10,6 +11,9 @@ import {
   validateDesaprove,
 } from "../../validator/auth/authValidator.js";
 import authController from "../../controllers/auth/authController.js";
+import isauthentificate from "../../middleware/isAuthentificate.js";
+import { blacklist } from "../../middleware/blacklist.js";
+
 const {
   login,
   register,
@@ -18,6 +22,7 @@ const {
   desapprove,
   resetPassword,
   confirmRegister,
+  deconnect
 } = authController();
 AuthRouter.post("/login", validateLogin, login);
 
@@ -34,4 +39,5 @@ AuthRouter.get(
 );
 AuthRouter.post("/desapprouve-reinitialisation", validateDesaprove, desapprove);
 AuthRouter.patch("/reset-password", validateResetPassword, resetPassword);
+AuthRouter.get('/deconnect', isauthentificate, blacklist, deconnect)
 export default AuthRouter;

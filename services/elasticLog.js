@@ -70,9 +70,10 @@ export const displayInterceptRequestLogs = async (data, limit = 100) => {
       session: data.session,
       project: data.project,
     })
+      .sort({ createdAt: -1 })
+      .limit(limit)
       .select(["timezone", "general", "response"])
       .exec();
-    console.log("displayInterceptRequestLogs", response);
     return response;
   } catch (error) {
     console.error("Error retrieving logs from Elasticsearch:", error);
