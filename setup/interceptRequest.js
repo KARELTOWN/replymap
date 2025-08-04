@@ -1,10 +1,12 @@
 import _ from "lodash";
-import { fetchPost } from "./request";
-import { project_id, session_id } from "../record";
+import { fetchPost } from "../utils/request.js";
+import { project_id } from "../record.js";
 let intercepts =
   JSON.parse(sessionStorage.getItem("replay_map_intercepts_errors")) || [];
 
 export default function interceptRequest() {
+  let session_id = JSON.parse(sessionStorage.getItem("track_bug_session_id"));
+
   const originalFetch = window.fetch;
 
   window.fetch = async (...args) => {
@@ -17,7 +19,7 @@ export default function interceptRequest() {
       const end = performance.now();
 
       const clonedResponse = response.clone();
-      if (!clonedResponse.ok && session_id) {
+      if (!clonedResponse.ok) {
         const avoid_urls = avoid_records_urls();
         if (avoid_urls === false) {
           const contentType = clonedResponse.headers.get("Content-Type");
@@ -48,7 +50,8 @@ export default function interceptRequest() {
 
           intercepts.push({
             project: project_id,
-            session: session_id,
+            session: session_id || null,
+            page_url: window.location.href,
             timeStamp: Date.now(),
             general: request_general,
             response: request_response,
@@ -94,7 +97,8 @@ const avoid_records_urls = (url) => {
     url.includes("session/create") ||
     url.includes("session/end") ||
     url.includes("chunk/store") ||
-    url.includes("intercept_error")
+    url.includes("intercept_error") ||
+    url.includes("api.ipify.org")
   ) {
     return true;
   }
