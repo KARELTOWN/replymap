@@ -7,7 +7,7 @@
             Informations
           </h4>
 
-          <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-7 2xl:gap-x-32">
+          <div class="grid grid-cols-2 gap-4 lg:grid-cols-3 lg:gap-7 2xl:gap-x-32">
             <div>
               <p class="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">Navigateur</p>
               <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ session?.metadata?.user_agent }}</p>
@@ -37,6 +37,18 @@
               }}</p>
             </div>
 
+            <div>
+              <p class="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">Hauteur écran</p>
+              <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ session?.metadata?.availHeight
+              }}</p>
+            </div>
+
+            <div>
+              <p class="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">Largeur écran</p>
+              <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ session?.metadata?.availWidth
+              }}</p>
+            </div>
+
           </div>
         </div>
       </div>
@@ -52,7 +64,7 @@
                   fill="currentColor"></path>
               </svg></div>
             <div>
-              <h4 class="mb-1 text-sm font-semibold text-gray-800 dark:text-white/90">Erreur
+              <h4 class="mb-1 text-sm font-semibold text-gray-800 dark:text-white/90">
               </h4>
               <p class="text-sm text-gray-500 dark:text-gray-400"> {{ errorMessage }}</p>
             </div>

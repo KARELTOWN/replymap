@@ -42,7 +42,7 @@
 import { useRoute } from 'vue-router';
 import { getReplayConsolePlugin } from '@rrweb/rrweb-plugin-console-replay';
 import rrwebPlayer from 'rrweb-player';
-import { onMounted } from 'vue';
+import { onMounted, onUnmounted } from 'vue';
 import { ref } from 'vue';
 const session_id = ref('')
 const project_id = ref('')
@@ -50,16 +50,21 @@ const route = useRoute()
 const loading = ref(false)
 const errorMessage = ref('')
 
-
 import { sessionStore } from "@/stores/session/sessionStore";
 import { storeToRefs } from "pinia";
 const store = sessionStore()
-const { events } = storeToRefs(store)
+const { events, canGetChunk, session, chunk_skip, chunk_limit } = storeToRefs(store)
+let player = ref(null)
 
 const { showSession } = store
 
 onMounted(async () => {
     try {
+        canGetChunk.value = true
+        session.value = ''
+        chunk_skip.value = 0
+        chunk_limit.value = 5
+
         session_id.value = route.query.session
         project_id.value = route.query.project
 
@@ -68,28 +73,9 @@ onMounted(async () => {
             return
         }
         loading.value = true
-        await showSession({ session_id: session_id.value, project_id: project_id.value })
-        if (events.value.length >= 2) {
-            new rrwebPlayer({
-                target: document.getElementById("player"), // customizable root element
-                props: {
-                    events: events.value,
-                    autoPlay: false,
-                    width: 850
-                },
-                // plugins: [
-                //     getReplayConsolePlugin({
-                //         level: ['info', 'log', 'warn', 'error'],
-                //     }),
-                // ],
-            });
-            loading.value = false
 
-        }
-        else {
-            loading.value = false
-            errorMessage.value = "Erreur lors du chargement de la session"
-        }
+        await readChunksContinuously()
+
     }
     catch (error) {
         errorMessage.value = "Erreur lors du chargement de la session"
@@ -98,5 +84,57 @@ onMounted(async () => {
     }
 
 })
+
+const initializePlayer = (events) => {
+    player.value = new rrwebPlayer({
+        target: document.getElementById("player"), // customizable root element
+        props: {
+            events: events,
+            autoPlay: false,
+            width: 850
+        },
+        // plugins: [
+        //     getReplayConsolePlugin({
+        //         level: ['info', 'log', 'warn', 'error'],
+        //     }),
+        // ],
+    });
+
+}
+
+const readChunksContinuously = async () => {
+    try {
+
+        while (canGetChunk.value === true) {
+            await showSession({ session_id: session_id.value, project_id: project_id.value });
+
+            if (events.value.length > 0) {
+                if (!player.value) {
+                    console.log("Adding events to player", events.value.length);
+                    initializePlayer(events.value);
+                }
+                else {
+                    for (let event of events.value) {
+                        player.value.addEvent(event);
+                    }
+                }
+
+                loading.value = false;
+            }
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+    }
+    catch (error) {
+        loading.value = false
+        console.error("Error in fetching session chunk:", error);
+    }
+
+}
+
+onUnmounted(() => {
+    session_id.value = ''
+    project_id.value = ''
+});
+
 </script>
 <style></style>

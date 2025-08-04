@@ -67,8 +67,6 @@
 import { onMounted, ref } from 'vue'
 import Button from '../ui/Button.vue';
 import TaskIcon from '@/icons/TaskIcon.vue';
-const copyText = ref('')
-const website = ref('ffff')
 
 const copyScript = (data, index) => {
     navigator.clipboard.writeText(data)
@@ -84,14 +82,9 @@ const copyScript = (data, index) => {
 import { projectStore } from "@/stores/project/projectStore";
 import { storeToRefs } from "pinia";
 import moment from 'moment';
-import { errorNotify, successNotify } from '@/utils/notification';
 const store = projectStore()
-const { errors,
-    projects,
-    total,
-    page,
-    limit,
-    totalPages } = storeToRefs(store)
+const {
+    projects } = storeToRefs(store)
 
 const { getProjects } = store
 
@@ -109,5 +102,4 @@ const handleProjects = async () => {
 </script>
 
 <style scoped>
-/* Add any additional styles here if needed */
 </style>

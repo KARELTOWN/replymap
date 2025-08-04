@@ -1,12 +1,13 @@
 import { fetchGet, fetchPost } from '@/composables/request'
 import { handleAppError, handleCatchError } from '@/utils/handleAppError'
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { reactive, ref } from 'vue'
 import projectValidator from '@/validator/project'
 import { successNotify } from '@/utils/notification'
 const { validateCreate } = projectValidator()
 export const projectStore = defineStore('project-store', () => {
   const errors = ref({})
+  const search_errors = ref({})
   const projects = ref([])
   const tracking_code = ref('')
   const total = ref(0)
@@ -14,6 +15,11 @@ export const projectStore = defineStore('project-store', () => {
   const limit = ref(15)
   const totalPages = ref(0)
   const projectSuccess = ref(false)
+  const search_form = reactive({
+    search: '',
+    start_date: '',
+    end_date: ''
+  })
   const updatePagination = () => {
     total.value += 1
     totalPages.value = Math.ceil(total.value / limit.value)
@@ -32,6 +38,30 @@ export const projectStore = defineStore('project-store', () => {
           totalPages.value = response.data.totalPages
         }
       }
+    } catch (err) {
+      handleCatchError(err)
+    }
+  }
+
+    const filterProjects = async (data) => {
+    try {
+      search_errors.value = {}
+      const result = await fetchPost(`project/filter?limit=${limit.value}&page=${page.value}`, data)
+      const response = await handleAppError(result)
+      if (response.status === false) {
+        if (response?.data) {
+          projects.value = response.data.projects
+          total.value = response.data.total
+          page.value = response.data.page
+          limit.value = response.data.limit
+          totalPages.value = response.data.totalPages
+        }
+      }
+      else {
+        if (response.errors) {
+          search_errors.value = response.errors
+        }
+      } 
     } catch (err) {
       handleCatchError(err)
     }
@@ -77,6 +107,9 @@ export const projectStore = defineStore('project-store', () => {
     page,
     limit,
     totalPages,
-    projectSuccess
+    projectSuccess,
+    filterProjects,
+    search_errors,
+    search_form
   }
 })

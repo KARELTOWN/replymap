@@ -8,11 +8,14 @@ export const sessionStore = defineStore('session-store', () => {
   const sessions = ref([])
   const total = ref(0)
   const page = ref(1)
-  const limit = ref(560)
+  const limit = ref(100)
   const totalPages = ref(0)
   const events = ref([])
   const session = ref({})
   const session_errors = ref([])
+  const chunk_skip = ref(0)
+  const chunk_limit = ref(5)
+  const canGetChunk = ref(true)
 
   const updatePagination = () => {
     total.value += 1
@@ -26,7 +29,6 @@ export const sessionStore = defineStore('session-store', () => {
       if (response.status === false) {
         if (response?.data) {
           sessions.value = response.data.sessions
-          console.log('sessions.value', sessions.value)
           total.value = response.data.total
           page.value = response.data.page
           limit.value = response.data.limit
@@ -40,26 +42,33 @@ export const sessionStore = defineStore('session-store', () => {
 
   const showSession = async (data) => {
     try {
-      session.value = []
       events.value = []
-      const result = await fetchPost('session/show', data)
+      const result = await fetchPost(
+        `session/show?skip=${chunk_skip.value}&limit=${chunk_limit.value}`,
+        data,
+      )
       const response = await handleAppError(result)
       if (response.status === false) {
         if (response?.data) {
-          if (
-            result &&
-            Array.isArray(response.data.events) &&
-            response.data.events.length >= 2 &&
-            response.data.session
-          ) {
+          if (Array.isArray(response.data.events) && response.data.events.length == 0) {
+            canGetChunk.value = false
+          } else if (Array.isArray(response.data.events) && response.data.events.length > 0) {
+            canGetChunk.value = true
+            chunk_skip.value += chunk_limit.value
             events.value = response.data.events
-            session.value = response.data.session
+            if (!session.value?._id) {
+              session.value = response.data.session
+            }
           } else {
+            canGetChunk.value = false
             errorNotify('Erreur de récupération de la session')
           }
         }
+      } else {
+        canGetChunk.value = false
       }
     } catch (err) {
+      canGetChunk.value = false
       handleCatchError(err)
     }
   }
@@ -91,5 +100,8 @@ export const sessionStore = defineStore('session-store', () => {
     session,
     session_errors,
     showErrors,
+    canGetChunk,
+    chunk_skip,
+    chunk_limit,
   }
 })
