@@ -142,9 +142,8 @@ async function initializeRecord() {
         startedAt: Date.now(),
         metadata: {
           user_agent: navigator.userAgent,
-          // language: navigator.language,
-          // height: window.screen.availHeight,
-          // width: window.screen.availWidth,
+          height: window.screen.availHeight,
+          width: window.screen.availWidth,
           localization: localization,
         },
       };
