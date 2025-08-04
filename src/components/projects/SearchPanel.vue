@@ -46,10 +46,6 @@ const flatpickrConfig = {
     wrap: true,
 }
 
-const disabledBtn = computed(() => {
-    return !search_form.value.search && !search_form.value.end_date && !search_form.value.start_date
-})
-
 const filter = async () => {
     await filterProjects({
         start_date: search_form.value.start_date,

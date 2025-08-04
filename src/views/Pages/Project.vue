@@ -13,6 +13,15 @@
           <SearchPanel />
         </div>
         <ProjectList />
+        <div class="grid grid-cols-2">
+          <div>
+            <Pagination :paginator="projects" :current_page="page" :totalPages="totalPages" @page-change="fetchNext" />
+          </div>
+          <div>
+            <strong>Total : </strong> {{ total }}
+          </div>
+
+        </div>
         <CreateProject :open="openModal" @close="openModal = false" />
       </ComponentCard>
     </div>
@@ -40,4 +49,9 @@ const { errors,
   totalPages } = storeToRefs(store)
 const { getProjects } = store
 
+const fetchNext = async (nextpage) => {
+  page.value = nextpage
+  await getProjects()
+}
+import Pagination from "@/components/pagination/Pagination.vue";
 </script>

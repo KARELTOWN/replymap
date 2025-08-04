@@ -2,13 +2,13 @@ import { fetchGet, fetchPost, fetchPut } from '@/composables/request'
 import { handleAppError, handleCatchError } from '@/utils/handleAppError'
 import { errorNotify } from '@/utils/notification'
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { reactive, ref } from 'vue'
 export const sessionStore = defineStore('session-store', () => {
   const errors = ref({})
   const sessions = ref([])
   const total = ref(0)
   const page = ref(1)
-  const limit = ref(100)
+  const limit = ref(30)
   const totalPages = ref(0)
   const events = ref([])
   const session = ref({})
@@ -16,6 +16,12 @@ export const sessionStore = defineStore('session-store', () => {
   const chunk_skip = ref(0)
   const chunk_limit = ref(5)
   const canGetChunk = ref(true)
+  const search_errors = ref({})
+  const search_form = reactive({
+    project_id: '',
+    start_date: '',
+    end_date: '',
+  })
 
   const updatePagination = () => {
     total.value += 1
@@ -33,6 +39,29 @@ export const sessionStore = defineStore('session-store', () => {
           page.value = response.data.page
           limit.value = response.data.limit
           totalPages.value = response.data.totalPages
+        }
+      }
+    } catch (err) {
+      handleCatchError(err)
+    }
+  }
+
+  const filterSessions = async (data) => {
+    try {
+      search_errors.value = {}
+      const result = await fetchPost(`session/filter?limit=${limit.value}&page=${page.value}`, data)
+      const response = await handleAppError(result)
+      if (response.status === false) {
+        if (response?.data) {
+          sessions.value = response.data.sessions
+          total.value = response.data.total
+          page.value = response.data.page
+          limit.value = response.data.limit
+          totalPages.value = response.data.totalPages
+        }
+      } else {
+        if (response.errors) {
+          search_errors.value = response.errors
         }
       }
     } catch (err) {
@@ -76,7 +105,7 @@ export const sessionStore = defineStore('session-store', () => {
   const showErrors = async (data) => {
     try {
       session_errors.value = []
-      const result = await fetchPut(`get_intercept_errors?limit=${limit.value}`, data)
+      const result = await fetchPut(`get_session_errors?limit=${limit.value}`, data)
       const response = await handleAppError(result)
       if (response.status === false) {
         if (response?.data) {
@@ -103,5 +132,8 @@ export const sessionStore = defineStore('session-store', () => {
     canGetChunk,
     chunk_skip,
     chunk_limit,
+    filterSessions,
+    search_form,
+    search_errors
   }
 })

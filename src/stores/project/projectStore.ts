@@ -18,7 +18,7 @@ export const projectStore = defineStore('project-store', () => {
   const search_form = reactive({
     search: '',
     start_date: '',
-    end_date: ''
+    end_date: '',
   })
   const updatePagination = () => {
     total.value += 1
@@ -43,7 +43,7 @@ export const projectStore = defineStore('project-store', () => {
     }
   }
 
-    const filterProjects = async (data) => {
+  const filterProjects = async (data) => {
     try {
       search_errors.value = {}
       const result = await fetchPost(`project/filter?limit=${limit.value}&page=${page.value}`, data)
@@ -56,12 +56,11 @@ export const projectStore = defineStore('project-store', () => {
           limit.value = response.data.limit
           totalPages.value = response.data.totalPages
         }
-      }
-      else {
+      } else {
         if (response.errors) {
           search_errors.value = response.errors
         }
-      } 
+      }
     } catch (err) {
       handleCatchError(err)
     }
@@ -110,6 +109,6 @@ export const projectStore = defineStore('project-store', () => {
     projectSuccess,
     filterProjects,
     search_errors,
-    search_form
+    search_form,
   }
 })
