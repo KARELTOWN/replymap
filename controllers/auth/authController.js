@@ -73,14 +73,14 @@ export default function authController() {
           if (user.is_active === false) {
             res.status(403).json({ message: "Compte désactivé" });
           }
-          console.log("result.password", result.password);
-          console.log("user.password", user.password);
 
           const confirm = await bcrypt.compare(result.password, user.password);
 
           if (confirm) {
             const token = jwt.sign(
-              { id: user._id, email: user.email },
+              {
+                id: user._id,
+              },
               process.env.SECRET_KEY,
               {
                 expiresIn: "2h",
@@ -388,6 +388,6 @@ export default function authController() {
     desapprove,
     resetPassword,
     confirmRegister,
-    deconnect
+    deconnect,
   };
 }

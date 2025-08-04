@@ -2,12 +2,18 @@ import { matchedData, validationResult } from "express-validator";
 // import mailing, { mailToAdmin } from "../../config/mailer";
 import {
   redisDeleteAllkey,
+  redisDeleteKey,
+  redisDeleteMultipleKeys,
   redisGetKey,
   redisSetKey,
 } from "../../config/redis.js";
-import Project from "../../models/Project.js";
+import Project, { ProjectModelFilter } from "../../models/Project.js";
 import crypto from "crypto";
 import moment from "moment";
+import UserProject, {
+  user_connect_projects,
+} from "../../models/UserProject.js";
+import { isAdmin } from "../../utils/util.js";
 
 export default function projectController() {
   const createProject = async (req, res, next) => {
@@ -17,14 +23,25 @@ export default function projectController() {
         res.status(422).json({ errors: errors.array() });
       }
       const data = matchedData(req);
-      const exist_link = await Project.exists({ link: data.link });
+      const exist_link = await Project.exists({
+        link: data.link,
+        created_by: req.user._id,
+      });
       if (exist_link) {
         res.status(403).json({ message: "Le lien existe déjà" });
       }
       data.tracking_id = crypto.randomUUID();
-      let project = new Project({ ...data, user_id: req.user._id });
+      let project = new Project({ ...data, created_by: req.user._id });
       await project.save();
-      await redisDeleteAllkey("projects_page_*");
+      await UserProject.insertOne({
+        user_id: req.user._id,
+        project_id: project._id,
+      });
+
+      await redisDeleteMultipleKeys([
+        `${req.user._id}_projects_page_*`,
+        `projects_page_*`,
+      ]);
 
       res.status(200).json({
         message: "Projet créé",
@@ -80,31 +97,32 @@ export default function projectController() {
   const getProjects = async (req, res, next) => {
     try {
       const { limit, skip, page } = req.pagination;
-      let project;
-      let total_project;
-      let cache_key = `projects_page_${page}_limit_${limit}`;
-      let cached_job_offers = await redisGetKey(cache_key);
-      if (cached_job_offers) {
-        project = JSON.parse(cached_job_offers);
+      let data;
+      let cache_key;
+      const admin = isAdmin(req);
+      if (admin) {
+        cache_key = `projects_page_${page}_limit_${limit}`;
       } else {
-        total_project = await Project.count();
-        project = await Project.find({})
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit)
-          .exec();
-        redisSetKey(cache_key, project);
+        cache_key = `${req.user._id}_projects_page_${page}_limit_${limit}`;
       }
-
-      res.status(200).json({
-        message: "Projets récupérées",
-        data: {
-          projects: project,
+      let cached_project_list = await redisGetKey(cache_key);
+      if (cached_project_list) {
+        data = JSON.parse(cached_project_list);
+      } else {
+        const result = await ProjectModelFilter(req, {}, skip, limit);
+        const { total_project, project_list } = result;
+        data = {
+          projects: project_list,
           total: total_project,
           page: page,
           limit: limit,
           totalPages: Math.ceil(total_project / limit),
-        },
+        };
+        redisSetKey(cache_key, data);
+      }
+      res.status(200).json({
+        message: "Projets récupérées",
+        data: data,
       });
     } catch (error) {
       next(error);
@@ -120,9 +138,7 @@ export default function projectController() {
       const data = matchedData(req);
 
       const { limit, skip, page } = req.pagination;
-      let project;
-      let total_project;
-      let search_libelle, search_link, search_date;
+      let search_libelle, search_link;
       let query = {};
 
       search_libelle = { libelle: { $regex: data.search, $options: "i" } };
@@ -142,18 +158,13 @@ export default function projectController() {
         query.createdAt = { $lte: end_date };
       }
 
-      project = await Project.find(query)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .exec();
-
-      total_project = await Project.countDocuments(query).exec();
+      const result = await ProjectModelFilter(req, query, skip, limit);
+      const { total_project, project_list } = result;
 
       res.status(200).json({
         message: "Projets filtrés",
         data: {
-          projects: project,
+          projects: project_list,
           total: total_project,
           page: page,
           limit: limit,
@@ -169,6 +180,6 @@ export default function projectController() {
     createProject,
     getProjects,
     showProject,
-    filterProjects,
+    filterProjects
   };
 }

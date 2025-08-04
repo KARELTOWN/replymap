@@ -4,6 +4,7 @@ import {
   validateCreateSession,
   validateUpdateEndAt,
   validateShowSession,
+  validateFilterSession
 } from "../../validator/session/sessionValidator.js";
 import sessionController from "../../controllers/session/sessionController.js";
 const {
@@ -12,6 +13,7 @@ const {
   updateEndAt,
   showSession,
   getSessions,
+  filterSessions
 } = sessionController();
 import paginateData from "../../helpers/pagination.js";
 import { validateChunkQuery, validatePaginationQuery } from "../../validator/generalValidator.js";
@@ -44,6 +46,16 @@ SessionRouter.post(
   validateChunkQuery,
   validateShowSession,
   showSession
+);
+
+SessionRouter.post(
+  "/filter",
+  isauthentificate,
+  blacklist,
+  validatePaginationQuery,
+  paginateData,
+  validateFilterSession,
+  filterSessions
 );
 
 export default SessionRouter;

@@ -8,6 +8,17 @@ export const validateCreateInterceptError = [
     .withMessage("Les données sont obligatoires")
     .custom(async (value) => {
       if (Array.isArray(value) && value.length > 0) {
+        for (const item of value) {
+          if (
+            !item.project ||
+            !item.page_url ||
+            !item.timeStamp ||
+            !item.general ||
+            !item.response
+          ) {
+            throw new Error("Erreur tracké invalide");
+          }
+        }
         return true;
       } else {
         throw new Error("Aucune donnée");

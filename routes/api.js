@@ -10,7 +10,7 @@ import { validateCreateInterceptError, validateShowSessionErrors } from "../vali
 import interceptController from "../controllers/interceptRequest/interceptController.js";
 import { validateLimitQuery } from "../validator/generalValidator.js";
 import { blacklist } from "../middleware/blacklist.js";
-const { createIntercept, getInterceptErrors } = interceptController();
+const { createIntercept, getSessionInterceptErrors, getErrors } = interceptController();
 
 router.use("/auth/", AuthRouter);
 router.use("/project/", ProjectRouter);
@@ -25,12 +25,20 @@ router.post(
   createIntercept
 );
 router.put(
-  "/get_intercept_errors",
+  "/get_session_errors",
   isauthentificate,
   blacklist,
   validateLimitQuery,
   validateShowSessionErrors,
-  getInterceptErrors
+  getSessionInterceptErrors
+);
+
+router.get(
+  "/get_errors",
+  isauthentificate,
+  blacklist,
+  validateLimitQuery,
+  getErrors
 );
 
 export default router;

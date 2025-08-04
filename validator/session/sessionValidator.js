@@ -2,6 +2,7 @@ import { body, query } from "express-validator";
 import User from "../../models/User.js";
 import Project from "../../models/Project.js";
 import Session from "../../models/Session.js";
+import moment from "moment";
 
 export const validateCreateSession = [
   body("project_id")
@@ -76,4 +77,41 @@ export const validateShowSession = [
         return true;
       }
     }),
+];
+
+export const validateFilterSession = [
+  body("project_id")
+    .optional()
+    .custom(async (value) => {
+      if (value) {
+        let project_exist = await Project.findById(value);
+        if (!project_exist) {
+          throw new Error("Le projet n'existe pas");
+        }
+        return true;
+      }
+    }),
+  body("start_date").custom((value) => {
+    if (value !== null && value !== "") {
+      if (moment(value, "YYYY-MM-DD").isValid()) {
+        return true;
+      } else {
+        throw new Error("Date invalide");
+      }
+    } else {
+      return true;
+    }
+  }),
+  ,
+  body("end_date").custom((value) => {
+    if (value !== null && value !== "") {
+      if (moment(value, "YYYY-MM-DD").isValid()) {
+        return true;
+      } else {
+        throw new Error("Date invalide");
+      }
+    } else {
+      return true;
+    }
+  }),
 ];

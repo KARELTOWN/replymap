@@ -1,7 +1,6 @@
 // import { v4 as uuidv4 } from "uuid";
 // import { elastiClient } from "../index.js";
-import { redisDeleteMultipleKeys } from "../config/redis.js";
-import ClientError from "../models/ClientError.js";
+import AppError from "../models/AppError.js";
 
 // export const createInterceptRequestLog = async (data) => {
 //   try {
@@ -20,7 +19,7 @@ import ClientError from "../models/ClientError.js";
 
 export const createInterceptRequestLog = async (data) => {
   try {
-    const result = await ClientError.insertMany(data);
+    const result = await AppError.insertMany(data);
     console.log("Log added successfully!");
     return true;
   } catch (error) {
@@ -64,12 +63,18 @@ export const createInterceptRequestLog = async (data) => {
 //   }
 // };
 
-export const displayInterceptRequestLogs = async (data, limit = 100) => {
+export const displayInterceptRequestLogs = async (data, limit = 100, type) => {
   try {
-    const response = await ClientError.find({
-      session: data.session,
-      project: data.project,
-    })
+    let request;
+    if (type == "all") {
+      request = AppError.find();
+    } else {
+      request = AppError.find({
+        session: data.session,
+        project: data.project,
+      });
+    }
+    const response = await request
       .sort({ createdAt: -1 })
       .limit(limit)
       .select(["timezone", "general", "response"])
@@ -99,7 +104,7 @@ export const displayInterceptRequestLogs = async (data, limit = 100) => {
 
 export const errorPerSession = async (session) => {
   try {
-    const count = await ClientError.find({}).countDocuments();
+    const count = await AppError.find({}).countDocuments();
     console.log("count", count);
     return count;
   } catch (error) {

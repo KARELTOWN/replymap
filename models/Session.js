@@ -3,6 +3,8 @@ import mongoose from "../config/mongodb.js";
 import Project from "./Project.js";
 import User from "./User.js";
 import { errorPerSession } from "../services/elasticLog.js";
+import { isAdmin } from "../utils/util.js";
+import { user_connect_projects } from "./UserProject.js";
 
 const SessionSchema = new mongoose.Schema(
   {
@@ -51,6 +53,33 @@ SessionSchema.statics.count = async function () {
 //     })
 //   );
 // });
+
+export const SessionModelFilter = async (req, query, skip, limit) => {
+  let admin = isAdmin(req);
+  let session_finder;
+  if (admin) {
+    session_finder = Session.find(query);
+  } else {
+    let project_list = await user_connect_projects(req);
+    query.project_id = { $in: project_list };
+    session_finder = Session.find(query);
+  }
+  let total_session = await Session.countDocuments(query);
+  let sessions = await session_finder
+    .populate({
+      path: "project_id",
+      model: Project,
+      select: "_id libelle link",
+    })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .exec();
+  return {
+    total_session: total_session,
+    session_list: sessions,
+  };
+};
 
 const Session = mongoose.model("Session", SessionSchema);
 export default Session;

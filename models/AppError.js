@@ -1,10 +1,11 @@
 import { SchemaTypes } from "mongoose";
 import mongoose from "../config/mongodb.js";
-const ClientErrorSchema = new mongoose.Schema(
+const AppErrorSchema = new mongoose.Schema(
   {
     project: {
       type: SchemaTypes.ObjectId,
       ref: "Project",
+      required: true,
     },
     session: {
       type: SchemaTypes.ObjectId,
@@ -14,11 +15,17 @@ const ClientErrorSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
+    page_url: {
+      type: String,
+      required: true,
+    },
     general: {
       type: Object,
+      required: true,
     },
     response: {
       type: Object,
+      required: true,
     },
   },
   {
@@ -26,5 +33,5 @@ const ClientErrorSchema = new mongoose.Schema(
   }
 );
 
-const ClientError = mongoose.model("ClientError", ClientErrorSchema);
-export default ClientError;
+const AppError = mongoose.model("AppError", AppErrorSchema);
+export default AppError;
