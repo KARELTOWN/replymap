@@ -24,9 +24,11 @@ export const validateStoreChunk = [
             `La session avec l'ID ${event.session_id} n'existe pas.`
           );
         }
-
         if (!event.uniqueId || !validator.isUUID(event.uniqueId)) {
           throw new Error("Identifiant d'événement invalide.");
+        }
+        else if (event.events.length == 0 || !event.timestamp) {
+          throw new Error("Chunk invalide");
         }
       }
       return true;

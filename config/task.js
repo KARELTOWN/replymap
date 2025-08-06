@@ -9,19 +9,38 @@ export const schedule_expired_session = cron.schedule(
   "* */2 * * *",
   async () => {
     try {
-      const twohours = moment().subtract(30, "minutes").toDate();
+      const thirtyMinutes = moment().subtract(30, "hours").toDate();
       let sessions = await Chunk.distinct("session_id");
       await Session.deleteMany({
         _id: { $nin: sessions },
-        startedAt: { $lte: twohours },
+        startedAt: { $lt: thirtyMinutes },
       });
-      await Session.updateMany(
+
+      const expired_sessions = await Chunk.aggregate([
         {
-          endedAt: null,
-          startedAt: { $lte: twohours },
+          $group: {
+            _id: "$session_id",
+            lastChunkAt: { $max: "$createdAt" },
+          },
         },
-        { endedAt: Date.now() }
-      );
+        {
+          $match: {
+            lastChunkAt: { $lt: thirtyMinutes },
+          },
+        },
+      ]);
+
+      const updates = expired_sessions.map((item) => ({
+        updateOne: {
+          filter: { _id: item._id },
+          update: { endedAt: item.lastChunkAt },
+        },
+      }));
+
+      if (updates.length > 0) {
+        await Session.bulkWrite(updates);
+      }
+
       console.log("Expired session task executed");
     } catch (error) {
       console.log("Expired session schedule", error);

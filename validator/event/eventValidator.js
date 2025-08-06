@@ -1,0 +1,64 @@
+import { body } from "express-validator";
+import Project from "../../models/Project.js";
+import Session from "../../models/Session.js";
+import EventType from "../../models/EventType.js";
+import validator from "validator";
+
+export const editEventType = async (req, res, next) => {
+  const { events } = req.body;
+  if (Array.isArray(events) && events.length > 0) {
+    let modifyEvents = [];
+    for (const event of events) {
+      if (event.type) {
+        let type = await EventType.findOne({ libelle: event.type });
+        if (!type) {
+          throw new Error(`Le type ${event.type} n'existe pas`);
+        } else {
+          event.type = type._id;
+          modifyEvents.push(event);
+        }
+      } else {
+        next(new Error("Un des types d'évenement est invalide"));
+      }
+    }
+    req.body.events = modifyEvents;
+    next();
+  } else {
+    next(new Error("Aucune donnée"));
+  }
+};
+export const validateStoreEvent = [
+  body("events")
+    .notEmpty()
+    .withMessage("Les évenements sont obligatoires")
+    .custom(async (value) => {
+      for (const item of value) {
+        if (
+          (Array.isArray(item.data) && item.data.length == 0) ||
+          !item.project ||
+          !item.page_url ||
+          !item.timestamp ||
+          !item.type ||
+          !item.uniqueId
+        ) {
+          throw new Error("Erreur tracké invalide");
+        }
+        if (!item.uniqueId || !validator.isUUID(item.uniqueId)) {
+          throw new Error("Identifiant d'événement invalide.");
+        }
+        if (item.session) {
+          let session_exist = await Session.findById(item.session);
+          if (!session_exist) {
+            throw new Error(`La session ${item.session} n'existe pas`);
+          }
+        }
+        if (item.project) {
+          let project_exist = await Project.findById(item.project);
+          if (!project_exist) {
+            throw new Error(`Le projet ${item.project} n'existe pas`);
+          }
+        }
+      }
+      return true;
+    }),
+];

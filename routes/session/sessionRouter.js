@@ -4,7 +4,7 @@ import {
   validateCreateSession,
   validateUpdateEndAt,
   validateShowSession,
-  validateFilterSession
+  validateFilterSession,
 } from "../../validator/session/sessionValidator.js";
 import sessionController from "../../controllers/session/sessionController.js";
 const {
@@ -13,14 +13,25 @@ const {
   updateEndAt,
   showSession,
   getSessions,
-  filterSessions
+  filterSessions,
 } = sessionController();
 import paginateData from "../../helpers/pagination.js";
-import { validateChunkQuery, validatePaginationQuery } from "../../validator/generalValidator.js";
+import {
+  validateChunkQuery,
+  validatePaginationQuery,
+} from "../../validator/generalValidator.js";
 import isauthentificate from "../../middleware/isAuthentificate.js";
 import { blacklist } from "../../middleware/blacklist.js";
 
-SessionRouter.post("/create", validateCreateSession, createSession);
+SessionRouter.post(
+  "/create",
+  (req, res, next) => {
+    console.log("req body", req.body);
+    next();
+  },
+  validateCreateSession,
+  createSession
+);
 SessionRouter.post("/end", validateUpdateEndAt, updateEndAt);
 SessionRouter.get(
   "getByProject",

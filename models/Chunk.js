@@ -9,16 +9,21 @@ const ChunkSchema = new mongoose.Schema(
       ref: Session,
       required: true,
     },
-    events: {
+    storage_link: {
       type: String,
     },
     timestamp: {
       type: Number,
       required: true,
-    }, // utile pour l’ordre
+    },
     recorded_at: {
       type: Date,
       default: Date.now,
+    },
+    uniqueId: {
+      type: String,
+      required: true,
+      unique: [true, "Chunk existant"],
     },
   },
   {

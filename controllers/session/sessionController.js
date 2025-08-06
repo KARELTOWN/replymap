@@ -7,12 +7,12 @@ import {
   redisSetKey,
 } from "../../config/redis.js";
 import Session, { SessionModelFilter } from "../../models/Session.js";
-import eventService from "../../services/eventService.js";
+import chunkService from "../../services/chunk/chunkService.js";
 import Project from "../../models/Project.js";
 import { isAdmin } from "../../utils/util.js";
 import UserProject from "../../models/UserProject.js";
 import moment from "moment";
-const { getSessionChunks } = eventService();
+const { getSessionChunks } = chunkService();
 
 export default function projectController() {
   const createSession = async (req, res, next) => {
@@ -23,7 +23,7 @@ export default function projectController() {
       }
       const data = matchedData(req);
       let session = await Session.insertOne(data);
-      const users_link_to_projects = UserProject.find({
+      const users_link_to_projects = await UserProject.find({
         project_id: data.project_id,
       })
         .select("user_id")
@@ -222,6 +222,6 @@ export default function projectController() {
     getSessionsByProjects,
     showSession,
     getSessions,
-    filterSessions
+    filterSessions,
   };
 }

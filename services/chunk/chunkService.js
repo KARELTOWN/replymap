@@ -3,8 +3,8 @@ import {
   S3Client,
   GetObjectCommand,
 } from "@aws-sdk/client-s3";
-import { __dirname } from "../index.js";
-import Chunk from "../models/Chunk.js";
+import { __dirname } from "../../index.js";
+import Chunk from "../../models/Chunk.js";
 import zlib, { gzip } from "zlib";
 import _ from "lodash";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -75,7 +75,6 @@ export default function eventWorker() {
 
       const data = await response.json();
 
-      console.log("data", data);
       if (Array.isArray(data)) {
         events.push(...data);
       }

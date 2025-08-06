@@ -68,7 +68,6 @@ export default function projectController() {
       }
       const data = matchedData(req);
       let project;
-      console.log("data", data);
       let cache_key = `project_${data.id}`;
       let cached_project = await redisGetKey(cache_key);
       if (cached_project) {
@@ -86,6 +85,8 @@ export default function projectController() {
             libelle: project.libelle,
             link: project.link,
             active: project.active,
+            active_recording: project.active_recording,
+            active_track_errors: project.active_track_errors
           },
         });
       }

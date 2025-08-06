@@ -2,15 +2,20 @@ import { SchemaTypes } from "mongoose";
 import mongoose from "../config/mongodb.js";
 import Project from "./Project.js";
 import User from "./User.js";
-import { errorPerSession } from "../services/elasticLog.js";
+import { errorPerSession } from "../services/interceptRequestService.js";
 import { isAdmin } from "../utils/util.js";
 import { user_connect_projects } from "./UserProject.js";
 
 const SessionSchema = new mongoose.Schema(
   {
     user_id: {
-      type: SchemaTypes.ObjectId,
-      ref: User,
+      type: String,
+      required: true,
+    },
+    first_visit: {
+      type: Boolean,
+      required: true,
+      default: true,
     },
     project_id: {
       type: SchemaTypes.ObjectId,

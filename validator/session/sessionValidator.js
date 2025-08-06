@@ -1,8 +1,8 @@
 import { body, query } from "express-validator";
-import User from "../../models/User.js";
 import Project from "../../models/Project.js";
 import Session from "../../models/Session.js";
 import moment from "moment";
+import validator from "validator";
 
 export const validateCreateSession = [
   body("project_id")
@@ -18,16 +18,22 @@ export const validateCreateSession = [
       }
     }),
   body("user_id")
-    .optional()
-    .custom(async (value) => {
-      if (value) {
-        let user_exist = await User.findById(value);
-        if (!user_exist) {
-          throw new Error("L'utilisateur spécifié n'existe pas.");
-        }
-        return true;
+    .notEmpty()
+    .withMessage("Id utilisateur requis")
+    .custom((value) => {
+      if (!validator.isUUID(value)) {
+        throw new Error("UUID attendu.");
+      }
+      else {
+        return true
       }
     }),
+  body("first_visit")
+    .notEmpty()
+    .withMessage("Champ requis")
+    .isBoolean()
+    .withMessage("Booléen attendu"),
+
   body("metadata").notEmpty().withMessage("La métadonnée est obligatoire"),
   body("startedAt")
     .notEmpty()

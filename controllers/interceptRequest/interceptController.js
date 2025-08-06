@@ -3,7 +3,7 @@ import { redisClient, redisGetKey, redisSetKey } from "../../config/redis.js";
 import {
   createInterceptRequestLog,
   displayInterceptRequestLogs,
-} from "../../services/elasticLog.js";
+} from "../../services/interceptRequestService.js";
 import { isAdmin } from "../../utils/util.js";
 
 export default function interceptController() {
@@ -53,20 +53,20 @@ export default function interceptController() {
       const admin = isAdmin();
       let logs;
       let cache_key;
-      if (admin) {
-        cache_key = `errors_logs_limit_${limit}`;
-      } else {
-        cache_key = `${req.user._id}_errors_logs_limit_${limit}`;
-      }
-      let cached_logs = await redisGetKey(cache_key);
-      if (cached_logs) {
-        logs = JSON.parse(cached_logs);
-      } else {
-        logs = await displayInterceptRequestLogs(data, limit, "all");
-        if (logs) {
-          redisSetKey(cache_key, logs, 180);
-        }
-      }
+      // if (admin) {
+      //   cache_key = `errors_logs_limit_${limit}`;
+      // } else {
+      //   cache_key = `${req.user._id}_errors_logs_limit_${limit}`;
+      // }
+      // let cached_logs = await redisGetKey(cache_key);
+      // if (cached_logs) {
+      //   logs = JSON.parse(cached_logs);
+      // } else {
+      logs = await displayInterceptRequestLogs(data, limit, "all");
+      // if (logs) {
+      //   redisSetKey(cache_key, logs, 180);
+      // }
+      // }
 
       res.status(200).json({
         message: "Logs récupérées",
@@ -96,6 +96,6 @@ export default function interceptController() {
   return {
     createIntercept,
     getSessionInterceptErrors,
-    getErrors
+    getErrors,
   };
 }

@@ -1,6 +1,7 @@
 // import { v4 as uuidv4 } from "uuid";
 // import { elastiClient } from "../index.js";
 import AppError from "../models/AppError.js";
+import Events from "../models/Events.js";
 
 // export const createInterceptRequestLog = async (data) => {
 //   try {

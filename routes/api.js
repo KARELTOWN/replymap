@@ -10,6 +10,7 @@ import { validateCreateInterceptError, validateShowSessionErrors } from "../vali
 import interceptController from "../controllers/interceptRequest/interceptController.js";
 import { validateLimitQuery } from "../validator/generalValidator.js";
 import { blacklist } from "../middleware/blacklist.js";
+import eventRouter from "./event/eventRouter.js";
 const { createIntercept, getSessionInterceptErrors, getErrors } = interceptController();
 
 router.use("/auth/", AuthRouter);
@@ -17,6 +18,7 @@ router.use("/project/", ProjectRouter);
 router.use("/notification/", isauthentificate, blacklist, NotificationRouter);
 router.use("/session/", SessionRouter);
 router.use("/chunk/", chunkRouter);
+router.use("/events/", eventRouter);
 
 // Intercept Error routes
 router.post(

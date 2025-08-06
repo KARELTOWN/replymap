@@ -18,6 +18,18 @@ export const validateCreateInterceptError = [
           ) {
             throw new Error("Erreur tracké invalide");
           }
+          if (item.session) {
+            let session_exist = await Session.findById(item.session);
+            if (!session_exist) {
+              throw new Error(`La session ${item.session} n'existe pas`);
+            }
+          }
+          if (item.project) {
+            let project_exist = await Project.findById(item.project);
+            if (!project_exist) {
+              throw new Error(`Le projet ${item.project} n'existe pas`);
+            }
+          }
         }
         return true;
       } else {

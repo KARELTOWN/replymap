@@ -5,12 +5,14 @@
 // import ModuleSeeder from "./ModuleSeeder.js";
 // import PermissionSeeder from "./PermissionSeeder.js";
 // import PostSeeder from "./PostSeeder.js";
+import EventTypeSeeder from "./EventTypeSeeder.js";
 import RoleSeeder from "./RoleSeeder.js";
 
 try {
   // FilesTypeSeeder();
   // PostSeeder();
-  RoleSeeder();
+  // RoleSeeder();
+  EventTypeSeeder()
   // ContractTypeSeeder();
   // await FonctionSeeder();
   // await ModuleSeeder();

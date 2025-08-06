@@ -1,7 +1,7 @@
 import { SchemaTypes } from "mongoose";
 import mongoose from "../config/mongodb.js";
 import User from "./User.js";
-import projectService from "../services/projectService.js";
+import projectService from "../services/project/projectService.js";
 import { user_connect_projects } from "./UserProject.js";
 import { isAdmin } from "../utils/util.js";
 const { getProjectScript } = projectService();
@@ -32,9 +32,6 @@ const ProjectSchema = new mongoose.Schema(
     active: {
       type: Boolean,
       default: true,
-    },
-    uniqueId: {
-      type: String,
     },
     active_recording: {
       type: Boolean,
