@@ -1,24 +1,22 @@
-// import { getRecordConsolePlugin } from "@rrweb/rrweb-plugin-console-record";
 import _ from "lodash";
 import { v4 as uuidV4 } from "uuid";
 import * as rrweb from "rrweb";
 import { fetchPost } from "../utils/request";
 import { getIpAdress } from "../utils/ipAdress";
 import { project_id } from "../record.js";
+import setCookie from "../utils/cookie.js";
 
 export default async function initializeRecord() {
-  let session_id;
+  let session_id = JSON.parse(sessionStorage.getItem("track_bug_session_id"));
   const session_events =
-    JSON.parse(sessionStorage.getItem("replay_map_events")) || [];
+    JSON.parse(sessionStorage.getItem("replay_map_record_events")) || [];
   let sessionCreate = false;
   let events = [];
   let stopRecording = null;
   const maxRetryCreateSession = 5;
   let retryCreateSession = 0;
-  const INACTIVITY_LIMIT = 3 * 60 * 1000;
+  const INACTIVITY_LIMIT = 30 * 60 * 1000;
   let inactivityTimeout = null;
-
-  session_id = JSON.parse(sessionStorage.getItem("track_bug_session_id"));
 
   const setInactivityTimeout = () => {
     return setTimeout(async () => {
@@ -55,7 +53,7 @@ export default async function initializeRecord() {
       .then(async (result) => {
         console.log("chunk store result", result);
         console.log("chunk store");
-        sessionStorage.removeItem("replay_map_events");
+        sessionStorage.removeItem("replay_map_record_events");
         events = [];
       })
       .catch((error) => {
@@ -63,25 +61,22 @@ export default async function initializeRecord() {
       });
   };
   const saveChunk = _.debounce(() => {
-    const data = JSON.parse(sessionStorage.getItem("replay_map_events"));
+    const data = JSON.parse(sessionStorage.getItem("replay_map_record_events"));
     if (data) {
       if (data.length > 0) {
         uploadChunk(data);
       }
     }
-  }, 5000);
+  }, 2000);
 
   const record = () => {
     try {
-      console.log("initialize ");
       stopRecording = rrweb.record({
         emit(event) {
-          console.log("events.type", event.type);
-
           resetInactivityTimeout();
           events.push(event);
 
-          if (events.length >= 10) {
+          if (events.length >= 20) {
             session_events.push({
               session_id: session_id,
               events: events,
@@ -90,7 +85,7 @@ export default async function initializeRecord() {
             });
             events = [];
             sessionStorage.setItem(
-              "replay_map_events",
+              "replay_map_record_events",
               JSON.stringify(session_events)
             );
             saveChunk();
@@ -98,18 +93,6 @@ export default async function initializeRecord() {
         },
         maskInputOptions: { password: true },
         recordCanvas: true,
-        // plugins: [
-        //   getRecordConsolePlugin({
-        //     level: ["info", "log", "warn", "error"],
-        //     lengthThreshold: 10000,
-        //     stringifyOptions: {
-        //       stringLengthLimit: 1000,
-        //       numOfKeysLimit: 100,
-        //       depthOfLimit: 1,
-        //     },
-        //     logger: window.console,
-        //   }),
-        // ],
       });
     } catch (error) {
       console.error("Erreur record ", error);
@@ -120,6 +103,7 @@ export default async function initializeRecord() {
     if (session_id) {
       record();
     } else {
+      let cookie = setCookie();
       const localization = await getIpAdress();
       let session_data = {
         project_id,
@@ -130,6 +114,8 @@ export default async function initializeRecord() {
           width: window.screen.availWidth,
           localization: localization,
         },
+        user_id: cookie.user,
+        first_visit: cookie.first_visit,
       };
 
       while (
@@ -141,7 +127,7 @@ export default async function initializeRecord() {
           if (!res.ok) {
             retryCreateSession++;
           }
-          console.log("session created");
+
           const result = await res.json();
           sessionCreate = true;
           session_id = result.data.session_id;

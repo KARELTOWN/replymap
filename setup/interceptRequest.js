@@ -5,12 +5,15 @@ let intercepts =
   JSON.parse(sessionStorage.getItem("replay_map_intercepts_errors")) || [];
 
 export default function interceptRequest() {
-  let session_id = JSON.parse(sessionStorage.getItem("track_bug_session_id"));
-
   const originalFetch = window.fetch;
 
+  //intercepter les requêtes avec FETCH
   window.fetch = async (...args) => {
     try {
+      let session_id = JSON.parse(
+        sessionStorage.getItem("track_bug_session_id")
+      );
+
       const start = performance.now();
       // Modify request if needed
       const [url, config] = args;
@@ -20,7 +23,7 @@ export default function interceptRequest() {
 
       const clonedResponse = response.clone();
       if (!clonedResponse.ok) {
-        const avoid_urls = avoid_records_urls();
+        const avoid_urls = avoid_records_urls(url);
         if (avoid_urls === false) {
           const contentType = clonedResponse.headers.get("Content-Type");
 
@@ -56,6 +59,7 @@ export default function interceptRequest() {
             general: request_general,
             response: request_response,
           });
+
           sessionStorage.setItem(
             "replay_map_intercepts_errors",
             JSON.stringify(intercepts)
