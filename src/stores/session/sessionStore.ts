@@ -8,7 +8,7 @@ export const sessionStore = defineStore('session-store', () => {
   const sessions = ref([])
   const total = ref(0)
   const page = ref(1)
-  const limit = ref(30)
+  const limit = ref(100)
   const totalPages = ref(0)
   const events = ref([])
   const session = ref({})
@@ -134,6 +134,6 @@ export const sessionStore = defineStore('session-store', () => {
     chunk_limit,
     filterSessions,
     search_form,
-    search_errors
+    search_errors,
   }
 })
