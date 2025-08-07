@@ -5,11 +5,21 @@ import { fetchPost } from "../utils/request";
 import { getIpAdress } from "../utils/ipAdress";
 import { project_id } from "../record.js";
 import setCookie from "../utils/cookie.js";
+import { getSessionId } from "../utils/session.js";
+const getSessionEvents = () =>
+  JSON.parse(localStorage.getItem("replay_map_record_events")) || [];
+
+const saveSessionEvents = (data) => {
+  if (Array.isArray(data) && data.length > 0) {
+    localStorage.setItem("replay_map_record_events", JSON.stringify(data));
+  } else {
+    localStorage.removeItem("replay_map_record_events"); // nettoie quand vide
+  }
+};
 
 export default async function initializeRecord() {
-  let session_id = JSON.parse(sessionStorage.getItem("track_bug_session_id"));
-  const session_events =
-    JSON.parse(sessionStorage.getItem("replay_map_record_events")) || [];
+  let session_id = getSessionId();
+  let session_events = getSessionEvents();
   let sessionCreate = false;
   let events = [];
   let stopRecording = null;
@@ -20,7 +30,7 @@ export default async function initializeRecord() {
 
   const setInactivityTimeout = () => {
     return setTimeout(async () => {
-      sessionStorage.removeItem("track_bug_session_id");
+      localStorage.removeItem("track_bug_session_id");
       if (typeof stopRecording === "function") {
         stopRecording(); // Arrête rrweb.record()
       }
@@ -40,28 +50,23 @@ export default async function initializeRecord() {
   };
 
   const uploadChunk = async (chunks) => {
-    if (!project_id) {
-      return;
-    }
-    const payload = {
-      project_id: project_id,
-      events: chunks,
-    };
+    if (!project_id) return;
 
-    fetchPost("chunk/store", payload)
-      .then((res) => res.json())
-      .then(async (result) => {
-        console.log("chunk store result", result);
-        console.log("chunk store");
-        sessionStorage.removeItem("replay_map_record_events");
-        events = [];
-      })
-      .catch((error) => {
-        console.error(error);
-      });
+    const payload = { project_id, events: chunks };
+    try {
+      const res = await fetchPost("chunk/store", payload);
+      const result = await res.json();
+      console.log("chunk store result", result);
+      session_events = _.differenceWith(session_events, chunks, _.isEqual);
+      saveSessionEvents(session_events);
+      events = [];
+    } catch (error) {
+      console.error(error);
+    }
   };
+
   const saveChunk = _.debounce(() => {
-    const data = JSON.parse(sessionStorage.getItem("replay_map_record_events"));
+    const data = getSessionEvents();
     if (data) {
       if (data.length > 0) {
         uploadChunk(data);
@@ -74,7 +79,11 @@ export default async function initializeRecord() {
       stopRecording = rrweb.record({
         emit(event) {
           resetInactivityTimeout();
-          events.push(event);
+          const lastEvent = events[events.length - 1];
+          // Cela empêche l’enregistrement d’un événement identique consécutif.
+          if (!_.isEqual(lastEvent, event)) {
+            events.push(event);
+          }
 
           if (events.length >= 20) {
             session_events.push({
@@ -84,10 +93,7 @@ export default async function initializeRecord() {
               uniqueId: uuidV4(),
             });
             events = [];
-            sessionStorage.setItem(
-              "replay_map_record_events",
-              JSON.stringify(session_events)
-            );
+            saveSessionEvents(session_events);
             saveChunk();
           }
         },
@@ -132,7 +138,7 @@ export default async function initializeRecord() {
           sessionCreate = true;
           session_id = result.data.session_id;
 
-          sessionStorage.setItem(
+          localStorage.setItem(
             "track_bug_session_id",
             JSON.stringify(session_id)
           );
@@ -157,15 +163,35 @@ export default async function initializeRecord() {
       session_id: session,
       endedAt: Date.now(),
     };
-    fetchPost("session/end", payload)
-      .then((res) => res.json())
-      .then(async (result) => {
+    try {
+      const result = await fetchPost("session/end", payload);
+      const data  = await result.json();
+      if (result.ok) {
         session_id = null;
-      })
-      .catch((error) => {
-        console.error(error);
-      });
+      }
+    } catch (error) {
+      console.error(error);
+    }
   };
+
+  window.addEventListener("beforeunload", () => {
+    if (events.length > 0) {
+      session_events.push({
+        session_id,
+        events,
+        timestamp: Date.now(),
+        uniqueId: uuidV4(),
+      });
+      navigator.sendBeacon(
+        "/chunk/store",
+        JSON.stringify({ project_id, events: session_events })
+      );
+      // localStorage.setItem(
+      //   "replay_map_record_events",
+      //   JSON.stringify(session_events)
+      // );
+    }
+  });
 
   await startSession();
 }

@@ -1,37 +1,30 @@
+import _ from "lodash";
 import { project_id } from "../record";
 import { fetchPost } from "../utils/request";
 import { v4 as UUID } from "uuid";
+import { getSessionId } from "../utils/session.js";
 
 export default function eventTracker() {
-  let allEvents =
-    JSON.parse(sessionStorage.getItem("replay_map_events_tracker")) || [];
+  const getEvents = () =>
+    JSON.parse(localStorage.getItem("replay_map_events_tracker")) || [];
 
-  const setEventStorage = () => {
-    if (Array.isArray(allEvents) && allEvents.length > 0) {
-      sessionStorage.setItem(
-        "replay_map_events_tracker",
-        JSON.stringify(allEvents)
-      );
+  const saveEvents = (data) => {
+    if (Array.isArray(data) && data.length > 0) {
+      localStorage.setItem("replay_map_events_tracker", JSON.stringify(data));
+    } else {
+      localStorage.removeItem("replay_map_events_tracker"); // nettoie quand vide
     }
   };
+
+  let allEvents = getEvents();
+
   //suivi de l'internaute pour identifier les pages visités
-  const pageTracker = () => {
-    // let pages =
-    //   sessionStorage.getItem("replay_map_page_views") || [];
-    // setInterval(() => {
-    //   let pageCount = pages[window.location.href] || 0;
-    //   pages[window.location.href] = pageCount + 1;
-    //   console.log("PAGES", pages);
-    //   sessionStorage.setItem("replay_map_page_views", pages);
-    // }, 1000);
-  };
 
   const consoleErrorTracker = () => {
     //Intercepter les erreurs  : REFERENCEERROR, TYPEERROR, SYNTAXERROR, ...
     // Ainsi que les échecs de chargements de resource
     window.addEventListener("error", (err) => {
-      let session_id =
-        JSON.parse(sessionStorage.getItem("track_bug_session_id")) || null;
+      let session_id = getSessionId();
       allEvents.push({
         type: "runtime_errors",
         project: project_id,
@@ -43,14 +36,13 @@ export default function eventTracker() {
           message: err.message,
           resource_source: err.target?.src || null,
         },
-        timestamp: err.timeStamp,
+        timestamp: Date.now(),
         uniqueId: UUID(),
       });
     });
 
     window.addEventListener("unhandledrejection", (err) => {
-      let session_id =
-        JSON.parse(sessionStorage.getItem("track_bug_session_id")) || null;
+      let session_id = getSessionId();
       //intercepter les erreurs de promesses non capturés
       allEvents.push({
         type: "unhandle_promise_rejection",
@@ -58,9 +50,10 @@ export default function eventTracker() {
         session: session_id || null,
         page_url: window.location.href,
         data: {
-          reason: err.reason,
+          message: err.reason.message,
+          stack: err.reason.stack,
         },
-        timestamp: err.timeStamp,
+        timestamp: Date.now(),
         uniqueId: UUID(),
       });
     });
@@ -70,8 +63,8 @@ export default function eventTracker() {
   const rageClickTracker = () => {
     let events = [];
     document.addEventListener("click", (e) => {
-      let session_id =
-        JSON.parse(sessionStorage.getItem("track_bug_session_id")) || null;
+      let session_id = getSessionId();
+
       if (session_id) {
         events.push({
           target: getSelector(e.target),
@@ -81,8 +74,7 @@ export default function eventTracker() {
     });
 
     setInterval(() => {
-      let session_id =
-        JSON.parse(sessionStorage.getItem("track_bug_session_id")) || null;
+      let session_id = getSessionId();
       if (session_id) {
         //récuperer les éléments stockés les 2 dernières secondes
         const lastEvents = events.filter(
@@ -116,9 +108,10 @@ export default function eventTracker() {
           }
         }
         if (newData > 0) {
-          setEventStorage();
+          saveEvents(allEvents);
         }
       }
+      events = [];
     }, 2000);
   };
 
@@ -136,21 +129,33 @@ export default function eventTracker() {
 
   //envoyer les evenements vers le serveur backend pour stockage
   const storeEvents = async (data) => {
+    console.log("Evenements envoyés", data);
+
     const response = await fetchPost("events/store", { events: data });
     if (!response.ok) {
       throw new Error("Erreur d'enregistrement des evenements");
     } else {
-      sessionStorage.removeItem("replay_map_events_tracker");
+      allEvents = _.differenceWith(allEvents, data, _.isEqual);
+      saveEvents(allEvents);
       console.log("Evenements enregistrés");
     }
   };
 
-  pageTracker();
   consoleErrorTracker();
   rageClickTracker();
   setInterval(async () => {
-    if (allEvents.length > 10) {
+    if (allEvents.length > 0) {
       await storeEvents(allEvents);
     }
-  }, 1000000);
+  }, 1000);
+
+  // window.addEventListener("beforeunload", () => {
+  //   if (allEvents.length > 0) {
+  //     navigator.sendBeacon(
+  //       "/events/store",
+  //       JSON.stringify({ events: allEvents })
+  //     );
+  //     saveEvents([]);
+  //   }
+  // });
 }

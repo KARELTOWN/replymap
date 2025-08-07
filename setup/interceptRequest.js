@@ -1,8 +1,21 @@
 import _ from "lodash";
 import { fetchPost } from "../utils/request.js";
 import { project_id } from "../record.js";
-let intercepts =
-  JSON.parse(sessionStorage.getItem("replay_map_intercepts_errors")) || [];
+import { v4 as uuidV4 } from "uuid";
+import { getSessionId } from "../utils/session.js";
+
+const getIntercepts = () =>
+  JSON.parse(localStorage.getItem("replay_map_intercepts_errors")) || [];
+
+const saveIntercepts = (data) => {
+  if (Array.isArray(data) && data.length > 0) {
+    localStorage.setItem("replay_map_intercepts_errors", JSON.stringify(data));
+  } else {
+    localStorage.removeItem("replay_map_intercepts_errors"); // nettoie quand vide
+  }
+};
+
+let intercepts = getIntercepts();
 
 export default function interceptRequest() {
   const originalFetch = window.fetch;
@@ -10,9 +23,7 @@ export default function interceptRequest() {
   //intercepter les requêtes avec FETCH
   window.fetch = async (...args) => {
     try {
-      let session_id = JSON.parse(
-        sessionStorage.getItem("track_bug_session_id")
-      );
+      let session_id = getSessionId();
 
       const start = performance.now();
       // Modify request if needed
@@ -58,12 +69,10 @@ export default function interceptRequest() {
             timeStamp: Date.now(),
             general: request_general,
             response: request_response,
+            uniqueId: uuidV4(),
           });
 
-          sessionStorage.setItem(
-            "replay_map_intercepts_errors",
-            JSON.stringify(intercepts)
-          );
+          saveIntercepts(intercepts);
           if (intercepts.length > 0) {
             sendInterceptData();
           }
@@ -79,22 +88,29 @@ export default function interceptRequest() {
 
 const sendInterceptData = _.debounce(async () => {
   try {
-    const data = JSON.parse(
-      sessionStorage.getItem("replay_map_intercepts_errors")
-    );
+    const data = getIntercepts();
     if (data && data.length > 0) {
       const response = await fetchPost("intercept_error", {
         data: data,
       });
       if (response.ok) {
         intercepts = [];
-        sessionStorage.removeItem("replay_map_intercepts_errors");
+        saveIntercepts(intercepts);
       }
     }
   } catch (error) {
     console.log("Request save error", error);
   }
 }, 5000);
+
+window.addEventListener("beforeunload", () => {
+  if (intercepts.length > 0) {
+    navigator.sendBeacon(
+      "intercept_error",
+      JSON.stringify({ data: intercepts })
+    );
+  }
+});
 
 const avoid_records_urls = (url) => {
   if (
