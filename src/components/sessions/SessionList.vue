@@ -5,28 +5,50 @@
                 <thead>
                     <tr class="border-b border-gray-200 dark:border-gray-700">
                         <th class="px-5 py-3 text-left w-3/11 sm:px-6">
+                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">ID</p>
+                        </th>
+                        <th class="px-5 py-3 text-left w-3/11 sm:px-6">
                             <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Utilisateur ID</p>
                         </th>
                         <th class="px-5 py-3 text-left w-3/11 sm:px-6">
                             <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Ancien visiteur</p>
                         </th>
                         <th class="px-5 py-3 text-left w-3/11 sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Date début</p>
+                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Début</p>
                         </th>
                         <th class="px-5 py-3 text-left w-2/11 sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Date fin</p>
+                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Fin</p>
                         </th>
                         <th class="px-5 py-3 text-left w-2/11 sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Nom Projet</p>
+                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Durée (minutes)</p>
                         </th>
                         <th class="px-5 py-3 text-left w-2/11 sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Lien projet</p>
+                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Projet</p>
+                        </th>
+                        <th class="px-5 py-3 text-left w-2/11 sm:px-6">
+                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Erreurs de requêtes
+                            </p>
+                        </th>
+                        <th class="px-5 py-3 text-left w-2/11 sm:px-6">
+                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Erreurs de consoles
+                            </p>
+                        </th>
+                        <th class="px-5 py-3 text-left w-2/11 sm:px-6">
+                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Rages click</p>
+                        </th>
+                        <th class="px-5 py-3 text-left w-2/11 sm:px-6">
+                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Action</p>
                         </th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     <tr v-for="(session, index) in sessions" :key="index"
                         class="border-t border-gray-100 dark:border-gray-800">
+                        <td class="px-5 py-4 sm:px-6">
+                            <p class="text-gray-500 text-theme-sm text-sm/6 dark:text-gray-400">
+                                {{ session.uniqueId }}
+                            </p>
+                        </td>
                         <td class="px-5 py-4 sm:px-6">
                             <p class="text-gray-500 text-theme-sm text-sm/6 dark:text-gray-400">
                                 {{ session.user_id }}
@@ -45,14 +67,25 @@
                             </p>
                         </td>
                         <td class="px-5 py-4 sm:px-6">
-                            <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{ format(session.endedAt) }}</p>
+                            <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{ format(session.endedAt) }} </p>
                         </td>
+                        <td class="px-5 py-4 sm:px-6">
+                            <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{ dureeSession(session.startedAt,
+                                session.endedAt) }} </p>
+                        </td>
+
                         <td class="px-5 py-4 sm:px-6">
                             <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{ session.project_id.libelle }}
                             </p>
                         </td>
                         <td class="px-5 py-4 sm:px-6">
-                            <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{ session.project_id.link }}</p>
+                            <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{ session.requestError }}</p>
+                        </td>
+                        <td class="px-5 py-4 sm:px-6">
+                            <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{ session.consoleError }}</p>
+                        </td>
+                        <td class="px-5 py-4 sm:px-6">
+                            <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{ session.rageClick }}</p>
                         </td>
                         <td>
                             <button type="button" @click="openDetail(session)"
@@ -110,5 +143,11 @@ const handleSessions = async () => {
 
 const openDetail = (session) => {
     router.push({ path: '/session/detail', query: { project: session.project_id._id, session: session._id } })
+}
+
+const dureeSession = (start, end) => {
+    const start_date = moment(start)
+    const end_date = moment(end)
+    return end_date.diff(start_date, "minutes")
 }
 </script>

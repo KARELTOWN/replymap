@@ -37,7 +37,7 @@
                 </thead>
                 <tbody>
                     <tr v-for="(req, index) in session_errors" :key="req._id" class="border-t hover:bg-gray-50">
-                        <td class="px-4 py-2 max-w-[250px] truncate">{{ req.general.url }}</td>
+                        <td class="px-4 py-2 max-w-[250px] truncate" :title="req.general.url">{{ req.general.url }}</td>
                         <td class="px-4 py-2 text-center">{{ req.general.method }}</td>
                         <td class="px-4 py-2 text-center">{{ req.response.duration }}</td>
                         <td class="px-4 py-2 text-center">{{ req.response.status }}</td>
