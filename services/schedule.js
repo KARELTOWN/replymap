@@ -2,6 +2,7 @@ import moment from "moment";
 import cron from "node-cron";
 import Session from "../models/Session.js";
 import Chunk from "../models/Chunk.js";
+import { v4 } from "uuid";
 // Tâche pour expiré les sessions qui sont été créé il y a plus de 10 h,
 // sans être expiré, à cause d'une possibl erreur
 
@@ -29,9 +30,6 @@ export const schedule_expired_session = cron.schedule(
           },
         },
       ]);
-      console.log("expired sessions", expired_sessions)
-      console.log("thirtyMinutes", thirtyMinutes)
-
       const updates = expired_sessions.map((item) => ({
         updateOne: {
           filter: { _id: item._id },

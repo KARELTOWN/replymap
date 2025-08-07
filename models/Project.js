@@ -59,34 +59,6 @@ ProjectSchema.pre("save", async function (next) {
   next();
 });
 
-export const ProjectModelFilter = async (req, query, skip = 0, limit = 0) => {
-  let admin = isAdmin(req);
-  let project_finder;
-  if (admin) {
-    project_finder = Project.find(query);
-  } else {
-    let project_list = await user_connect_projects(req);
-    query._id = { $in: project_list };
-    project_finder = Project.find(query);
-  }
-
-  let total_project = await Project.countDocuments(query);
-  let projects;
-  if (skip == 0 && limit == 0) {
-    projects = await project_finder
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .exec();
-  } else {
-    projects = await project_finder.sort({ createdAt: -1 }).exec();
-  }
-
-  return {
-    total_project: total_project,
-    project_list: projects,
-  };
-};
 ProjectSchema.index({ link: 1, created_by: 1 }, { unique: true });
 const Project = mongoose.model("Project", ProjectSchema);
 export default Project;

@@ -6,12 +6,14 @@ import {
   redisGetKey,
   redisSetKey,
 } from "../../config/redis.js";
-import Session, { SessionModelFilter } from "../../models/Session.js";
+import Session from "../../models/Session.js";
 import chunkService from "../../services/chunk/chunkService.js";
 import Project from "../../models/Project.js";
 import { isAdmin } from "../../utils/util.js";
 import UserProject from "../../models/UserProject.js";
 import moment from "moment";
+import {v4} from 'uuid'
+import { SessionModelFilter } from "../../services/session/sessionService.js";
 const { getSessionChunks, getSessionChunksLocal } = chunkService();
 
 export default function projectController() {
@@ -22,18 +24,21 @@ export default function projectController() {
         res.status(422).json({ errors: errors.array() });
       }
       const data = matchedData(req);
+      const lastsession  =await Session.findOne().sort({createdAt: -1})
+      let lastIndex= lastsession.split('-')[1]
+      data.uniqueId = `session-${lastIndex + 1}`
       let session = await Session.insertOne(data);
-      const users_link_to_projects = await UserProject.find({
-        project_id: data.project_id,
-      })
-        .select("user_id")
-        .exec();
-      let keys = [];
-      for (const user of users_link_to_projects) {
-        keys.push(`${user.user_id}_sessions_page_*`);
-      }
-      keys.push("all_sessions_page_*");
-      await redisDeleteMultipleKeys(keys);
+      // const users_link_to_projects = await UserProject.find({
+      //   project_id: data.project_id,
+      // })
+      //   .select("user_id")
+      //   .exec();
+      // let keys = [];
+      // for (const user of users_link_to_projects) {
+      //   keys.push(`${user.user_id}_sessions_page_*`);
+      // }
+      // keys.push("all_sessions_page_*");
+      // await redisDeleteMultipleKeys(keys);
       res.status(200).json({
         message: "Session créé",
         data: { session_id: session._id },
@@ -57,41 +62,6 @@ export default function projectController() {
       res.status(200).json({
         message: "Session modifiée",
         data: { session_id: session._id },
-      });
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  const getSessionsByProjects = async (req, res, next) => {
-    try {
-      if (!req.project_id) {
-        res.status(500).json({ message: "Invalid request" });
-      }
-      const { limit, skip, page } = req.pagination;
-      let sessions;
-      let total_sessions;
-      cache_key = `project_${req.project_id}_sessions_page_${page}_limit_${limit}`;
-      let cached_job_sessions_by_project = await redisGetKey(cache_key);
-      if (cached_job_sessions_by_project) {
-        sessions = JSON.parse(cached_job_sessions_by_project);
-      } else {
-        total_sessions = await Session.count();
-        sessions = await Session.find({ project_id: req.project_id })
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit)
-          .exec();
-        await redisSetKey(cache_key, sessions);
-      }
-
-      res.status(200).json({
-        message: "Sessions récupérées",
-        data: sessions,
-        total: total_sessions,
-        page: page,
-        limit: limit,
-        totalPages: Math.ceil(total_sessions / limit),
       });
     } catch (error) {
       next(error);
@@ -219,7 +189,6 @@ export default function projectController() {
   return {
     createSession,
     updateEndAt,
-    getSessionsByProjects,
     showSession,
     getSessions,
     filterSessions,

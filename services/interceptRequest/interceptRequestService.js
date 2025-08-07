@@ -124,10 +124,9 @@ export const displayInterceptRequestLogs = async (
 //   }
 // };
 
-export const errorPerSession = async (session) => {
+export const sessionRequestErrors = async (session) => {
   try {
-    const count = await AppError.find({}).countDocuments();
-    console.log("count", count);
+    const count = await AppError.find({session: session}).countDocuments();
     return count;
   } catch (error) {
     console.error("Error retrieving error count from DB:", error);

@@ -9,7 +9,6 @@ import {
 import sessionController from "../../controllers/session/sessionController.js";
 const {
   createSession,
-  getSessionsByProjects,
   updateEndAt,
   showSession,
   getSessions,
@@ -29,14 +28,7 @@ SessionRouter.post(
   createSession
 );
 SessionRouter.post("/end", validateUpdateEndAt, updateEndAt);
-SessionRouter.get(
-  "getByProject",
-  isauthentificate,
-  blacklist,
-  validatePaginationQuery,
-  paginateData,
-  getSessionsByProjects
-);
+
 SessionRouter.get(
   "/get",
   isauthentificate,

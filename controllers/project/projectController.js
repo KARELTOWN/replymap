@@ -6,13 +6,14 @@ import {
   redisGetKey,
   redisSetKey,
 } from "../../config/redis.js";
-import Project, { ProjectModelFilter } from "../../models/Project.js";
+import Project from "../../models/Project.js";
 import crypto from "crypto";
 import moment from "moment";
 import UserProject, {
   user_connect_projects,
 } from "../../models/UserProject.js";
 import { isAdmin } from "../../utils/util.js";
+import { ProjectModelFilter } from "../../services/project/projectService.js";
 
 export default function projectController() {
   const createProject = async (req, res, next) => {
@@ -109,16 +110,16 @@ export default function projectController() {
       // if (cached_project_list) {
       //   data = JSON.parse(cached_project_list);
       // } else {
-        const result = await ProjectModelFilter(req, {}, skip, limit);
-        const { total_project, project_list } = result;
-        data = {
-          projects: project_list,
-          total: total_project,
-          page: page,
-          limit: limit,
-          totalPages: Math.ceil(total_project / limit),
-        };
-        // redisSetKey(cache_key, data);
+      const result = await ProjectModelFilter(req, {}, skip, limit);
+      const { total_project, project_list } = result;
+      data = {
+        projects: project_list,
+        total: total_project,
+        page: page,
+        limit: limit,
+        totalPages: Math.ceil(total_project / limit),
+      };
+      // redisSetKey(cache_key, data);
       // }
       res.status(200).json({
         message: "Projets récupérées",

@@ -1,6 +1,5 @@
 import { matchedData, validationResult } from "express-validator";
-import { createEventsLog } from "../../services/event/eventService.js";
-import { EventModelFilter } from "../../models/Events.js";
+import { createEventsLog, EventModelFilter } from "../../services/event/eventService.js";
 export default function eventController() {
   const createEvents = async (req, res, next) => {
     try {
