@@ -1,6 +1,5 @@
 <template>
-
-    <div v-if="canGetChunk == false && errorMessage !== ''">
+    <div v-if="props.loading == false && props.errorMessage !== ''">
         <div
             class="mb-3 rounded-xl border p-4 border-error-500 bg-error-50 dark:border-error-500/30 dark:bg-error-500/15">
             <div class="flex items-start gap-3">
@@ -11,14 +10,14 @@
                             fill="currentColor"></path>
                     </svg></div>
                 <div>
-                    <h4 class="mb-1 text-sm font-semibold text-gray-800 dark:text-white/90">Erreur
+                    <h4 class="mb-1 text-sm font-semibold text-gray-800 dark:text-white/90">
                     </h4>
-                    <p class="text-sm text-gray-500 dark:text-gray-400"> {{ errorMessage }}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400"> {{ props.errorMessage }}</p>
                 </div>
             </div>
         </div>
     </div>
-    <div v-if="canGetChunk == true && errorMessage == ''">
+    <div v-if="props.loading == true && props.errorMessage == ''">
         <div
             class="mb-3 rounded-xl border p-4 border-blue-light-500 bg-blue-light-50 dark:border-blue-light-500/30 dark:bg-blue-light-500/15">
             <div class="flex items-start gap-3">
@@ -35,107 +34,17 @@
             </div>
         </div>
     </div>
-    <div>
-        <div id="player" :class="{ 'pointer-event-none': (canGetChunk === true && errorMessage == '') }" class="w-full">
-        </div>
-    </div>
 </template>
 
-<script setup>
-import { useRoute } from 'vue-router';
-import rrwebPlayer from 'rrweb-player';
-import { nextTick, onMounted, onUnmounted } from 'vue';
-import { ref } from 'vue';
-const session_id = ref('')
-const project_id = ref('')
-const route = useRoute()
-const loading = ref(false)
-
-import { sessionStore } from "@/stores/session/sessionStore";
-import { storeToRefs } from "pinia";
-const store = sessionStore()
-const { events, canGetChunk, session, chunk_skip, chunk_limit, errorMessage } = storeToRefs(store)
-let player = ref(null)
-
-const { showSession } = store
-
-onMounted(async () => {
-    try {
-        await nextTick(); // attend que le DOM soit mis à jour
-        canGetChunk.value = true
-        session.value = ''
-        chunk_skip.value = 0
-
-        session_id.value = route.query.session
-        project_id.value = route.query.project
-
-        if (!session_id.value || !project_id.value) {
-            errorMessage.value = "Impossible de charger la session"
-            return
-        }
-        loading.value = true
-
-        await readChunksContinuously()
-
+<script setup lang="ts">
+const props = defineProps({
+    loading: {
+        type: Boolean,
+        required: true
+    },
+    errorMessage: {
+        type: String,
+        required: true
     }
-    catch (error) {
-        errorMessage.value = "Erreur lors du chargement de la session"
-        console.error(error)
-        loading.value = false
-    }
-
 })
-
-
-const initializePlayer = (events) => {
-    player.value = new rrwebPlayer({
-        target: document.getElementById("player"), // customizable root element
-        props: {
-            events: events,
-            autoPlay: false,
-            width: 850
-        },
-    });
-
-}
-
-const readChunksContinuously = async () => {
-    try {
-
-        while (canGetChunk.value === true) {
-            await showSession({ session_id: session_id.value, project_id: project_id.value });
-
-            if (events.value.length > 0) {
-                if (!player.value) {
-                    console.log("Adding events to player", events.value.length);
-                    initializePlayer(events.value);
-                }
-                else {
-                    for (let event of events.value) {
-                        player.value.addEvent(event);
-                    }
-                }
-
-                loading.value = false;
-            }
-            // await new Promise(resolve => setTimeout(resolve, 500));
-        }
-    }
-    catch (error) {
-        loading.value = false
-        console.error("Error in fetching session chunk:", error);
-    }
-
-}
-
-onUnmounted(() => {
-    session_id.value = ''
-    project_id.value = ''
-});
-
 </script>
-<style scoped>
-.pointer-event-none {
-    pointer-events: none;
-}
-</style>

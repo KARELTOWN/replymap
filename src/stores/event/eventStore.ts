@@ -1,0 +1,76 @@
+import { fetchGet, fetchPost } from '@/composables/request'
+import { handleAppError, handleCatchError } from '@/utils/handleAppError'
+import { defineStore } from 'pinia'
+import { reactive, ref } from 'vue'
+import { successNotify } from '@/utils/notification'
+export const eventStore = defineStore('event-store', () => {
+  const errors = ref({})
+  const search_errors = ref({})
+  const events = ref([])
+  const total = ref(0)
+  const page = ref(1)
+  const limit = ref(15)
+  const totalPages = ref(0)
+  const eventSuccess = ref(false)
+  const search_form = reactive({
+    search: '',
+    start_date: '',
+    end_date: '',
+  })
+
+  const getEvents = async () => {
+    try {
+      const result = await fetchGet(`event/get?limit=${limit.value}&page=${page.value}`)
+      const response = await handleAppError(result)
+      if (response.status === false) {
+        if (response?.data) {
+          events.value = response.data.events
+          total.value = response.data.total
+          page.value = response.data.page
+          limit.value = response.data.limit
+          totalPages.value = response.data.totalPages
+        }
+      }
+    } catch (err) {
+      handleCatchError(err)
+    }
+  }
+
+  const filterEvents = async (data) => {
+    try {
+      search_errors.value = {}
+      const result = await fetchPost(`event/filter?limit=${limit.value}&page=${page.value}`, data)
+      const response = await handleAppError(result)
+      if (response.status === false) {
+        if (response?.data) {
+          events.value = response.data.events
+          total.value = response.data.total
+          page.value = response.data.page
+          limit.value = response.data.limit
+          totalPages.value = response.data.totalPages
+        }
+      } else {
+        if (response.errors) {
+          search_errors.value = response.errors
+        }
+      }
+    } catch (err) {
+      handleCatchError(err)
+    }
+  }
+
+
+  return {
+    getEvents,
+    errors,
+    events,
+    total,
+    page,
+    limit,
+    totalPages,
+    eventSuccess,
+    filterEvents,
+    search_errors,
+    search_form,
+  }
+})

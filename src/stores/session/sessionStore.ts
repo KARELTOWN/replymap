@@ -8,15 +8,17 @@ export const sessionStore = defineStore('session-store', () => {
   const sessions = ref([])
   const total = ref(0)
   const page = ref(1)
-  const limit = ref(100)
+  const limit = ref(15)
+  const session_errors_limit = ref(10)
   const totalPages = ref(0)
   const events = ref([])
   const session = ref({})
   const session_errors = ref([])
   const chunk_skip = ref(0)
-  const chunk_limit = ref(5)
+  const chunk_limit = ref(20)
   const canGetChunk = ref(true)
   const search_errors = ref({})
+  const errorMessage = ref('')
   const search_form = reactive({
     project_id: '',
     start_date: '',
@@ -71,6 +73,7 @@ export const sessionStore = defineStore('session-store', () => {
 
   const showSession = async (data) => {
     try {
+      errorMessage.value = ''
       events.value = []
       const result = await fetchPost(
         `session/show?skip=${chunk_skip.value}&limit=${chunk_limit.value}`,
@@ -95,8 +98,10 @@ export const sessionStore = defineStore('session-store', () => {
         }
       } else {
         canGetChunk.value = false
+        errorMessage.value = "Une erreur s'est produite"
       }
     } catch (err) {
+      errorMessage.value = "Une erreur s'est produite"
       canGetChunk.value = false
       handleCatchError(err)
     }
@@ -104,12 +109,26 @@ export const sessionStore = defineStore('session-store', () => {
 
   const showErrors = async (data) => {
     try {
-      session_errors.value = []
-      const result = await fetchPut(`get_session_errors?limit=${limit.value}`, data)
+      let skip
+      if (limit.value > session_errors.value.length) {
+        skip = session_errors.value.length
+      } else {
+        skip = 0
+      }
+      const result = await fetchPut(
+        `get_session_errors?limit=${session_errors_limit.value}&skip=${skip}`,
+        data,
+      )
       const response = await handleAppError(result)
       if (response.status === false) {
         if (response?.data) {
-          session_errors.value = response.data
+          if (skip == 0) {
+            console.log('session_errordfffffs', response.data.length)
+            session_errors.value = response.data
+          } else {
+            console.log('session_errors', response.data.length)
+            session_errors.value.push(...response.data)
+          }
         }
       }
     } catch (err) {
@@ -135,5 +154,7 @@ export const sessionStore = defineStore('session-store', () => {
     filterSessions,
     search_form,
     search_errors,
+    errorMessage,
+    session_errors_limit,
   }
 })

@@ -34,6 +34,15 @@ const router = createRouter({
       },
     },
     {
+      path: '/erreurs-console',
+      name: 'ConsoleErrors',
+      component: () => import('../views/Pages/Event/ConsoleError.vue'),
+      meta: {
+        title: 'Erreurs de console',
+        requiredAuth: true,
+      },
+    },
+    {
       path: '/session/detail',
       name: 'Session-detail',
       component: () => import('../views/Pages/SessionDetail.vue'),
@@ -110,7 +119,7 @@ router.beforeEach((to, from, next) => {
   const replay_map_token = localStorage.getItem('replay_map_token')
   console.log('replay_map_token', replay_map_token)
   const data = replay_map_token !== null ? JSON.parse(replay_map_token) : null
-    console.log('replay_map_data', data)
+  console.log('replay_map_data', data)
 
   const token = data?.token
 

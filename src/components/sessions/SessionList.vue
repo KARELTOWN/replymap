@@ -5,6 +5,12 @@
                 <thead>
                     <tr class="border-b border-gray-200 dark:border-gray-700">
                         <th class="px-5 py-3 text-left w-3/11 sm:px-6">
+                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Utilisateur ID</p>
+                        </th>
+                        <th class="px-5 py-3 text-left w-3/11 sm:px-6">
+                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Ancien visiteur</p>
+                        </th>
+                        <th class="px-5 py-3 text-left w-3/11 sm:px-6">
                             <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Date début</p>
                         </th>
                         <th class="px-5 py-3 text-left w-2/11 sm:px-6">
@@ -21,6 +27,19 @@
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     <tr v-for="(session, index) in sessions" :key="index"
                         class="border-t border-gray-100 dark:border-gray-800">
+                        <td class="px-5 py-4 sm:px-6">
+                            <p class="text-gray-500 text-theme-sm text-sm/6 dark:text-gray-400">
+                                {{ session.user_id }}
+                            </p>
+                        </td>
+                        <td class="px-5 py-4 sm:px-6">
+                            <p class="text-gray-500 text-theme-sm dark:text-gray-400">
+                                <Badge color="info">
+                                    {{ session.first_visit === false ?
+                                        'OUI' : 'NON' }}
+                                </Badge>
+                            </p>
+                        </td>
                         <td class="px-5 py-4 sm:px-6">
                             <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{ format(session.startedAt) }}
                             </p>
@@ -60,6 +79,7 @@ import { storeToRefs } from "pinia";
 import moment from 'moment';
 import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import Badge from '../ui/Badge.vue';
 const store = sessionStore()
 const { errors,
     sessions,
