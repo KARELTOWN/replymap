@@ -1,6 +1,7 @@
 import { body } from "express-validator";
 import Project from "../../models/Project.js";
 import Session from "../../models/Session.js";
+import validator from "validator";
 
 export const validateCreateInterceptError = [
   body("data")
@@ -29,6 +30,9 @@ export const validateCreateInterceptError = [
             if (!project_exist) {
               throw new Error(`Le projet ${item.project} n'existe pas`);
             }
+          }
+          if (!item.uniqueId || !validator.isUUID(item.uniqueId)) {
+            throw new Error("Identifiant de l'erreur invalide.");
           }
         }
         return true;

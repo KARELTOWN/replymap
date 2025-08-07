@@ -22,7 +22,7 @@ export const validateLimitQuery = [
     .withMessage("La limite doit être un entier"),
 ];
 
-export const validateChunkQuery = [
+export const validateLimitSkipQuery = [
   query("limit")
     .notEmpty()
     .withMessage("La limite est obligatoire")

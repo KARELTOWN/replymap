@@ -27,6 +27,11 @@ const AppErrorSchema = new mongoose.Schema(
       type: Object,
       required: true,
     },
+    uniqueId: {
+      type: String,
+      required: true,
+      unique: [true, "Erreur existant"],
+    },
   },
   {
     timestamps: true,

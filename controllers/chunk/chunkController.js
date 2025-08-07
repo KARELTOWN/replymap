@@ -1,5 +1,5 @@
 import { matchedData, validationResult } from "express-validator";
-import storeChunkJob from "../../queue/chunk/queue.js";
+import { storeChunkJob } from "../../jobs/queue.js";
 export default function chunkController() {
   const storeChunk = async (req, res, next) => {
     const errors = validationResult(req);

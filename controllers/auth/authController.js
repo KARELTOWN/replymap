@@ -3,7 +3,7 @@ import User from "../../models/User.js";
 import VerificationCode, {
   verificationType,
 } from "../../models/VerificationCode.js";
-import mailing from "../../config/mailer.js";
+import mailing from "../../services/mailing.js";
 import PasswordResetToken from "../../models/PasswordResetToken.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";

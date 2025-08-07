@@ -8,7 +8,7 @@ import bodyParser from "body-parser";
 // import initializeElasticsearch from "./config/elasticClient.js";
 // export const { client: elastiClient } = await initializeElasticsearch();
 // import { createAppLog } from "./services/elasticLog.js";
-import { schedule_expired_session } from "./config/task.js";
+import { schedule_expired_session } from "./services/schedule.js";
 schedule_expired_session.start()
 
 import redisConnection from "./config/redis.js";

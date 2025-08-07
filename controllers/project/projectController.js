@@ -1,5 +1,4 @@
 import { matchedData, validationResult } from "express-validator";
-// import mailing, { mailToAdmin } from "../../config/mailer";
 import {
   redisDeleteAllkey,
   redisDeleteKey,
@@ -38,10 +37,10 @@ export default function projectController() {
         project_id: project._id,
       });
 
-      await redisDeleteMultipleKeys([
-        `${req.user._id}_projects_page_*`,
-        `projects_page_*`,
-      ]);
+      // await redisDeleteMultipleKeys([
+      //   `${req.user._id}_projects_page_*`,
+      //   `projects_page_*`,
+      // ]);
 
       res.status(200).json({
         message: "Projet créé",
@@ -68,17 +67,17 @@ export default function projectController() {
       }
       const data = matchedData(req);
       let project;
-      let cache_key = `project_${data.id}`;
-      let cached_project = await redisGetKey(cache_key);
-      if (cached_project) {
-        project = JSON.parse(cached_project);
-      } else {
-        project = await Project.findOne({ _id: data.id }).exec();
-      }
+      // let cache_key = `project_${data.id}`;
+      // let cached_project = await redisGetKey(cache_key);
+      // if (cached_project) {
+      //   project = JSON.parse(cached_project);
+      // } else {
+      project = await Project.findOne({ _id: data.id }).exec();
+      // }
       if (!project) {
         res.status(403).json({ message: "Projet non trouvé" });
       } else {
-        redisSetKey(cache_key, project);
+        // redisSetKey(cache_key, project);
         res.status(200).json({
           message: "Projet récupéré",
           data: {
@@ -86,7 +85,7 @@ export default function projectController() {
             link: project.link,
             active: project.active,
             active_recording: project.active_recording,
-            active_track_errors: project.active_track_errors
+            active_track_errors: project.active_track_errors,
           },
         });
       }
@@ -99,17 +98,17 @@ export default function projectController() {
     try {
       const { limit, skip, page } = req.pagination;
       let data;
-      let cache_key;
-      const admin = isAdmin(req);
-      if (admin) {
-        cache_key = `projects_page_${page}_limit_${limit}`;
-      } else {
-        cache_key = `${req.user._id}_projects_page_${page}_limit_${limit}`;
-      }
-      let cached_project_list = await redisGetKey(cache_key);
-      if (cached_project_list) {
-        data = JSON.parse(cached_project_list);
-      } else {
+      // let cache_key;
+      // const admin = isAdmin(req);
+      // if (admin) {
+      //   cache_key = `projects_page_${page}_limit_${limit}`;
+      // } else {
+      //   cache_key = `${req.user._id}_projects_page_${page}_limit_${limit}`;
+      // }
+      // let cached_project_list = await redisGetKey(cache_key);
+      // if (cached_project_list) {
+      //   data = JSON.parse(cached_project_list);
+      // } else {
         const result = await ProjectModelFilter(req, {}, skip, limit);
         const { total_project, project_list } = result;
         data = {
@@ -119,8 +118,8 @@ export default function projectController() {
           limit: limit,
           totalPages: Math.ceil(total_project / limit),
         };
-        redisSetKey(cache_key, data);
-      }
+        // redisSetKey(cache_key, data);
+      // }
       res.status(200).json({
         message: "Projets récupérées",
         data: data,
@@ -181,6 +180,6 @@ export default function projectController() {
     createProject,
     getProjects,
     showProject,
-    filterProjects
+    filterProjects,
   };
 }

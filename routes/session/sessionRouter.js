@@ -17,7 +17,7 @@ const {
 } = sessionController();
 import paginateData from "../../helpers/pagination.js";
 import {
-  validateChunkQuery,
+  validateLimitSkipQuery,
   validatePaginationQuery,
 } from "../../validator/generalValidator.js";
 import isauthentificate from "../../middleware/isAuthentificate.js";
@@ -25,10 +25,6 @@ import { blacklist } from "../../middleware/blacklist.js";
 
 SessionRouter.post(
   "/create",
-  (req, res, next) => {
-    console.log("req body", req.body);
-    next();
-  },
   validateCreateSession,
   createSession
 );
@@ -54,7 +50,7 @@ SessionRouter.post(
   "/show",
   isauthentificate,
   blacklist,
-  validateChunkQuery,
+  validateLimitSkipQuery,
   validateShowSession,
   showSession
 );

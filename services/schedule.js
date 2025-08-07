@@ -6,10 +6,10 @@ import Chunk from "../models/Chunk.js";
 // sans être expiré, à cause d'une possibl erreur
 
 export const schedule_expired_session = cron.schedule(
-  "* */2 * * *",
+  "*/1 * * * *",
   async () => {
     try {
-      const thirtyMinutes = moment().subtract(30, "hours").toDate();
+      const thirtyMinutes = moment().subtract(30, "minutes").toDate();
       let sessions = await Chunk.distinct("session_id");
       await Session.deleteMany({
         _id: { $nin: sessions },
@@ -29,6 +29,8 @@ export const schedule_expired_session = cron.schedule(
           },
         },
       ]);
+      console.log("expired sessions", expired_sessions)
+      console.log("thirtyMinutes", thirtyMinutes)
 
       const updates = expired_sessions.map((item) => ({
         updateOne: {

@@ -12,7 +12,7 @@ import Project from "../../models/Project.js";
 import { isAdmin } from "../../utils/util.js";
 import UserProject from "../../models/UserProject.js";
 import moment from "moment";
-const { getSessionChunks } = chunkService();
+const { getSessionChunks, getSessionChunksLocal } = chunkService();
 
 export default function projectController() {
   const createSession = async (req, res, next) => {
@@ -102,33 +102,33 @@ export default function projectController() {
     try {
       const { limit, skip, page } = req.pagination;
       let data;
-      let cache_key;
-      let admin = isAdmin(req);
-      if (admin) {
-        cache_key = `all_sessions_page_${page}_limit_${limit}`;
-      } else {
-        cache_key = `${req.user._id}_sessions_page_${page}_limit_${limit}`;
-      }
-      let cached_job_sessions = await redisGetKey(cache_key);
-      if (cached_job_sessions) {
-        data = JSON.parse(cached_job_sessions);
-      } else {
-        const result = await SessionModelFilter(req, {}, skip, limit);
-        const { total_session, session_list } = result;
-        (data = {
-          sessions: session_list,
-          total: total_session,
-          page: page,
-          limit: limit,
-          totalPages: Math.ceil(total_session / limit),
-        }),
-          await redisSetKey(cache_key, data);
-      }
+      // let cache_key;
+      // let admin = isAdmin(req);
+      // if (admin) {
+      //   cache_key = `all_sessions_page_${page}_limit_${limit}`;
+      // } else {
+      //   cache_key = `${req.user._id}_sessions_page_${page}_limit_${limit}`;
+      // }
+      // let cached_job_sessions = await redisGetKey(cache_key);
+      // if (cached_job_sessions) {
+      //   data = JSON.parse(cached_job_sessions);
+      // } else {
+      const result = await SessionModelFilter(req, {}, skip, limit);
+      const { total_session, session_list } = result;
+      (data = {
+        sessions: session_list,
+        total: total_session,
+        page: page,
+        limit: limit,
+        totalPages: Math.ceil(total_session / limit),
+      }),
+        // await redisSetKey(cache_key, data);
+        // }
 
-      res.status(200).json({
-        message: "Sessions récupérées",
-        data: data,
-      });
+        res.status(200).json({
+          message: "Sessions récupérées",
+          data: data,
+        });
     } catch (error) {
       next(error);
     }
@@ -154,8 +154,8 @@ export default function projectController() {
       //   session = JSON.parse(cached_session);
       //   events = JSON.parse(cached_events);
       // } else {
-      session = await Session.findById(data.session_id).populate("user_id");
-      events = await getSessionChunks(data.session_id, skip, limit);
+      session = await Session.findById(data.session_id);
+      events = await getSessionChunksLocal(data.session_id, skip, limit);
       // }
 
       // await redisSetKey(cache_key, session, 180);

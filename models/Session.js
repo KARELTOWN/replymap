@@ -2,7 +2,7 @@ import { SchemaTypes } from "mongoose";
 import mongoose from "../config/mongodb.js";
 import Project from "./Project.js";
 import User from "./User.js";
-import { errorPerSession } from "../services/interceptRequestService.js";
+import { errorPerSession } from "../services/interceptRequest/interceptRequestService.js";
 import { isAdmin } from "../utils/util.js";
 import { user_connect_projects } from "./UserProject.js";
 

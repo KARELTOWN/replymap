@@ -1,7 +1,7 @@
 // import { v4 as uuidv4 } from "uuid";
 // import { elastiClient } from "../index.js";
-import AppError from "../models/AppError.js";
-import Events from "../models/Events.js";
+import AppError from "../../models/AppError.js";
+import Events from "../../models/Events.js";
 
 // export const createInterceptRequestLog = async (data) => {
 //   try {
@@ -20,8 +20,17 @@ import Events from "../models/Events.js";
 
 export const createInterceptRequestLog = async (data) => {
   try {
-    const result = await AppError.insertMany(data);
-    console.log("Log added successfully!");
+    let logs = [];
+    for (const item of data) {
+      const exist = await AppError.exists({ uniqueId: item.uniqueId });
+      if (exist) {
+        continue;
+      } else {
+        logs.push(item);
+      }
+    }
+    const result = await AppError.insertMany(logs);
+    console.log("Logs added successfully!");
     return true;
   } catch (error) {
     console.log("Erreur de création", error);
@@ -64,22 +73,34 @@ export const createInterceptRequestLog = async (data) => {
 //   }
 // };
 
-export const displayInterceptRequestLogs = async (data, limit = 100, type) => {
+export const displayInterceptRequestLogs = async (
+  data,
+  limit = 10,
+  skip = 0
+) => {
   try {
     let request;
-    if (type == "all") {
-      request = AppError.find();
+
+    request = AppError.find({
+      session: data.session,
+      project: data.project,
+    });
+    let response = null;
+    if (limit == 1000) {
+      response = await request
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .select(["timezone", "general", "response"])
+        .exec();
     } else {
-      request = AppError.find({
-        session: data.session,
-        project: data.project,
-      });
+      response = await request
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .select(["timezone", "general", "response"])
+        .exec();
     }
-    const response = await request
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .select(["timezone", "general", "response"])
-      .exec();
+    console.log("displayInterceptRequestLogs", response)
     return response;
   } catch (error) {
     console.error("Error retrieving logs from Elasticsearch:", error);

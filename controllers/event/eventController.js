@@ -1,7 +1,6 @@
 import { matchedData, validationResult } from "express-validator";
 import { createEventsLog } from "../../services/event/eventService.js";
-import EventType from "../../models/EventType.js";
-
+import { EventModelFilter } from "../../models/Events.js";
 export default function eventController() {
   const createEvents = async (req, res, next) => {
     try {
@@ -19,7 +18,30 @@ export default function eventController() {
     }
   };
 
+  const getIssues = async (req, res, next) => {
+    try {
+      const { limit, skip, page } = req.pagination;
+      const result = await EventModelFilter(req, {}, skip, limit, true);
+      const { total_issues, issues_list } = result;
+      const data = {
+        events: issues_list,
+        total: total_issues,
+        page: page,
+        limit: limit,
+        totalPages: Math.ceil(total_issues / limit),
+      };
+
+      res.status(200).json({
+        message: "Issues récupérées",
+        data: data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   return {
     createEvents,
+    getIssues,
   };
 }
