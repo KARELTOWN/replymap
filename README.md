@@ -1,3 +1,7 @@
+# Tous le projets back, front, record nécessite l'installation de npm (npm install)
+
+# Technologies utilisées : EXPRESS JS, VUE JS, JAVASCRIPT, RRWEB
+
 # 📦 Backend - Session Record & Error Tracking
 
 Ce projet Node.js utilise Express, MongoDB, Redis, BullMQ et AWS S3 pour enregistrer et analyser les sessions des utilisateurs et leurs erreurs. Il fonctionne en synergie avec un frontend (Vue.js) et un enregistreur de sessions (`record`).
@@ -61,7 +65,7 @@ ELASTIC_URL=https://0b6a0d33c64547549be8d9b4e6fd21fd.us-central1.gcp.cloud.es.io
 ELASTIC_API_KEY=NkQxVzhaY0JsakxaVDc0Wk1jT1o6bzA5T21EOF9MejJEUmxscjUzRE9rUQ==
 
 
-🚀 Démarrage des services
+Démarrage des services
 Avant de lancer l'application, assure-toi que tous les services nécessaires sont actifs.
 
 1. Lancer MongoDB
@@ -70,43 +74,28 @@ MongoDB doit être actif sur localhost:27017. Utilise un service local ou Docker
 2. Lancer Redis
 Redis doit être en fonctionnement sur le port 6379.
 
-bash
-Copier
-Modifier
-redis-server
 3. Lancer le microservice record
-bash
-Copier
-Modifier
-cd record
 npm install
 npm run dev
 Ce service tourne par défaut sur le port 5174.
 
 4. Lancer le frontend
-bash
-Copier
-Modifier
-cd frontend
+
 npm install
 npm run dev
+
 5. Lancer le backend
-bash
-Copier
-Modifier
-cd backend
+
 npm install
 npm run dev
-🔥 Le backend Express doit tourner sur le port 3000. Sinon, adapte la configuration du .env du frontend pour pointer vers le bon port.
+🔥 Adapte la configuration du .env du frontend pour pointer vers le bon port.
 
 6. Lancer les workers BullMQ (pour la queue)
-Deux commandes sont à exécuter pour activer les workers qui traitent les sessions et erreurs :
+Deux commandes sont à exécuter pour activer les workers qui traitent les sessions et erreurs (dans le projet BACK)
 
-bash
-Copier
-Modifier
 npm run listener
 npm run worker
+
 🧠 Fonctionnement général
 Création de compte via le frontend
 
@@ -118,21 +107,17 @@ Ce script doit être inséré dans le footer du site que l’on souhaite analyse
 
 Le script enregistre :
 
-Les erreurs JS (console.error, ReferenceError, etc.)
+#Les erreurs JS (console.error, ReferenceError, etc.)
 
-Les erreurs de promesses (unhandledrejection)
+#Les erreurs de promesses (unhandledrejection)
 
-Les rage clicks
+#Les rage clicks
 
-La première visite d’un utilisateur via un cookie de 365 jours
+# Détecte s'il s'agit d'un nouvel utilisateur qui atteri sur le site via un cookie de 365 jours
 
-Les erreurs sont :
+# Les erreurs sont : Stockées dans MongoDB , bientôt dans ELASTICSEARCH
 
-Stockées dans MongoDB
-
-Indexées dans Elasticsearch
-
-Les sessions sont envoyées et stockées sur AWS S3
+# Les sessions sont envoyées et stockées sur AWS S3
 
 🔁 Stockage et queue
 Le projet utilise BullMQ pour traiter et stocker les sessions enregistrées de manière asynchrone. Les workers doivent être lancés pour que cela fonctionne correctement.
@@ -146,4 +131,4 @@ MongoDB
 
 Compte AWS (ou équivalent compatible S3)
 
-Elasticsearch (facultatif si non utilisé)
+Elasticsearch (facultatif)
