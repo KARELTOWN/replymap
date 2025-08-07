@@ -1,4 +1,4 @@
-# Tous le projets back, front, record nécessite l'installation de npm (npm install)
+Tous le projets back, front, record nécessite l'installation de npm (npm install)
 
 # Technologies utilisées : EXPRESS JS, VUE JS, JAVASCRIPT, RRWEB
 
