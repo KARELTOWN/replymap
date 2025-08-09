@@ -15,10 +15,10 @@ if (res?.status == "error") {
   throw new Error(res.message);
 } else if (res?.status == "success") {
   if (res.data.active_recording === true) {
-    // initializeRecord();
+    initializeRecord();
   }
   if (res.data.active_track_errors === true) {
-    // interceptRequest();
+    interceptRequest();
   }
-  // eventTracker();
+  eventTracker();
 }

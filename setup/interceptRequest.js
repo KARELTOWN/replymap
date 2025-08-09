@@ -5,13 +5,13 @@ import { v4 as uuidV4 } from "uuid";
 import { getSessionId } from "../utils/session.js";
 
 const getIntercepts = () =>
-  JSON.parse(localStorage.getItem("replay_map_intercepts_errors")) || [];
+  JSON.parse(localStorage.getItem("replay_map_events_tracker")) || [];
 
 const saveIntercepts = (data) => {
   if (Array.isArray(data) && data.length > 0) {
-    localStorage.setItem("replay_map_intercepts_errors", JSON.stringify(data));
+    localStorage.setItem("replay_map_events_tracker", JSON.stringify(data));
   } else {
-    localStorage.removeItem("replay_map_intercepts_errors"); // nettoie quand vide
+    localStorage.removeItem("replay_map_events_tracker"); // nettoie quand vide
   }
 };
 
@@ -63,13 +63,16 @@ export default function interceptRequest() {
           };
 
           intercepts.push({
+            type: "request_errors",
             project: project_id,
             session: session_id || null,
             page_url: window.location.href,
-            timeStamp: Date.now(),
-            general: request_general,
-            response: request_response,
+            data: {
+              general: request_general,
+              response: request_response,
+            },
             uniqueId: uuidV4(),
+            timestamp: Date.now(),
           });
 
           saveIntercepts(intercepts);
@@ -90,8 +93,8 @@ const sendInterceptData = _.debounce(async () => {
   try {
     const data = getIntercepts();
     if (data && data.length > 0) {
-      const response = await fetchPost("intercept_error", {
-        data: data,
+      const response = await fetchPost("event/store", {
+        events: data,
       });
       if (response.ok) {
         intercepts = [];
@@ -106,8 +109,8 @@ const sendInterceptData = _.debounce(async () => {
 window.addEventListener("beforeunload", () => {
   if (intercepts.length > 0) {
     navigator.sendBeacon(
-      "intercept_error",
-      JSON.stringify({ data: intercepts })
+      "event/store",
+      JSON.stringify({ events: intercepts })
     );
   }
 });
@@ -117,7 +120,7 @@ const avoid_records_urls = (url) => {
     url.includes("session/create") ||
     url.includes("session/end") ||
     url.includes("chunk/store") ||
-    url.includes("intercept_error") ||
+    url.includes("event/store") ||
     url.includes("api.ipify.org")
   ) {
     return true;

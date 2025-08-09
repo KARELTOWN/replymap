@@ -131,7 +131,7 @@ export default function eventTracker() {
   const storeEvents = async (data) => {
     console.log("Evenements envoyés", data);
 
-    const response = await fetchPost("events/store", { events: data });
+    const response = await fetchPost("event/store", { events: data });
     if (!response.ok) {
       throw new Error("Erreur d'enregistrement des evenements");
     } else {
@@ -152,7 +152,7 @@ export default function eventTracker() {
   // window.addEventListener("beforeunload", () => {
   //   if (allEvents.length > 0) {
   //     navigator.sendBeacon(
-  //       "/events/store",
+  //       "event/store",
   //       JSON.stringify({ events: allEvents })
   //     );
   //     saveEvents([]);
