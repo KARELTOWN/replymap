@@ -25,7 +25,7 @@
                         <th class="px-5 py-3 text-left w-2/11 sm:px-6">
                             <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Projet</p>
                         </th>
-                        <th class="px-5 py-3 text-left w-2/11 sm:px-6">
+                        <!-- <th class="px-5 py-3 text-left w-2/11 sm:px-6">
                             <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Erreurs de requêtes
                             </p>
                         </th>
@@ -35,7 +35,7 @@
                         </th>
                         <th class="px-5 py-3 text-left w-2/11 sm:px-6">
                             <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Rages click</p>
-                        </th>
+                        </th> -->
                         <th class="px-5 py-3 text-left w-2/11 sm:px-6">
                             <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Action</p>
                         </th>
@@ -80,7 +80,7 @@
                             <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{ session.project_id.libelle }}
                             </p>
                         </td>
-                        <td class="px-5 py-4 sm:px-6">
+                        <!-- <td class="px-5 py-4 sm:px-6">
                             <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{ session.requestError }}</p>
                         </td>
                         <td class="px-5 py-4 sm:px-6">
@@ -88,7 +88,7 @@
                         </td>
                         <td class="px-5 py-4 sm:px-6">
                             <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{ session.rageClick }}</p>
-                        </td>
+                        </td> -->
                         <td>
                             <button type="button" @click="openDetail(session)"
                                 class="text-brand-500 hover:text-brand-600 dark:text-brand-400">
@@ -108,7 +108,6 @@
 
 <script setup>
 import { ref } from 'vue'
-
 import { sessionStore } from "@/stores/session/sessionStore";
 import { storeToRefs } from "pinia";
 import moment from 'moment';
