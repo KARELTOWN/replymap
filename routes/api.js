@@ -8,7 +8,6 @@ import chunkRouter from "./chunk/chunkRouter.js";
 import SessionRouter from "./session/sessionRouter.js";
 import { blacklist } from "../middleware/blacklist.js";
 import eventRouter from "./event/eventRouter.js";
-import interceptRequestRouter from "./interceptRequest/interceptRequestRouter.js";
 
 router.use("/auth/", AuthRouter);
 router.use("/project/", ProjectRouter);
@@ -16,6 +15,5 @@ router.use("/notification/", isauthentificate, blacklist, NotificationRouter);
 router.use("/session/", SessionRouter);
 router.use("/chunk/", chunkRouter);
 router.use("/event/", eventRouter);
-router.use("", interceptRequestRouter)
 
 export default router;

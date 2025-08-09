@@ -3,6 +3,7 @@ import Project from "../../models/Project.js";
 import Session from "../../models/Session.js";
 import EventType from "../../models/EventType.js";
 import validator from "validator";
+import moment from "moment";
 
 export const editEventType = async (req, res, next) => {
   const { events } = req.body;
@@ -61,4 +62,72 @@ export const validateStoreEvent = [
       }
       return true;
     }),
+];
+
+export const validateEventFilter = [
+  body("search")
+    .optional()
+    .isString()
+    .withMessage("Un chaine de caractère est attendu"),
+  body("start_date").custom((value) => {
+    if (value !== null && value !== "" && value) {
+      if (moment(value, "YYYY-MM-DD").isValid()) {
+        return true;
+      } else {
+        throw new Error("Date invalide");
+      }
+    } else {
+      return true;
+    }
+  }),
+  ,
+  body("end_date").custom((value) => {
+    if (value !== null && value !== "" && value) {
+      if (moment(value, "YYYY-MM-DD").isValid()) {
+        return true;
+      } else {
+        throw new Error("Date invalide");
+      }
+    } else {
+      return true;
+    }
+  }),
+
+  body("session")
+    .custom(async (value) => {
+      if (value) {
+        let session_exist = await Session.findById(value);
+        if (!session_exist) {
+          throw new Error("La session n'existe pas");
+        }
+        return true;
+      }
+    }),
+  body("project")
+    .custom(async (value) => {
+      if (value) {
+        let project_exist = await Project.findById(value);
+        if (!project_exist) {
+          throw new Error("Le projet n'existe pas");
+        }
+        return true;
+      }
+    }),
+  body("type").custom(async (value) => {
+    if (value) {
+      let type_exist = await EventType.findById(value);
+      if (!type_exist) {
+        throw new Error("Le type n'existe pas");
+      }
+      return true;
+    }
+  }),
+  body("is_error").custom(async (value) => {
+    if (value) {
+      if (value === true || value === false) {
+        return true;
+      }
+      throw new Error("Booleen attendu");
+    }
+  }),
 ];

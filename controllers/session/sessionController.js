@@ -12,7 +12,7 @@ import Project from "../../models/Project.js";
 import { isAdmin } from "../../utils/util.js";
 import UserProject from "../../models/UserProject.js";
 import moment from "moment";
-import {v4} from 'uuid'
+import { v4 } from "uuid";
 import { SessionModelFilter } from "../../services/session/sessionService.js";
 const { getSessionChunks, getSessionChunksLocal } = chunkService();
 
@@ -24,9 +24,14 @@ export default function projectController() {
         res.status(422).json({ errors: errors.array() });
       }
       const data = matchedData(req);
-      const lastsession  =await Session.findOne().sort({createdAt: -1})
-      let lastIndex= lastsession.split('-')[1]
-      data.uniqueId = `session-${lastIndex + 1}`
+      const lastsession = await Session.findOne().sort({ createdAt: -1 });
+      if (lastsession !== null) {
+        let lastIndex = lastsession.split("-")[1];
+        data.uniqueId = `session-${lastIndex + 1}`;
+      } else {
+        data.uniqueId = `session-1`;
+      }
+
       let session = await Session.insertOne(data);
       // const users_link_to_projects = await UserProject.find({
       //   project_id: data.project_id,

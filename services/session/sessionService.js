@@ -1,3 +1,4 @@
+import Project from "../../models/Project.js";
 import Session from "../../models/Session.js";
 import { user_connect_projects } from "../../models/UserProject.js";
 import { isAdmin } from "../../utils/util.js";

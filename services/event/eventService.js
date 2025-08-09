@@ -5,6 +5,8 @@ import Events from "../../models/Events.js";
 import EventType from "../../models/EventType.js";
 import { isAdmin } from "../../utils/util.js";
 import { user_connect_projects } from "../../models/UserProject.js";
+import Project from "../../models/Project.js";
+import Session from "../../models/Session.js";
 
 export const createEventsLog = async (data) => {
   try {
@@ -34,9 +36,11 @@ export const EventModelFilter = async (
 ) => {
   let admin = isAdmin(req);
   let issue_finder;
-  if (error) {
+  if (error === true && !query.type) {
     let errorsType = await EventType.find({
-      libelle: { $in: ["runtime_errors", "unhandle_promise_rejection"] },
+      libelle: {
+        $in: ["runtime_errors", "unhandle_promise_rejection", "request_errors"],
+      },
     })
       .select("_id")
       .exec();
@@ -51,28 +55,35 @@ export const EventModelFilter = async (
     issue_finder = Events.find(query);
   }
   let total_issues = await Events.countDocuments(query);
-  let issues_list = await issue_finder
-    .populate([
-      {
-        path: "project",
-        model: Project,
-        select: "_id libelle",
-      },
-      {
-        path: "session",
-        model: Session,
-        select: "_id uniqueId",
-      },
-      {
-        path: "type",
-        model: EventType,
-        select: "libelle",
-      },
-    ])
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit)
-    .exec();
+
+  let issues = issue_finder.populate([
+    {
+      path: "project",
+      model: Project,
+      select: "libelle",
+    },
+    {
+      path: "session",
+      model: Session,
+      select: "uniqueId",
+    },
+    {
+      path: "type",
+      model: EventType,
+      select: "libelle",
+    },
+  ]);
+  let issues_list = [];
+  if (limit == 1000) {
+    issues_list = await issues.sort({ createdAt: -1 }).exec();
+  } else {
+    issues_list = await issues
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .exec();
+  }
+
   return {
     total_issues: total_issues,
     issues_list: issues_list,

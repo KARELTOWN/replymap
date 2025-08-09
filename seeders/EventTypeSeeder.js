@@ -4,6 +4,7 @@ async function EventTypeSeeder() {
     let data = [
       { libelle: "runtime_errors" },
       { libelle: "unhandle_promise_rejection" },
+      { libelle: "request_errors" },
       { libelle: "rage_click" },
       { libelle: "page_view" },
       { libelle: "scroll_issue" },
