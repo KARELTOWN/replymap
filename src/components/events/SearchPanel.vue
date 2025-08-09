@@ -1,6 +1,6 @@
 <template>
     <div class="grid grid-cols-14 gap-4">
-        <div class="col-span-4">
+        <!-- <div class="col-span-4">
             <select v-model="search_form.project_id" placeholder="Projets"
                 class="text-gray-800 dark:text-white/90 dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800">
                 <option value="" disabled>Projets</option>
@@ -16,7 +16,12 @@
             </select>
             <p v-if="search_errors.project_id" style="color: red">{{ search_errors.project_id }}</p>
 
-        </div>
+        </div> -->
+        <!-- <div class="col-span-4">
+            <input type="text" v-model="search_form.search" placeholder="Rechercher"
+                class="dark:bg-dark-900 h-11 rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800" />
+            <p v-if="search_errors.search" style="color: red">{{ search_errors.search }}</p>
+        </div> -->
         <div class="relative col-span-4">
             <flat-pickr v-model="search_form.start_date" :config="flatpickrConfig"
                 class="dark:bg-dark-900 h-11 appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
@@ -43,7 +48,7 @@
 
 <script setup lang="ts">
 
-import { sessionStore } from '@/stores/session/sessionStore';
+import { eventStore } from '@/stores/event/eventStore.ts';
 import { storeToRefs } from 'pinia';
 
 const flatpickrConfig = {
@@ -53,15 +58,15 @@ const flatpickrConfig = {
     wrap: true,
 }
 
-const store = sessionStore()
+const store = eventStore()
 const {
     search_form, search_errors } = storeToRefs(store)
-const { filterSessions } = store
+const { filterEvents } = store
 const filter = async () => {
-    await filterSessions({
+    await filterEvents({
         start_date: search_form.value.start_date,
         end_date: search_form.value.end_date,
-        search: search_form.value.project_id,
+        search: search_form.value.search,
     })
 }
 </script>

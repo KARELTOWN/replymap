@@ -9,13 +9,13 @@ export const sessionStore = defineStore('session-store', () => {
   const total = ref(0)
   const page = ref(1)
   const limit = ref(15)
-  const session_errors_limit = ref(10)
+  const session_errors_limit = ref(15)
   const totalPages = ref(0)
   const events = ref([])
   const session = ref({})
   const session_errors = ref([])
   const chunk_skip = ref(0)
-  const chunk_limit = ref(20)
+  const chunk_limit = ref(10)
   const canGetChunk = ref(true)
   const search_errors = ref({})
   const errorMessage = ref('')
@@ -24,6 +24,7 @@ export const sessionStore = defineStore('session-store', () => {
     start_date: '',
     end_date: '',
   })
+  const player = ref(null)
 
   const updatePagination = () => {
     total.value += 1
@@ -109,26 +110,19 @@ export const sessionStore = defineStore('session-store', () => {
 
   const showErrors = async (data) => {
     try {
-      let skip
-      if (limit.value > session_errors.value.length) {
-        skip = session_errors.value.length
-      } else {
-        skip = 0
-      }
+      data.is_error = true
       const result = await fetchPut(
-        `get_session_errors?limit=${session_errors_limit.value}&skip=${skip}`,
+        `event/filter?limit=${session_errors_limit.value}&page=${page.value}`,
         data,
       )
       const response = await handleAppError(result)
       if (response.status === false) {
         if (response?.data) {
-          if (skip == 0) {
-            console.log('session_errordfffffs', response.data.length)
-            session_errors.value = response.data
-          } else {
-            console.log('session_errors', response.data.length)
-            session_errors.value.push(...response.data)
-          }
+          session_errors.value = response.data.events
+          total.value = response.data.total
+          page.value = response.data.page
+          limit.value = response.data.limit
+          totalPages.value = response.data.totalPages
         }
       }
     } catch (err) {
@@ -156,5 +150,6 @@ export const sessionStore = defineStore('session-store', () => {
     search_errors,
     errorMessage,
     session_errors_limit,
+    player
   }
 })

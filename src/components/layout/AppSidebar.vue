@@ -192,8 +192,7 @@ const menuGroups = [
       {
         icon: GridIcon,
         name: "Evénements",
-        subItems: [{ name: "Erreurs de console", path: "/erreurs-console", pro: false },
-        ],
+        path: "/evenements",
       },
     ],
   },

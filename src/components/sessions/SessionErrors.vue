@@ -1,9 +1,10 @@
 <template>
 
-    <h2 class="text-xl font-bold my-4">Liste des Requêtes (Erreurs)</h2>
+    <h2 class="text-xl font-bold my-4">Erreurs</h2>
+    <em>(Erreurs JS, Erreurs de requêtes)</em>
     <loadingStatus :loading="loading" :error-message="errorMessage" />
     <div v-if="session_errors.length > 0" class="mt-6">
-        <div class="grid grid-cols-10 my-2">
+        <!-- <div class="grid grid-cols-10 my-2">
             <div class="relative z-20 bg-transparent">
                 <select v-model="session_errors_limit" @change="fetchErrors"
                     class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800">
@@ -22,26 +23,33 @@
                     </option>
                 </select>
             </div>
-        </div>
-        <div class="overflow-x-auto rounded-lg border border-gray-300">
-            <table class="min-w-full table-auto text-sm text-left text-gray-800">
+        </div> -->
+        <div class="overflow-x-auto rounded-lg border border-gray-300 w-full">
+            <table class="w-full table-auto text-sm text-left text-gray-800">
                 <thead class="bg-gray-100">
                     <tr>
-                        <th class="px-4 py-2">URL</th>
+                        <th class="px-4 py-2">Type</th>
+                        <th class="px-4 py-2 text-center">Date</th>
+                        <th class="px-4 py-2">Page URL</th>
+                        <th class="px-4 py-2">URL requête</th>
                         <th class="px-4 py-2 text-center">Méthode</th>
-                        <th class="px-4 py-2 text-center">Durée</th>
                         <th class="px-4 py-2 text-center">Status</th>
-                        <th class="px-4 py-2 text-center">Status Text</th>
                         <th class="px-4 py-2 text-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="(req, index) in session_errors" :key="req._id" class="border-t hover:bg-gray-50">
-                        <td class="px-4 py-2 max-w-[250px] truncate" :title="req.general.url">{{ req.general.url }}</td>
-                        <td class="px-4 py-2 text-center">{{ req.general.method }}</td>
-                        <td class="px-4 py-2 text-center">{{ req.response.duration }}</td>
-                        <td class="px-4 py-2 text-center">{{ req.response.status }}</td>
-                        <td class="px-4 py-2 text-center">{{ req.response.statusText }}</td>
+                        <td class="px-4 py-2 text-center">
+                            <Badge color="error">{{ req.type.libelle }}</Badge>
+                        </td>
+                        <td class="px-4 py-2 text-center"> <a type="button" @click="goToError(req.timestamp)">{{
+                            formatTimestampToDate(req.timestamp) }}</a></td>
+                        <td class="px-4 py-2 text-center max-w-[250px] truncate" :title="req.page_url">{{ req.page_url
+                        }}</td>
+                        <td class="px-4 py-2 max-w-[250px] truncate" :title="req.data?.general?.url">{{
+                            req.data?.general?.url }}</td>
+                        <td class="px-4 py-2 text-center">{{ req.data?.general?.method }}</td>
+                        <td class="px-4 py-2 text-center">{{ req.data?.response?.status }}</td>
                         <td class="px-4 py-2 text-center">
                             <button type="button" @click="openModal(index)"
                                 class="text-brand-500 hover:text-brand-600 dark:text-brand-400">
@@ -57,6 +65,17 @@
             </table>
         </div>
 
+        <div class="grid grid-cols-2 mt-5">
+            <div>
+                <Pagination :paginator="session_errors" :current_page="page" :totalPages="totalPages"
+                    @page-change="fetchNext" />
+            </div>
+            <div>
+                <strong>Total : </strong> {{ total }}
+            </div>
+
+        </div>
+
     </div>
 
     <RequestErrorModal :request="currentRequest" @close="resetSelectError" />
@@ -69,9 +88,11 @@ import { storeToRefs } from "pinia";
 import RequestErrorModal from '@/components/Errors/RequestErrorModal.vue';
 import { useRoute } from 'vue-router';
 import loadingStatus from '../loading/loadingStatus.vue';
-
+import Badge from '../ui/Badge.vue';
+import Pagination from '../pagination/Pagination.vue';
+import { formatTimestampToDate } from '@/utils/format';
 const store = sessionStore()
-const { session_errors, session_errors_limit } = storeToRefs(store)
+const { session_errors, session_errors_limit, page, totalPages, total, player, canGetChunk } = storeToRefs(store)
 const { showErrors } = store
 const route = useRoute()
 
@@ -127,5 +148,20 @@ const fetchErrors = async () => {
         loading.value = false
     }
 }
+
+const fetchNext = async (nextpage) => {
+    page.value = nextpage
+    await showErrors({ session: session_id.value, project: project_id.value })
+}
+
+
+const goToError = (timestamp) => {
+    if (player.value && canGetChunk.value === false) {
+        alert('fdv')
+        player.value.goto(timestamp)
+    }
+
+}
+
 
 </script>

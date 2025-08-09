@@ -54,8 +54,7 @@ const loading = ref(false)
 import { sessionStore } from "@/stores/session/sessionStore";
 import { storeToRefs } from "pinia";
 const store = sessionStore()
-const { events, canGetChunk, session, chunk_skip, chunk_limit, errorMessage } = storeToRefs(store)
-let player = ref(null)
+const { events, canGetChunk, session, chunk_skip, chunk_limit, errorMessage, player } = storeToRefs(store)
 
 const { showSession } = store
 
@@ -101,6 +100,7 @@ const initializePlayer = (events) => {
 
 const readChunksContinuously = async () => {
     try {
+        player.value = null
 
         while (canGetChunk.value === true) {
             await showSession({ session_id: session_id.value, project_id: project_id.value });
@@ -118,7 +118,7 @@ const readChunksContinuously = async () => {
 
                 loading.value = false;
             }
-            // await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 100));
         }
     }
     catch (error) {
@@ -131,6 +131,8 @@ const readChunksContinuously = async () => {
 onUnmounted(() => {
     session_id.value = ''
     project_id.value = ''
+    player.value = null
+    canGetChunk.value = true
 });
 
 </script>

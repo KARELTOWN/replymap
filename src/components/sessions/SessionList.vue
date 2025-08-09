@@ -46,7 +46,9 @@
                         class="border-t border-gray-100 dark:border-gray-800">
                         <td class="px-5 py-4 sm:px-6">
                             <p class="text-gray-500 text-theme-sm text-sm/6 dark:text-gray-400">
-                                {{ session.uniqueId }}
+                                <Badge color="primary">
+                                    {{ session.uniqueId }}
+                                </Badge> 
                             </p>
                         </td>
                         <td class="px-5 py-4 sm:px-6">

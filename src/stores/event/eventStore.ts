@@ -1,4 +1,4 @@
-import { fetchGet, fetchPost } from '@/composables/request'
+import { fetchGet, fetchPost, fetchPut } from '@/composables/request'
 import { handleAppError, handleCatchError } from '@/utils/handleAppError'
 import { defineStore } from 'pinia'
 import { reactive, ref } from 'vue'
@@ -39,7 +39,7 @@ export const eventStore = defineStore('event-store', () => {
   const filterEvents = async (data) => {
     try {
       search_errors.value = {}
-      const result = await fetchPost(`event/filter?limit=${limit.value}&page=${page.value}`, data)
+      const result = await fetchPut(`event/filter?limit=${limit.value}&page=${page.value}`, data)
       const response = await handleAppError(result)
       if (response.status === false) {
         if (response?.data) {

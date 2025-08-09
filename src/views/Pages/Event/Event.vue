@@ -2,9 +2,9 @@
     <AdminLayout>
         <PageBreadcrumb :pageTitle="currentPageTitle" />
         <div class="space-y-5 sm:space-y-6">
-            <ComponentCard title="Erreurs de console">
+            <ComponentCard title="Evénements">
                 <div>
-                    <!-- <SearchPanel /> -->
+                    <SearchPanel />
                 </div>
                 <EventList />
                 <div class="grid grid-cols-2">
@@ -28,7 +28,7 @@ import PageBreadcrumb from "@/components/common/PageBreadcrumb.vue";
 import AdminLayout from "@/components/layout/AdminLayout.vue";
 import ComponentCard from "@/components/common/ComponentCard.vue";
 import EventList from "@/components/events/EventList.vue";
-const currentPageTitle = ref("Erreurs de console");
+const currentPageTitle = ref("Evénements");
 import SearchPanel from '@/components/events/SearchPanel.vue'
 import Pagination from "@/components/pagination/Pagination.vue";
 

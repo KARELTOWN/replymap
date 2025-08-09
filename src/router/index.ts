@@ -34,11 +34,11 @@ const router = createRouter({
       },
     },
     {
-      path: '/erreurs-console',
-      name: 'ConsoleErrors',
-      component: () => import('../views/Pages/Event/ConsoleError.vue'),
+      path: '/evenements',
+      name: 'Evenements',
+      component: () => import('../views/Pages/Event/Event.vue'),
       meta: {
-        title: 'Erreurs de console',
+        title: 'Evénements',
         requiredAuth: true,
       },
     },

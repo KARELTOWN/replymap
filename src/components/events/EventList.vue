@@ -54,7 +54,7 @@
                             </p>
                         </td>
                         <td class="px-5 py-4 sm:px-6">
-                            <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{ format(event.timestamp) }}</p>
+                            <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{ formatTimestampToDate(event.timestamp) }}</p>
                         </td>
                         <td>
                             <button type="button" class="text-brand-500 hover:text-brand-600 dark:text-brand-400"
@@ -71,35 +71,7 @@
             </table>
         </div>
 
-        <Modal v-if="currentRequest !== null">
-            <template #body>
-                <div
-                    class="no-scrollbar relative w-full max-h-[500px] max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
-                    <h5
-                        class="mb-2 font-semibold text-gray-800 modal-title text-theme-xl dark:text-white/90 lg:text-2xl">
-                        Détail Erreur
-                    </h5>
-                    <div class="custom-scrollbar h-[458px] overflow-y-auto p-2">
-                        <div class="space-y-2 text-sm">
-                            <p><strong>URL:</strong> {{ currentRequest.page_url }}</p>
-                            <div>
-                                <p class="mb-1"><strong>Erreur</strong></p>
-                                <pre
-                                    class="bg-gray-100 p-2 rounded text-xs overflow-x-auto">{{ currentRequest.data }}</pre>
-                            </div>
-
-                        </div>
-
-                        <div class="mt-6 text-right">
-                            <button @click="selectedRequest = null"
-                                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md">
-                                Fermer
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </template>
-        </Modal>
+        <RequestErrorModal :request="currentRequest" @close="resetSelectError" />
 
     </div>
 
@@ -112,19 +84,14 @@ import moment from 'moment';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Badge from '../ui/Badge.vue';
-import Modal from "../profile/Modal.vue";
+import RequestErrorModal from "../Errors/RequestErrorModal.vue";
+import { formatTimestampToDate } from "@/utils/format";
 const store = eventStore()
 const {
     events } = storeToRefs(store)
 
 const { getEvents } = store
 
-const format = (data) => {
-    if (data) {
-        return moment(data).format('DD-MM-YYYY HH:mm:ss')
-    }
-    return ''
-}
 
 const router = useRouter()
 onMounted(async () => {
@@ -155,5 +122,11 @@ const currentRequest = computed(() => {
     }
     return null
 })
+
+
+const resetSelectError = () => {
+    selectedRequest.value = null
+}
+
 
 </script>
