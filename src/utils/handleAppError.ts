@@ -38,7 +38,6 @@ export const handleAppError = async (response: Response): Promise<object> => {
       return { status: true, errors: errors }
     } else if (response.status == 403) {
       errorNotify(res.message)
-      console.log('handleAppError 403')
     } else {
       errorNotify("Une erreur s'est produite")
     }
@@ -57,7 +56,6 @@ export const handleCatchError = (err) => {
       })
       return errors
     } else {
-      console.log('Autre erreur', err)
       errorNotify("Une erreur inattendue s'est produite")
     }
   }

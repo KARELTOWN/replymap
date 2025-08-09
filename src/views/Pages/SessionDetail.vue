@@ -3,8 +3,8 @@
         <PageBreadcrumb :pageTitle="currentPageTitle" />
 
         <div
-            class="grid grid-row-2 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
-            <div class="my-5 w-auto">
+            class="grid grid-row-2 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6" style="width: auto;">
+            <div class="my-5">
                 <SessionPlayer />
             </div>
             <SessionInfo />

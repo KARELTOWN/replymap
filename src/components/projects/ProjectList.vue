@@ -96,7 +96,6 @@ const handleProjects = async () => {
     try {
         await getProjects()
     } catch (err) {
-        console.log('Erreur ', err)
     }
 }
 </script>

@@ -138,7 +138,6 @@ const handleSubmit = async () => {
 
   } catch (err) {
     disableBtn.value = false
-    console.log('Erreur ', err)
   }
 }
 const copyText = ref('')

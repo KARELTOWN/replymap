@@ -139,7 +139,6 @@ const handleSessions = async () => {
     try {
         await getSessions()
     } catch (err) {
-        console.log('Erreur ', err)
     }
 }
 

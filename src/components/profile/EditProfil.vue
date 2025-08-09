@@ -91,6 +91,5 @@ const resetModalFields = () => {
 
 const saveProfile = () => {
     // Implement save profile logic here
-    console.log('Profile saved')
 }
 </script>

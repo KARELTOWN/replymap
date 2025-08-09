@@ -151,9 +151,6 @@ const toggleConfirmPasswordVisibility = () => {
 
 const handleSubmit = () => {
   // Implement form submission logic here
-  console.log('Form submitted', {
-    password: password.value,
-    confirm_password: confirm_password.value,
-  })
+
 }
 </script>

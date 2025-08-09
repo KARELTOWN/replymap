@@ -24,31 +24,26 @@
                 </select>
             </div>
         </div> -->
-        <div class="overflow-x-auto rounded-lg border border-gray-300 w-full">
-            <table class="w-full table-auto text-sm text-left text-gray-800">
-                <thead class="bg-gray-100">
+        <div class="overflow-x-auto rounded-lg border-gray-300">
+            <table class="table-auto table-border text-sm text-left text-gray-800 w-full">
+                <thead class="bg-gray-100 border">
                     <tr>
                         <th class="px-4 py-2">Type</th>
                         <th class="px-4 py-2 text-center">Date</th>
                         <th class="px-4 py-2">Page URL</th>
-                        <th class="px-4 py-2">URL requête</th>
-                        <th class="px-4 py-2 text-center">Méthode</th>
                         <th class="px-4 py-2 text-center">Status</th>
                         <th class="px-4 py-2 text-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="(req, index) in session_errors" :key="req._id" class="border-t hover:bg-gray-50">
+                    <tr v-for="(req, index) in session_errors" :key="req._id" class="border hover:bg-gray-50">
                         <td class="px-4 py-2 text-center">
                             <Badge color="error">{{ req.type.libelle }}</Badge>
                         </td>
-                        <td class="px-4 py-2 text-center"> <a type="button" @click="goToError(req.timestamp)">{{
-                            formatTimestampToDate(req.timestamp) }}</a></td>
+                        <td class="px-4 py-2 text-center"> {{
+                            formatTimestampToDate(req.timestamp) }}</td>
                         <td class="px-4 py-2 text-center max-w-[250px] truncate" :title="req.page_url">{{ req.page_url
-                        }}</td>
-                        <td class="px-4 py-2 max-w-[250px] truncate" :title="req.data?.general?.url">{{
-                            req.data?.general?.url }}</td>
-                        <td class="px-4 py-2 text-center">{{ req.data?.general?.method }}</td>
+                            }}</td>
                         <td class="px-4 py-2 text-center">{{ req.data?.response?.status }}</td>
                         <td class="px-4 py-2 text-center">
                             <button type="button" @click="openModal(index)"
@@ -156,9 +151,8 @@ const fetchNext = async (nextpage) => {
 
 
 const goToError = (timestamp) => {
-    if (player.value && canGetChunk.value === false) {
-        alert('fdv')
-        player.value.goto(timestamp)
+    if (player.value) {
+        // player.value.goto(timestamp)
     }
 
 }

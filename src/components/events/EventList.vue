@@ -102,7 +102,6 @@ const handleEvents = async () => {
     try {
         await getEvents()
     } catch (err) {
-        console.log('Erreur ', err)
     }
 }
 

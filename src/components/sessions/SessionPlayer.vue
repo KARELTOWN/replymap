@@ -1,6 +1,6 @@
 <template>
 
-    <div v-if="canGetChunk == false && errorMessage !== ''">
+    <div v-if="loading == false && errorMessage !== ''">
         <div
             class="mb-3 rounded-xl border p-4 border-error-500 bg-error-50 dark:border-error-500/30 dark:bg-error-500/15">
             <div class="flex items-start gap-3">
@@ -18,7 +18,7 @@
             </div>
         </div>
     </div>
-    <div v-if="canGetChunk == true && errorMessage == ''">
+    <div v-if="loading == true && errorMessage == ''">
         <div
             class="mb-3 rounded-xl border p-4 border-blue-light-500 bg-blue-light-50 dark:border-blue-light-500/30 dark:bg-blue-light-500/15">
             <div class="flex items-start gap-3">
@@ -36,12 +36,11 @@
         </div>
     </div>
     <div>
-        <div id="player" :class="{ 'pointer-event-none': (canGetChunk === true && errorMessage == '') }" class="w-full">
-        </div>
+        <div id="player" />
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useRoute } from 'vue-router';
 import rrwebPlayer from 'rrweb-player';
 import { nextTick, onMounted, onUnmounted } from 'vue';
@@ -50,21 +49,18 @@ const session_id = ref('')
 const project_id = ref('')
 const route = useRoute()
 const loading = ref(false)
-
+const errorMessage = ref('')
 import { sessionStore } from "@/stores/session/sessionStore";
 import { storeToRefs } from "pinia";
+import { errorNotify } from '@/utils/notification';
+import ReplayWorker from '@/composables/replay-worker?worker'
+import { api, getToken } from '@/composables/request';
 const store = sessionStore()
-const { events, canGetChunk, session, chunk_skip, chunk_limit, errorMessage, player } = storeToRefs(store)
-
-const { showSession } = store
+const { session, player } = storeToRefs(store)
 
 onMounted(async () => {
     try {
         await nextTick(); // attend que le DOM soit mis à jour
-        canGetChunk.value = true
-        session.value = ''
-        chunk_skip.value = 0
-
         session_id.value = route.query.session
         project_id.value = route.query.project
 
@@ -72,15 +68,12 @@ onMounted(async () => {
             errorMessage.value = "Impossible de charger la session"
             return
         }
-        loading.value = true
-
         await readChunksContinuously()
 
     }
     catch (error) {
         errorMessage.value = "Erreur lors du chargement de la session"
         console.error(error)
-        loading.value = false
     }
 
 })
@@ -95,31 +88,43 @@ const initializePlayer = (events) => {
             width: 850
         },
     });
-
 }
+
 
 const readChunksContinuously = async () => {
     try {
-        player.value = null
-
-        while (canGetChunk.value === true) {
-            await showSession({ session_id: session_id.value, project_id: project_id.value });
-
-            if (events.value.length > 0) {
+        loading.value = true
+        const worker = new ReplayWorker()
+        worker.onmessage = (e) => {
+            const { type, events, session_data } = e.data
+            if (type === 'batch') {
+                if (!session.value?.metadata) {
+                    session.value = session_data
+                }
                 if (!player.value) {
-                    console.log("Adding events to player", events.value.length);
-                    initializePlayer(events.value);
+                    initializePlayer(events)
                 }
                 else {
-                    for (let event of events.value) {
-                        player.value.addEvent(event);
+                    for (const event of events) {
+                        player.value.addEvent(event)
                     }
                 }
-
-                loading.value = false;
+            } else if (type === 'done') {
+                if (player.value) {
+                    loading.value = false
+                    // player.value.play()
+                }
             }
-            await new Promise(resolve => setTimeout(resolve, 100));
+            else if (type === 'error') {
+                loading.value = false
+                errorMessage.value = 'Erreur de chargement de la session'
+            }
         }
+        worker.postMessage({
+            param: { session_id: session_id.value, project_id: project_id.value },
+            token: getToken(),
+            api: api
+        })
     }
     catch (error) {
         loading.value = false
@@ -132,7 +137,6 @@ onUnmounted(() => {
     session_id.value = ''
     project_id.value = ''
     player.value = null
-    canGetChunk.value = true
 });
 
 </script>

@@ -74,10 +74,8 @@ onMounted(() => {
     dictDefaultMessage: '',
     init: function () {
       this.on('addedfile', (file) => {
-        console.log('A file has been added', file)
       })
       this.on('success', (file, response) => {
-        console.log('File successfully uploaded', file, response)
       })
       this.on('error', (file, error) => {
         console.error('An error occurred during upload', file, error)

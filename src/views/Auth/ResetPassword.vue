@@ -73,8 +73,6 @@ const email = ref('')
 
 const handleSubmit = () => {
   // Handle form submission
-  console.log('Form submitted', {
-    email: email.value,
-  })
+ 
 }
 </script>

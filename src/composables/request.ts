@@ -1,5 +1,5 @@
-const api: string = import.meta.env.VITE_API_URL
-const getToken = () => {
+export const api: string = import.meta.env.VITE_API_URL
+export const getToken = () => {
   const replay_map_token = localStorage.getItem('replay_map_token')
   const data = replay_map_token !== null ? JSON.parse(replay_map_token) : null
   return data?.token
@@ -8,7 +8,7 @@ interface BodyData {
   [key: string]: unknown
 }
 
-async function customFetch(path: string, options: RequestInit): Promise<Response> {
+export async function customFetch(path: string, options: RequestInit): Promise<Response> {
   const response = await fetch(`${api}/${path}`, options)
   if (response.status === 401) {
     localStorage.removeItem('replay_map_token')

@@ -117,9 +117,7 @@ export default router
 router.beforeEach((to, from, next) => {
   document.title = `${to.meta.title} | Replay MAP`
   const replay_map_token = localStorage.getItem('replay_map_token')
-  console.log('replay_map_token', replay_map_token)
   const data = replay_map_token !== null ? JSON.parse(replay_map_token) : null
-  console.log('replay_map_data', data)
 
   const token = data?.token
 
