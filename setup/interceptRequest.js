@@ -108,10 +108,8 @@ const sendInterceptData = _.debounce(async () => {
 
 window.addEventListener("beforeunload", () => {
   if (intercepts.length > 0) {
-    navigator.sendBeacon(
-      "event/store",
-      JSON.stringify({ events: intercepts })
-    );
+    navigator.sendBeacon("event/store", JSON.stringify({ events: intercepts }));
+    saveIntercepts([]);
   }
 });
 
@@ -121,7 +119,8 @@ const avoid_records_urls = (url) => {
     url.includes("session/end") ||
     url.includes("chunk/store") ||
     url.includes("event/store") ||
-    url.includes("api.ipify.org")
+    url.includes("api.ipify.org") ||
+    url.includes("session/show")
   ) {
     return true;
   }

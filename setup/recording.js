@@ -1,7 +1,7 @@
 import _ from "lodash";
 import { v4 as uuidV4 } from "uuid";
 import * as rrweb from "rrweb";
-import { fetchPost } from "../utils/request";
+import { fetchGet, fetchPost } from "../utils/request";
 import { getIpAdress } from "../utils/ipAdress";
 import { project_id } from "../record.js";
 import setCookie from "../utils/cookie.js";
@@ -27,6 +27,8 @@ export default async function initializeRecord() {
   let retryCreateSession = 0;
   const INACTIVITY_LIMIT = 30 * 60 * 1000;
   let inactivityTimeout = null;
+  let retryFetchSessionInfo = 0;
+  let maxFetchSessionInfo = 5;
 
   const setInactivityTimeout = () => {
     return setTimeout(async () => {
@@ -56,10 +58,8 @@ export default async function initializeRecord() {
     try {
       const res = await fetchPost("chunk/store", payload);
       const result = await res.json();
-      console.log("chunk store result", result);
       session_events = _.differenceWith(session_events, chunks, _.isEqual);
       saveSessionEvents(session_events);
-      events = [];
     } catch (error) {
       console.error(error);
     }
@@ -79,6 +79,7 @@ export default async function initializeRecord() {
       stopRecording = rrweb.record({
         emit(event) {
           resetInactivityTimeout();
+
           const lastEvent = events[events.length - 1];
           // Cela empêche l’enregistrement d’un événement identique consécutif.
           if (!_.isEqual(lastEvent, event)) {
@@ -106,9 +107,48 @@ export default async function initializeRecord() {
   };
 
   const startSession = async () => {
+    let session_info = null;
+    let isEnded = false;
     if (session_id) {
-      record();
-    } else {
+      while (
+        session_info == null &&
+        retryFetchSessionInfo <= maxFetchSessionInfo
+      ) {
+        try {
+          const response = await fetchGet(`session/show/${session_id}`);
+          if (response.ok) {
+            session_info = response.json();
+            isEnded = session_info.endedAt ? true : false;
+            if (isEnded === false) {
+              record();
+              break;
+            } else {
+              localStorage.removeItem("track_bug_session_id");
+              break;
+            }
+          } else {
+            retryFetchSessionInfo++;
+          }
+        } catch (error) {
+          retryFetchSessionInfo++;
+          console.log(
+            "Echec tentative de récupération des informations de la session existante : " +
+              retryFetchSessionInfo
+          );
+          console.log(
+            "Echec tentative de récupération des informations de la session existant",
+            error
+          );
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+      }
+      if (session_info == null) {
+        console.error(
+          "REPLAY MAP : Impossible de récupérer les informations de la session existante"
+        );
+      }
+    }
+    if (!session_id || (session_id && isEnded === true)) {
       let cookie = setCookie();
       const localization = await getIpAdress();
       let session_data = {
@@ -165,7 +205,7 @@ export default async function initializeRecord() {
     };
     try {
       const result = await fetchPost("session/end", payload);
-      const data  = await result.json();
+      const data = await result.json();
       if (result.ok) {
         session_id = null;
       }
@@ -186,10 +226,7 @@ export default async function initializeRecord() {
         "/chunk/store",
         JSON.stringify({ project_id, events: session_events })
       );
-      // localStorage.setItem(
-      //   "replay_map_record_events",
-      //   JSON.stringify(session_events)
-      // );
+      saveSessionEvents([]);
     }
   });
 

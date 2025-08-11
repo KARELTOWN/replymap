@@ -66,6 +66,8 @@ export default function eventTracker() {
       let session_id = getSessionId();
 
       if (session_id) {
+              console.log("jjkjkjk", 1);
+
         events.push({
           target: getSelector(e.target),
           timestamp: Date.now(),
@@ -75,7 +77,11 @@ export default function eventTracker() {
 
     setInterval(() => {
       let session_id = getSessionId();
+      console.log("session_id", session_id);
+
       if (session_id) {
+        console.log("events", events);
+
         //récuperer les éléments stockés les 2 dernières secondes
         const lastEvents = events.filter(
           (e) => Date.now() - e.timestamp < 2000
@@ -91,7 +97,7 @@ export default function eventTracker() {
 
         let newData = 0;
         for (const [item, count] of clickCounts.entries()) {
-          if (count >= 3) {
+          if (count >= 2) {
             newData++;
             allEvents.push({
               type: "rage_click",
@@ -108,10 +114,10 @@ export default function eventTracker() {
           }
         }
         if (newData > 0) {
+          events = [];
           saveEvents(allEvents);
         }
       }
-      events = [];
     }, 2000);
   };
 
@@ -126,18 +132,14 @@ export default function eventTracker() {
     }
     return element.tagName.toLowerCase();
   };
-
   //envoyer les evenements vers le serveur backend pour stockage
   const storeEvents = async (data) => {
-    console.log("Evenements envoyés", data);
-
     const response = await fetchPost("event/store", { events: data });
     if (!response.ok) {
       throw new Error("Erreur d'enregistrement des evenements");
     } else {
       allEvents = _.differenceWith(allEvents, data, _.isEqual);
       saveEvents(allEvents);
-      console.log("Evenements enregistrés");
     }
   };
 
@@ -145,17 +147,19 @@ export default function eventTracker() {
   rageClickTracker();
   setInterval(async () => {
     if (allEvents.length > 0) {
+      console.log("ccd");
+      saveEvents(allEvents);
       await storeEvents(allEvents);
     }
   }, 1000);
 
-  // window.addEventListener("beforeunload", () => {
-  //   if (allEvents.length > 0) {
-  //     navigator.sendBeacon(
-  //       "event/store",
-  //       JSON.stringify({ events: allEvents })
-  //     );
-  //     saveEvents([]);
-  //   }
-  // });
+  window.addEventListener("beforeunload", () => {
+    if (allEvents.length > 0) {
+      navigator.sendBeacon(
+        "event/store",
+        JSON.stringify({ events: allEvents })
+      );
+      saveEvents([]);
+    }
+  });
 }
