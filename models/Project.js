@@ -33,13 +33,27 @@ const ProjectSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-    active_recording: {
-      type: Boolean,
-      default: true
-    },
-    active_track_errors: {
-      type: Boolean,
-      default: true
+    track: {
+      // Activé l'enregistrement de session
+      active_recording: {
+        type: Boolean,
+        default: true,
+      },
+      // Activé le suivi des erreurs : Erreurs de requêtes, erreurs javascript, erreurs de la console ...
+      active_track_errors: {
+        type: Boolean,
+        default: true,
+      },
+      // Activé le suivi des événements: Rageclick, Rebond, Pages visités par sessions, etc ...
+      active_event_issues: {
+        type: Boolean,
+        default: true,
+      },
+      // Activé le suivi des performances, pour détecter les requêtes qui prennent du temps (>= 1 seconde)
+      active_performance_issues: {
+        type: Boolean,
+        default: true,
+      },
     },
   },
   {

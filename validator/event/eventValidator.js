@@ -44,6 +44,9 @@ export const validateStoreEvent = [
         ) {
           throw new Error("Erreur tracké invalide");
         }
+        if (!item.data) {
+          throw new Error("Data Obligatoire");
+        }
         if (!item.uniqueId || !validator.isUUID(item.uniqueId)) {
           throw new Error("Identifiant d'événement invalide.");
         }
@@ -93,26 +96,24 @@ export const validateEventFilter = [
     }
   }),
 
-  body("session")
-    .custom(async (value) => {
-      if (value) {
-        let session_exist = await Session.findById(value);
-        if (!session_exist) {
-          throw new Error("La session n'existe pas");
-        }
-        return true;
+  body("session").custom(async (value) => {
+    if (value) {
+      let session_exist = await Session.findById(value);
+      if (!session_exist) {
+        throw new Error("La session n'existe pas");
       }
-    }),
-  body("project")
-    .custom(async (value) => {
-      if (value) {
-        let project_exist = await Project.findById(value);
-        if (!project_exist) {
-          throw new Error("Le projet n'existe pas");
-        }
-        return true;
+      return true;
+    }
+  }),
+  body("project").custom(async (value) => {
+    if (value) {
+      let project_exist = await Project.findById(value);
+      if (!project_exist) {
+        throw new Error("Le projet n'existe pas");
       }
-    }),
+      return true;
+    }
+  }),
   body("type").custom(async (value) => {
     if (value) {
       let type_exist = await EventType.findById(value);

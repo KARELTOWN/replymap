@@ -1,4 +1,4 @@
-import { body, query } from "express-validator";
+import { body, param, query } from "express-validator";
 import Project from "../../models/Project.js";
 import Session from "../../models/Session.js";
 import moment from "moment";
@@ -23,9 +23,8 @@ export const validateCreateSession = [
     .custom((value) => {
       if (!validator.isUUID(value)) {
         throw new Error("UUID attendu.");
-      }
-      else {
-        return true
+      } else {
+        return true;
       }
     }),
   body("first_visit")
@@ -59,18 +58,21 @@ export const validateUpdateEndAt = [
 ];
 
 export const validateShowSession = [
-  body("project_id")
+  param("session_id")
     .notEmpty()
-    .withMessage("Le libelle est obligatoire")
+    .withMessage("La session est obligatoire")
     .custom(async (value) => {
       if (value) {
-        let project_exist = await Project.findById(value);
-        if (!project_exist) {
-          throw new Error("Le projet n'existe pas");
+        let session_exist = await Session.findById(value);
+        if (!session_exist) {
+          throw new Error("La session n'existe pas");
         }
         return true;
       }
     }),
+];
+
+export const validateShowSessionWithChunks = [
   body("session_id")
     .notEmpty()
     .withMessage("La session est obligatoire")

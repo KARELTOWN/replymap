@@ -3,16 +3,29 @@ const ProjectRouter = express.Router();
 import {
   validateProject,
   validateShowProject,
-  validateFilterProject
+  validateFilterProject,
+  validateUpdateProject,
 } from "../../validator/project/projectValidator.js";
 import projectController from "../../controllers/project/projectController.js";
-const { createProject, getProjects, showProject, filterProjects } = projectController();
+const {
+  createProject,
+  getProjects,
+  showProject,
+  filterProjects,
+  updateProject,
+} = projectController();
 import paginateData from "../../helpers/pagination.js";
 import { validatePaginationQuery } from "../../validator/generalValidator.js";
 import isauthentificate from "../../middleware/isAuthentificate.js";
 import { blacklist } from "../../middleware/blacklist.js";
 
-ProjectRouter.post("/create", isauthentificate, blacklist, validateProject, createProject);
+ProjectRouter.post(
+  "/create",
+  isauthentificate,
+  blacklist,
+  validateProject,
+  createProject
+);
 ProjectRouter.get(
   "/get",
   isauthentificate,
@@ -20,6 +33,14 @@ ProjectRouter.get(
   validatePaginationQuery,
   paginateData,
   getProjects
+);
+
+ProjectRouter.put(
+  "/update/:project_id",
+  isauthentificate,
+  blacklist,
+  validateUpdateProject,
+  updateProject
 );
 
 ProjectRouter.post(
@@ -31,7 +52,6 @@ ProjectRouter.post(
   validateFilterProject,
   filterProjects
 );
-
 
 ProjectRouter.get("/show/:id", validateShowProject, showProject);
 

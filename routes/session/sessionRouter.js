@@ -5,6 +5,7 @@ import {
   validateUpdateEndAt,
   validateShowSession,
   validateFilterSession,
+  validateShowSessionWithChunks,
 } from "../../validator/session/sessionValidator.js";
 import sessionController from "../../controllers/session/sessionController.js";
 const {
@@ -13,6 +14,7 @@ const {
   showSession,
   getSessions,
   filterSessions,
+  showSessionWithChunks
 } = sessionController();
 import paginateData from "../../helpers/pagination.js";
 import {
@@ -38,13 +40,19 @@ SessionRouter.get(
   getSessions
 );
 
+SessionRouter.get(
+  "/show/:session_id",
+  validateShowSession,
+  showSession
+);
+
 SessionRouter.post(
-  "/show",
+  "/show_with_chunks",
   isauthentificate,
   blacklist,
   validateLimitSkipQuery,
-  validateShowSession,
-  showSession
+  validateShowSessionWithChunks,
+  showSessionWithChunks
 );
 
 SessionRouter.post(

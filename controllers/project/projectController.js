@@ -47,11 +47,13 @@ export default function projectController() {
         message: "Projet créé",
         data: {
           project: {
+            _id: project._id,
             libelle: project.libelle,
             link: project.link,
             active: project.active,
             createdAt: project.createdAt,
             tracking_code: project.tracking_code,
+            track: project.track,
           },
         },
       });
@@ -85,8 +87,7 @@ export default function projectController() {
             libelle: project.libelle,
             link: project.link,
             active: project.active,
-            active_recording: project.active_recording,
-            active_track_errors: project.active_track_errors,
+            track: project.track,
           },
         });
       }
@@ -124,6 +125,36 @@ export default function projectController() {
       res.status(200).json({
         message: "Projets récupérées",
         data: data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  const updateProject = async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(422).json({ errors: errors.array() });
+      }
+      const data = matchedData(req);
+      let project = await Project.findByIdAndUpdate(data.project_id, data, {
+        new: true,
+      });
+
+      res.status(200).json({
+        message: "Projet modifié",
+        data: {
+          project: {
+            _id: project._id,
+            libelle: project.libelle,
+            link: project.link,
+            active: project.active,
+            createdAt: project.createdAt,
+            tracking_code: project.tracking_code,
+            track: project.track,
+          },
+        },
       });
     } catch (error) {
       next(error);
@@ -182,5 +213,6 @@ export default function projectController() {
     getProjects,
     showProject,
     filterProjects,
+    updateProject,
   };
 }

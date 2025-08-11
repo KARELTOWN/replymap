@@ -24,7 +24,7 @@ export default function eventController() {
   const getIssues = async (req, res, next) => {
     try {
       const { limit, skip, page } = req.pagination;
-      const result = await EventModelFilter(req, {}, skip, limit, true);
+      const result = await EventModelFilter(req, {}, skip, limit, false);
       const { total_issues, issues_list } = result;
       const data = {
         events: issues_list,
