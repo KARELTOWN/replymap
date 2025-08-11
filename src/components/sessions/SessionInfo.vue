@@ -39,13 +39,13 @@
 
             <div>
               <p class="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">Hauteur écran</p>
-              <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ session?.metadata?.availHeight
+              <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ session?.metadata?.height
               }}</p>
             </div>
 
             <div>
               <p class="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">Largeur écran</p>
-              <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ session?.metadata?.availWidth
+              <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ session?.metadata?.width
               }}</p>
             </div>
 

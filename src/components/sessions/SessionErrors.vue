@@ -40,7 +40,7 @@
                         <td class="px-4 py-2 text-center">
                             <Badge color="error">{{ req.type.libelle }}</Badge>
                         </td>
-                        <td class="px-4 py-2 text-center"> {{
+                        <td class="px-4 py-2 text-center">{{
                             formatTimestampToDate(req.timestamp) }}</td>
                         <td class="px-4 py-2 text-center max-w-[250px] truncate" :title="req.page_url">{{ req.page_url
                             }}</td>
@@ -150,12 +150,12 @@ const fetchNext = async (nextpage) => {
 }
 
 
-const goToError = (timestamp) => {
-    if (player.value) {
-        // player.value.goto(timestamp)
-    }
-
-}
+// const goToError = (timestamp) => {
+//     if (player.value) {
+//         console.log('timestamp', timestamp)
+//         player.value.goto(timestamp)
+//     }
+// }
 
 
 </script>

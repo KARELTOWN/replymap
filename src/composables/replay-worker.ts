@@ -9,7 +9,7 @@ self.onmessage = async (e: MessageEvent) => {
   async function getChunksLoop() {
     while (true) {
       try {
-        const result = await fetch(`${api}/session/show?skip=${chunk_skip}&limit=${chunk_limit}`, {
+        const result = await fetch(`${api}/session/show_with_chunks?skip=${chunk_skip}&limit=${chunk_limit}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json;charset=utf-8',

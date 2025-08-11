@@ -6,7 +6,7 @@
         <h5 class="mb-2 font-semibold text-gray-800 modal-title text-theme-xl dark:text-white/90 lg:text-2xl">
           {{ selectProject ? 'Modifier le Projet' : 'Ajouter un Projet' }}
         </h5>
-        <form class="flex flex-col" @submit.prevent="handleSubmit">
+        <form class="flex flex-col custom-scrollbar max-h-[458px] overflow-y-auto p-2" @submit.prevent="handleSubmit">
           <div class="mt-8">
             <div>
               <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
@@ -33,7 +33,7 @@
               </div>
             </div>
 
-            <div class="mt-6" v-if="tracking_code">
+            <div class="mt-6" v-if="tracking_code && !selectProject">
               <div>
                 <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"> Script </label>
                 <em>Intégrer ce script dans le pied de page de votre site (FOOTER)</em>
@@ -51,6 +51,60 @@
                   <input v-model="tracking_code" type="text"
                     class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent py-3 pl-4 pr-[90px] text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800" />
                 </div>
+              </div>
+            </div>
+
+            <div class="mt-6" v-if="selectProject">
+              <div>
+                <label class="mb-1.5 block text-md font-medium text-gray-700 dark:text-gray-400">
+                  <strong>Fonctionnalitées</strong>
+                </label>
+                <div>
+                  <p v-if="errors.track" style="color: red">{{ errors.track }}</p>
+                </div>
+                <div class="grid grid-cols-1">
+                  <div class="mb-3">
+                    <div class="text-sm text-gray-500"><em>Activer l'enregistrement d'écran pour voir un directe ce que
+                        font les
+                        visiteurs sur votre site</em></div>
+                    <div class="flex flex-items gap-5"><label for="active_recording">Enregistrer l'écran</label> <input
+                        type='checkbox' :checked="track.active_recording"
+                        @change="track.active_recording = !track.active_recording" id="active_recording"></div>
+                  </div>
+                  <div class="mb-3">
+                    <div class="text-sm text-gray-500"><em>Activer le suivi des erreurs : Erreurs de requêtes, erreurs
+                        javascript,
+                        erreurs de la console ...</em></div>
+                    <div class="flex flex-items gap-5"><label for="active_track_errors">Tracker les erreurs</label>
+                      <input type='checkbox' :checked="track.active_track_errors"
+                        @change="track.active_track_errors = !track.active_track_errors" id="active_track_errors">
+                    </div>
+                  </div>
+
+                  <div class="mb-3">
+                    <div class="text-sm text-gray-500"><em>Activer le suivi des événements: Rageclick, Rebond, Pages
+                        visités par
+                        sessions, etc ...</em></div>
+                    <div class="flex flex-items gap-5"><label for="active_event_issues">Tracker les événements</label>
+                      <input type='checkbox' :checked="track.active_event_issues"
+                        @change="track.active_event_issues = !track.active_event_issues" id="active_event_issues">
+                    </div>
+                  </div>
+
+                  <div class="mb-3">
+                    <div class="text-sm text-gray-500"><em>Activer le suivi des performances, pour détecter les requêtes
+                        qui prennent du temps (>= 1 seconde)</em></div>
+                    <div class="flex flex-items gap-5"><label for="active_performance_issues">Tracker les
+                        performances</label>
+                      <input type='checkbox'
+                        @change="track.active_performance_issues = !track.active_performance_issues"
+                        :checked="track.active_performance_issues" id="active_performance_issues">
+                    </div>
+                  </div>
+
+                </div>
+
+
               </div>
             </div>
 
@@ -75,7 +129,7 @@
 
 <script setup>
 
-import { ref, reactive, onMounted, watchEffect } from 'vue'
+import { ref, reactive, onMounted, watchEffect, watch } from 'vue'
 import Modal from '@/components/profile/Modal.vue'
 
 import { projectStore } from "@/stores/project/projectStore";
@@ -83,12 +137,11 @@ import { storeToRefs } from "pinia";
 const store = projectStore()
 const { errors,
   projectSuccess,
-  tracking_code } = storeToRefs(store)
-const { createProject } = store
+  tracking_code, selectProject } = storeToRefs(store)
+const { createProject, updateProject } = store
 const isOpen = ref(false)
 const libelle = ref('')
 const link = ref('')
-const selectProject = ref(false)
 const props = defineProps({
   open: {
     type: String,
@@ -97,11 +150,29 @@ const props = defineProps({
 })
 
 const emits = defineEmits(['close'])
+let track = ref({})
 
 onMounted(() => {
   errors.value = {}
   tracking_code.value = ''
 })
+
+watch(
+  () => selectProject.value,
+  (newValue, oldvalue) => {
+    console.log('newvalue', newValue)
+    if (newValue) {
+      libelle.value = newValue.libelle
+      link.value = newValue.link
+      track.value = newValue.track
+    }
+    else {
+      libelle.value = ''
+      link.value = ''
+      track.value = {}
+    }
+  }
+)
 
 watchEffect(() => {
   if (props.open && props.open !== undefined) {
@@ -118,6 +189,7 @@ const closeModal = () => {
 const resetModalFields = () => {
   libelle.value = ''
   link.value = ''
+  track.value = {}
 }
 
 const disableBtn = ref(false)
@@ -125,16 +197,38 @@ const disableBtn = ref(false)
 const handleSubmit = async () => {
   try {
     disableBtn.value = true
-    await createProject({
-      libelle: libelle.value,
-      link: link.value
-    })
-    disableBtn.value = false
+    if (selectProject.value == '') {
+      await createProject({
+        libelle: libelle.value,
+        link: link.value
+      })
+      disableBtn.value = false
 
-    if (projectSuccess.value === true) {
-      libelle.value = ''
-      link.value = ''
+      if (projectSuccess.value === true) {
+        libelle.value = ''
+        link.value = ''
+      }
     }
+    else {
+      console.log('events', {
+        libelle: libelle.value,
+        link: link.value,
+        track: track.value,
+        project_id: selectProject.value._id,
+      })
+      disableBtn.value = false
+
+      await updateProject({
+        libelle: libelle.value,
+        link: link.value,
+        track: track.value,
+        project_id: selectProject.value._id,
+      })
+      if (projectSuccess.value === true) {
+        closeModal()
+      }
+    }
+
 
   } catch (err) {
     disableBtn.value = false

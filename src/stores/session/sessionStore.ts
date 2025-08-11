@@ -77,7 +77,7 @@ export const sessionStore = defineStore('session-store', () => {
       errorMessage.value = ''
       events.value = []
       const result = await fetchPost(
-        `session/show?skip=${chunk_skip.value}&limit=${chunk_limit.value}`,
+        `session/show_with_chunks?skip=${chunk_skip.value}&limit=${chunk_limit.value}`,
         data,
       )
       const response = await handleAppError(result)

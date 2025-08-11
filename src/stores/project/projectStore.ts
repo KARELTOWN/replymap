@@ -1,10 +1,10 @@
-import { fetchGet, fetchPost } from '@/composables/request'
+import { fetchGet, fetchPost, fetchPut } from '@/composables/request'
 import { handleAppError, handleCatchError } from '@/utils/handleAppError'
 import { defineStore } from 'pinia'
 import { reactive, ref } from 'vue'
 import projectValidator from '@/validator/project'
 import { successNotify } from '@/utils/notification'
-const { validateCreate } = projectValidator()
+const { validateCreate, validateUpdate } = projectValidator()
 export const projectStore = defineStore('project-store', () => {
   const errors = ref({})
   const search_errors = ref({})
@@ -20,6 +20,9 @@ export const projectStore = defineStore('project-store', () => {
     start_date: '',
     end_date: '',
   })
+  let selectProject = ref('')
+  let openModal = ref(false)
+
   const updatePagination = () => {
     total.value += 1
     totalPages.value = Math.ceil(total.value / limit.value)
@@ -96,8 +99,40 @@ export const projectStore = defineStore('project-store', () => {
     }
   }
 
+  const updateProject = async (data) => {
+    try {
+      projectSuccess.value = false
+      errors.value = {}
+      const schemaProject = validateUpdate()
+      const data_result = await schemaProject.validate(data, { abortEarly: false })
+      const result = await fetchPut(`project/update/${data_result.project_id}`, data_result)
+      const response = await handleAppError(result)
+      if (response.status === true) {
+        if (response.errors) {
+          errors.value = response.errors
+        }
+      } else {
+        if (response?.data) {
+          projectSuccess.value = true
+          let project_index = projects.value.findIndex(
+            (item) => item._id === data_result.project_id,
+          )
+          console.log('find index', project_index)
+          projects.value[project_index] = response.data.project
+          successNotify('Projet modifié')
+        }
+      }
+    } catch (err) {
+      const result = handleCatchError(err)
+      if (result) {
+        errors.value = result
+      }
+    }
+  }
+
   return {
     createProject,
+    updateProject,
     getProjects,
     errors,
     projects,
@@ -110,5 +145,7 @@ export const projectStore = defineStore('project-store', () => {
     filterProjects,
     search_errors,
     search_form,
+    selectProject,
+    openModal
   }
 })

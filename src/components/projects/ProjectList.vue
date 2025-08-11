@@ -56,6 +56,10 @@
                             <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{
                                 moment(project.createdAt).format('DD-MM-YYYY HH:mm:ss') }}</p>
                         </td>
+                        <td>
+                            <Button @click="update(project)" size="sm" variant="outline" :startIcon="SettingsIcon">
+                            </Button>
+                        </td>
                     </tr>
                 </tbody>
             </table>
@@ -67,6 +71,11 @@
 import { onMounted, ref } from 'vue'
 import Button from '../ui/Button.vue';
 import TaskIcon from '@/icons/TaskIcon.vue';
+import SettingsIcon from '@/icons/SettingsIcon.vue'
+import { projectStore } from "@/stores/project/projectStore";
+import { storeToRefs } from "pinia";
+import moment from 'moment';
+
 
 const copyScript = (data, index) => {
     navigator.clipboard.writeText(data)
@@ -79,12 +88,10 @@ const copyScript = (data, index) => {
     }, 1000)
 }
 
-import { projectStore } from "@/stores/project/projectStore";
-import { storeToRefs } from "pinia";
-import moment from 'moment';
+
 const store = projectStore()
 const {
-    projects } = storeToRefs(store)
+    projects, selectProject, openModal, errors } = storeToRefs(store)
 
 const { getProjects } = store
 
@@ -98,7 +105,12 @@ const handleProjects = async () => {
     } catch (err) {
     }
 }
+
+const update = (project) => {
+    errors.value = {}
+    selectProject.value = project
+    openModal.value = true
+}
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>

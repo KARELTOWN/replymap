@@ -4,7 +4,7 @@
     <div class="space-y-5 sm:space-y-6">
       <ComponentCard title="Projets">
         <div>
-          <button type="button" @click="openModal = true"
+          <button type="button" @click="open()"
             class="flex items-center justify-center w-64 px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
             Ajouter un projet
           </button>
@@ -22,7 +22,7 @@
           </div>
 
         </div>
-        <CreateProject :open="openModal" @close="openModal = false" />
+        <CreateProject :open="openModal" @close="close" />
       </ComponentCard>
     </div>
   </AdminLayout>
@@ -37,7 +37,6 @@ import ProjectList from "@/components/projects/ProjectList.vue";
 const currentPageTitle = ref("Projets");
 import CreateProject from '@/components/projects/CreateProject.vue'
 import SearchPanel from '@/components/projects/SearchPanel.vue'
-const openModal = ref(false)
 import { projectStore } from "@/stores/project/projectStore";
 import { storeToRefs } from "pinia";
 const store = projectStore()
@@ -46,12 +45,23 @@ const { errors,
   total,
   page,
   limit,
-  totalPages } = storeToRefs(store)
+  totalPages, selectProject, openModal } = storeToRefs(store)
 const { getProjects } = store
 
 const fetchNext = async (nextpage) => {
   page.value = nextpage
   await getProjects()
+}
+
+const open = () => {
+  errors.value = {}
+  selectProject.value = ''
+  openModal.value = true
+}
+
+const close = () => {
+  selectProject.value = ''
+  openModal.value = false
 }
 import Pagination from "@/components/pagination/Pagination.vue";
 </script>

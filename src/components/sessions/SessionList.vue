@@ -48,7 +48,7 @@
                             <p class="text-gray-500 text-theme-sm text-sm/6 dark:text-gray-400">
                                 <Badge color="primary">
                                     {{ session.uniqueId }}
-                                </Badge> 
+                                </Badge>
                             </p>
                         </td>
                         <td class="px-5 py-4 sm:px-6">
@@ -146,8 +146,12 @@ const openDetail = (session) => {
 }
 
 const dureeSession = (start, end) => {
-    const start_date = moment(start)
-    const end_date = moment(end)
-    return end_date.diff(start_date, "minutes")
+    if (end && start) {
+        const start_date = moment(start)
+        const end_date = moment(end)
+        return end_date.diff(start_date, "minutes")
+    }
+    return '---'
+
 }
 </script>

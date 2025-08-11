@@ -31,7 +31,7 @@
                                 class="bg-gray-100 p-2 rounded text-xs overflow-x-auto">{{ request.data?.general?.body }}</pre>
                         </div>
                         <div v-if="request.data && request.type.libelle !== 'request_errors'">
-                            <p class="mb-1"><strong>Erreur</strong></p>
+                            <p class="mb-1"><strong>Données</strong></p>
                             <pre class="bg-gray-100 p-2 rounded text-xs overflow-x-auto">{{ request.data }}</pre>
                         </div>
 
