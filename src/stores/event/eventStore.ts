@@ -16,7 +16,23 @@ export const eventStore = defineStore('event-store', () => {
     search: '',
     start_date: '',
     end_date: '',
+    eventtype: '',
   })
+  const eventtypes = ref([])
+
+  const getEventTypes = async () => {
+    try {
+      const result = await fetchGet(`event/get-type`)
+      const response = await handleAppError(result)
+      if (response.status === false) {
+        if (response?.data) {
+          eventtypes.value = response.data
+        }
+      }
+    } catch (err) {
+      handleCatchError(err)
+    }
+  }
 
   const getEvents = async () => {
     try {
@@ -36,10 +52,13 @@ export const eventStore = defineStore('event-store', () => {
     }
   }
 
-  const filterEvents = async (data) => {
+  const filterEvents = async () => {
     try {
       search_errors.value = {}
-      const result = await fetchPut(`event/filter?limit=${limit.value}&page=${page.value}`, data)
+      const result = await fetchPut(
+        `event/filter?limit=${limit.value}&page=${page.value}`,
+        search_form,
+      )
       const response = await handleAppError(result)
       if (response.status === false) {
         if (response?.data) {
@@ -59,7 +78,6 @@ export const eventStore = defineStore('event-store', () => {
     }
   }
 
-
   return {
     getEvents,
     errors,
@@ -72,5 +90,7 @@ export const eventStore = defineStore('event-store', () => {
     filterEvents,
     search_errors,
     search_form,
+    getEventTypes,
+    eventtypes,
   }
 })
