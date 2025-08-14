@@ -114,11 +114,11 @@ export const validateEventFilter = [
       return true;
     }
   }),
-  body("type").custom(async (value) => {
+  body("eventtype").custom(async (value) => {
     if (value) {
       let type_exist = await EventType.findById(value);
       if (!type_exist) {
-        throw new Error("Le type n'existe pas");
+        throw new Error("Le type d'événement n'existe pas");
       }
       return true;
     }

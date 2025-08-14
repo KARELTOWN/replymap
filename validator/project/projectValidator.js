@@ -4,6 +4,7 @@ import Project from "../../models/Project.js";
 import moment from "moment";
 import _ from "lodash";
 import Session from "../../models/Session.js";
+import Events from "../../models/Events.js";
 
 export const validateProject = [
   body("libelle").notEmpty().withMessage("Le libelle est obligatoire"),
@@ -38,7 +39,6 @@ export const validateUpdateProject = [
     .trim()
     .custom(async (value, { req }) => {
       const { project_id } = req.params;
-      console.log("project_id", project_id);
       const projet = await Project.exists({
         link: value,
         _id: { $nin: [project_id] },
@@ -46,6 +46,19 @@ export const validateUpdateProject = [
       if (projet) {
         throw new Error("Existe déjà");
       }
+      let myproject = await Project.findOne({ _id: project_id });
+      if (myproject.link !== value) {
+        let session_exist = await Session.exists({
+          project_id: project_id,
+        }).exec();
+        let event_exist = await Events.exists({ project: project_id });
+        if (session_exist || event_exist) {
+          throw new Error(
+            "Modification impossible. Le projet a déjà en cours d'utilisation"
+          );
+        }
+      }
+
       return true;
     }),
   body("libelle")
@@ -59,15 +72,6 @@ export const validateUpdateProject = [
       });
       if (projet) {
         throw new Error("Existe déjà");
-      }
-      return true;
-    }),
-  body("track")
-    .optional()
-    .custom((value) => {
-      console.log("track", value);
-      if (!_.isObject(value)) {
-        throw new Error("Un objet est attendu");
       }
       return true;
     }),
