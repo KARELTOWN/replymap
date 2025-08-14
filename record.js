@@ -16,15 +16,15 @@ if (res?.status == "error") {
   throw new Error(res.message);
 } else if (res?.status == "success") {
   if (res.data.track.active_recording === true) {
-    // initializeRecord();
+    initializeRecord();
   }
   if (res.data.track.active_track_errors === true) {
-    // interceptRequest();
+    interceptRequest();
   }
   if (res.data.track.active_event_issues === true) {
-    // eventTracker();
+    eventTracker();
   }
   if (res.data.track.active_performance_issues === true) {
-    // observer.observe({ buffered: true, entryTypes: ["resource"] });
+    observer.observe({ buffered: true, entryTypes: ["resource"] });
   }
 }

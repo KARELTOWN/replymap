@@ -66,8 +66,6 @@ export default function eventTracker() {
       let session_id = getSessionId();
 
       if (session_id) {
-              console.log("jjkjkjk", 1);
-
         events.push({
           target: getSelector(e.target),
           timestamp: Date.now(),
@@ -147,11 +145,10 @@ export default function eventTracker() {
   rageClickTracker();
   setInterval(async () => {
     if (allEvents.length > 0) {
-      console.log("ccd");
       saveEvents(allEvents);
       await storeEvents(allEvents);
     }
-  }, 1000);
+  }, 4000);
 
   window.addEventListener("beforeunload", () => {
     if (allEvents.length > 0) {

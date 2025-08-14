@@ -2,7 +2,6 @@ import _ from "lodash";
 import { project_id } from "../record";
 import { fetchPost } from "../utils/request";
 import { v4 } from "uuid";
-let speed = 0;
 let performances = [];
 const getPerformance = () => {
   return JSON.parse(localStorage.getItem("replay_map_performance_issues"));
@@ -16,13 +15,12 @@ const setPerformance = (data) => {
 };
 export const observer = new PerformanceObserver((list) => {
   list.getEntries().forEach((entry) => {
-    if (entry.entryType === "resource") {
+    if (entry.entryType === "resource" && !isRecordResource(entry)) {
       const timeToFetch = entry.responseEnd - entry.fetchStart;
       const timeInSecond = timeToFetch / 1000;
 
       if (timeInSecond >= 1) {
-        let exist = performances.find((item) => item?.data?.name == entry.name);
-        if (exist == undefined) {
+        if (!existPerformance(entry)) {
           let newPerformance = {
             type: "performance_issues",
             project: project_id,
@@ -45,8 +43,21 @@ export const observer = new PerformanceObserver((list) => {
   });
 });
 
+const existPerformance = (entry) => {
+  const performances = getPerformance();
+  if (performances !== null) {
+    let exist = performances.find((item) => item.data.name === entry.name);
+    return exist === undefined ? false : true;
+  }
+  return false;
+};
+
+const isRecordResource = (entry) => {
+  return entry.name.includes(`${import.meta.env.VITE_BACKEND_URL}`);
+};
+
 //envoyer les evenements vers le serveur backend pour stockage
-const storePerformance = async () => {
+const storePerformance = _.debounce(async () => {
   try {
     let data = getPerformance();
     const response = await fetchPost("event/store", { events: data });
@@ -59,4 +70,15 @@ const storePerformance = async () => {
   } catch (error) {
     throw new Error(error);
   }
-};
+}, 4000);
+
+window.addEventListener("unload", () => {
+  const performances = getPerformance();
+  if (performances.length > 0) {
+    navigator.sendBeacon(
+      "event/store",
+      JSON.stringify({ events: performances })
+    );
+    setPerformance([]);
+  }
+});
