@@ -2,6 +2,8 @@ import { SchemaTypes } from "mongoose";
 import mongoose from "../config/mongodb.js";
 
 import _ from "lodash";
+import { isAdmin } from "../utils/util.js";
+import { user_connect_projects } from "./UserProject.js";
 
 const EventsSchema = new mongoose.Schema(
   {
@@ -41,6 +43,15 @@ const EventsSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+export const user_connect_events = async (req) => {
+  if (isAdmin(req)) {
+    return await Events.find({}).exec();
+  } else {
+    let projects = user_connect_projects(req);
+    return await Events.find({ project: { $in: projects } }).exec();
+  }
+};
 
 const Events = mongoose.model("Events", EventsSchema);
 export default Events;

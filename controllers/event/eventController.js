@@ -4,6 +4,7 @@ import {
   EventModelFilter,
 } from "../../services/event/eventService.js";
 import moment from "moment";
+import EventType from "../../models/EventType.js";
 export default function eventController() {
   const createEvents = async (req, res, next) => {
     try {
@@ -76,8 +77,8 @@ export default function eventController() {
       if (data.session) {
         query.session = { $eq: data.session };
       }
-      if (data.type) {
-        query.type = { $eq: data.type };
+      if (data.eventtype) {
+        query.type = { $eq: data.eventtype };
       }
 
       let error = null;
@@ -105,9 +106,22 @@ export default function eventController() {
     }
   };
 
+  const getEventTypes = async (req, res, next) => {
+    try {
+      const result = await EventType.find({}).sort({ libelle: 1 });
+      res.status(200).json({
+        message: "Issues récupérées",
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   return {
     createEvents,
     getIssues,
     filterIssues,
+    getEventTypes,
   };
 }

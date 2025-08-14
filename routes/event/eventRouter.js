@@ -6,7 +6,7 @@ import isauthentificate from "../../middleware/isAuthentificate.js";
 import { blacklist } from "../../middleware/blacklist.js";
 import { validateLimitQuery, validatePaginationQuery } from "../../validator/generalValidator.js";
 import paginateData from "../../helpers/pagination.js";
-const { createEvents, getIssues, filterIssues } = eventController();
+const { createEvents, getIssues, filterIssues, getEventTypes } = eventController();
 eventRouter.post("/store", editEventType, validateStoreEvent, createEvents);
 
 eventRouter.get(
@@ -27,5 +27,12 @@ eventRouter.put(
   validateEventFilter,
   filterIssues
 );
+
+eventRouter.get(
+  "/get-type",
+  isauthentificate,
+  blacklist,
+  getEventTypes
+)
 
 export default eventRouter;
