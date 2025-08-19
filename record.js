@@ -3,6 +3,7 @@ import interceptRequest from "./setup/interceptRequest";
 import { observer } from "./setup/performanceObserver";
 import initializeRecord from "./setup/recording";
 import { getProject } from "./utils/project";
+
 export let project_id = null;
 const script = document.getElementById("rrweb-init");
 
