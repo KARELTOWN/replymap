@@ -86,7 +86,7 @@ export default async function initializeRecord() {
             events.push(event);
           }
 
-          if (events.length >= 20) {
+          if (events.length >= 5) {
             session_events.push({
               session_id: session_id,
               events: events,
@@ -100,6 +100,8 @@ export default async function initializeRecord() {
         },
         maskInputOptions: { password: true },
         recordCanvas: true,
+        recordIframe: true,
+        // recordCrossOriginIframes: true
       });
     } catch (error) {
       console.error("Erreur record ", error);

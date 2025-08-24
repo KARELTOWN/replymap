@@ -19,7 +19,7 @@ export const observer = new PerformanceObserver((list) => {
       const timeToFetch = entry.responseEnd - entry.fetchStart;
       const timeInSecond = timeToFetch / 1000;
 
-      if (timeInSecond >= 1) {
+      if (timeInSecond >= 2) {
         if (!existPerformance(entry)) {
           let newPerformance = {
             type: "performance_issues",

@@ -11,6 +11,7 @@
   "description": "",
   "dependencies": {
     "@rrweb/rrweb-plugin-console-record": "^2.0.0-alpha.18",
+    "bootstrap": "^5.3.7",
     "fetch-intercept": "^2.4.0",
     "lodash": "^4.17.21",
     "rrweb": "^2.0.0-alpha.4",

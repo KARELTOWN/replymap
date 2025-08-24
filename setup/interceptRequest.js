@@ -7,7 +7,7 @@ import { getSessionId } from "../utils/session.js";
 const getIntercepts = () =>
   JSON.parse(localStorage.getItem("replay_map_events_tracker")) || [];
 
-const saveIntercepts = (data) => {
+const saveIntercepts = async (data) => {
   if (Array.isArray(data) && data.length > 0) {
     localStorage.setItem("replay_map_events_tracker", JSON.stringify(data));
   } else {
