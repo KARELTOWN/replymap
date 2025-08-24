@@ -194,6 +194,11 @@ const menuGroups = [
         name: "Evénements",
         path: "/evenements",
       },
+      {
+        icon: GridIcon,
+        name: "Feedbacks",
+        path: "/feedbacks",
+      },
     ],
   },
 

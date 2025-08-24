@@ -23,6 +23,8 @@
 
         </div>
         <CreateProject :open="openModal" @close="close" />
+        <InviteMember :open="openModalInvitation" @close="closeInviteModal" />
+
       </ComponentCard>
     </div>
   </AdminLayout>
@@ -36,16 +38,18 @@ import ComponentCard from "@/components/common/ComponentCard.vue";
 import ProjectList from "@/components/projects/ProjectList.vue";
 const currentPageTitle = ref("Projets");
 import CreateProject from '@/components/projects/CreateProject.vue'
+import InviteMember from "@/components/projects/InviteMember.vue";
 import SearchPanel from '@/components/projects/SearchPanel.vue'
 import { projectStore } from "@/stores/project/projectStore";
 import { storeToRefs } from "pinia";
+import Pagination from "@/components/pagination/Pagination.vue";
 const store = projectStore()
 const { errors,
   projects,
   total,
   page,
   limit,
-  totalPages, selectProject, openModal } = storeToRefs(store)
+  totalPages, selectProject, openModal, openModalInvitation } = storeToRefs(store)
 const { getProjects } = store
 
 const fetchNext = async (nextpage) => {
@@ -63,5 +67,9 @@ const close = () => {
   selectProject.value = ''
   openModal.value = false
 }
-import Pagination from "@/components/pagination/Pagination.vue";
+
+const closeInviteModal = () => {
+  selectProject.value = ''
+  openModalInvitation.value = false
+}
 </script>

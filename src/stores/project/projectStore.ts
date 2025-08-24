@@ -22,6 +22,8 @@ export const projectStore = defineStore('project-store', () => {
   })
   let selectProject = ref('')
   let openModal = ref(false)
+  let openModalInvitation = ref(false)
+  const projectMembers = ref([])
 
   const updatePagination = () => {
     total.value += 1
@@ -130,6 +132,60 @@ export const projectStore = defineStore('project-store', () => {
     }
   }
 
+  const inviteUser = async (data) => {
+    try {
+      projectSuccess.value = false
+      errors.value = {}
+      const result = await fetchPost(`project/invite_user`, data)
+      const response = await handleAppError(result)
+      if (response.status === false) {
+        projectSuccess.value = true
+        successNotify('Utilisateur ajouté')
+      } else if (response.status === true) {
+        if (response.errors) {
+          errors.value = response.errors
+        }
+      }
+    } catch (err) {
+      handleCatchError(err)
+    }
+  }
+
+  const getProjectMember = async (project_id) => {
+    try {
+      search_errors.value = {}
+      const result = await fetchGet(`project/member/${project_id}`)
+      const response = await handleAppError(result)
+      if (response.status === false) {
+        if (response?.data) {
+          projectMembers.value = response.data
+        }
+      }
+    } catch (err) {
+      handleCatchError(err)
+    }
+  }
+
+  const quitProject = async (data) => {
+    try {
+      projectSuccess.value = false
+      search_errors.value = {}
+      errors.value = {}
+      const result = await fetchPost(`project/quit`, data)
+      const response = await handleAppError(result)
+      if (response.status === false) {
+        projectSuccess.value = true
+        successNotify('Modification réussie')
+      } else if (response.status === true) {
+        if (response.errors) {
+          errors.value = response.errors
+        }
+      }
+    } catch (err) {
+      handleCatchError(err)
+    }
+  }
+
   return {
     createProject,
     updateProject,
@@ -146,6 +202,11 @@ export const projectStore = defineStore('project-store', () => {
     search_errors,
     search_form,
     selectProject,
-    openModal
+    openModal,
+    openModalInvitation,
+    inviteUser,
+    projectMembers,
+    getProjectMember,
+    quitProject,
   }
 })

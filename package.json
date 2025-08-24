@@ -24,6 +24,7 @@
     "@tailwindcss/typography": "^0.5.16",
     "apexcharts": "^4.4.0",
     "dropzone": "^6.0.0-beta.2",
+    "file-saver": "^2.0.5",
     "flatpickr": "^4.6.13",
     "jsvectormap": "^1.6.0",
     "lodash": "^4.17.21",
@@ -33,8 +34,10 @@
     "pinia": "^3.0.3",
     "rrweb": "^2.0.0-alpha.4",
     "rrweb-player": "^1.0.0-alpha.4",
+    "sweetalert2": "^11.22.4",
     "swiper": "^11.2.1",
     "vue": "^3.5.13",
+    "vue-draggable-next": "^2.3.0",
     "vue-flatpickr-component": "^11.0.5",
     "vue-kanban": "^1.8.0",
     "vue-router": "^4.5.0",
@@ -43,6 +46,7 @@
     "vue3-toastify": "^0.2.8",
     "vuedraggable": "^4.1.0",
     "vuevectormap": "^2.0.1",
+    "world-countries": "^5.1.0",
     "yup": "^1.6.1"
   },
   "devDependencies": {

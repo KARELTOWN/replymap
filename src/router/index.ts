@@ -18,21 +18,42 @@ const router = createRouter({
     {
       path: '/projets',
       name: 'Projets',
-      component: () => import('../views/Pages/Project.vue'),
+      component: () => import('../views/Pages/Project/Project.vue'),
       meta: {
         title: 'Projets',
         requiredAuth: true,
       },
     },
+    // Sessions
     {
       path: '/sessions',
       name: 'Sessions',
-      component: () => import('../views/Pages/Session.vue'),
+      component: () => import('../views/Pages/Session/Session.vue'),
       meta: {
         title: 'Sessions',
         requiredAuth: true,
       },
     },
+    {
+      path: '/session/detail',
+      name: 'Session-detail',
+      component: () => import('../views/Pages/Session/SessionDetail.vue'),
+      meta: {
+        title: 'Session Detail',
+        requiredAuth: true,
+      },
+    },
+    // Feedback
+    {
+      path: '/feedbacks',
+      name: 'Feedbacks',
+      component: () => import('../views/Pages/Feedback/Feedback.vue'),
+      meta: {
+        title: 'Feedbacks',
+        requiredAuth: true,
+      },
+    },
+    // Evénements
     {
       path: '/evenements',
       name: 'Evenements',
@@ -42,24 +63,17 @@ const router = createRouter({
         requiredAuth: true,
       },
     },
-    {
-      path: '/session/detail',
-      name: 'Session-detail',
-      component: () => import('../views/Pages/SessionDetail.vue'),
-      meta: {
-        title: 'Session Detail',
-        requiredAuth: true,
-      },
-    },
+    // Profile
     {
       path: '/profile',
       name: 'Profile',
-      component: () => import('../views/Others/UserProfile.vue'),
+      component: () => import('../views/Pages/Profile/UserProfile.vue'),
       meta: {
         title: 'Profile',
         requiredAuth: true,
       },
     },
+    // Autres pages
     {
       path: '/error-404',
       name: '404 Error',
@@ -69,6 +83,7 @@ const router = createRouter({
         requiredAuth: true,
       },
     },
+    //Authentification
     {
       path: '/signin',
       name: 'Signin',

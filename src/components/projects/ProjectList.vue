@@ -57,9 +57,19 @@
                                 moment(project.createdAt).format('DD-MM-YYYY HH:mm:ss') }}</p>
                         </td>
                         <td>
-                            <Button @click="update(project)" size="sm" variant="outline" :startIcon="SettingsIcon">
-                            </Button>
+                            <div class="flex flex justify-center space-x-2">
+                                <Button @click="update(project)" v-if="project.creator === true" size="sm"
+                                    variant="outline" :startIcon="SettingsIcon">
+                                </Button>
+                                <Button @click="invite(project)" v-if="project.creator === true" size="sm"
+                                    variant="outline" :startIcon="UserCircleIcon" title="Inviter un utilisateur">
+                                </Button>
+                                <Button @click="quit(project)" v-if="project.creator === false" size="sm"
+                                    variant="outline" :startIcon="LogoutIcon" title="Quitter le projet">
+                                </Button>
+                            </div>
                         </td>
+
                     </tr>
                 </tbody>
             </table>
@@ -72,10 +82,12 @@ import { onMounted, ref } from 'vue'
 import Button from '../ui/Button.vue';
 import TaskIcon from '@/icons/TaskIcon.vue';
 import SettingsIcon from '@/icons/SettingsIcon.vue'
+import LogoutIcon from '@/icons/LogoutIcon.vue';
+import UserCircleIcon from '@/icons/UserCircleIcon.vue';
 import { projectStore } from "@/stores/project/projectStore";
 import { storeToRefs } from "pinia";
 import moment from 'moment';
-
+import Swal from 'sweetalert2'
 
 const copyScript = (data, index) => {
     navigator.clipboard.writeText(data)
@@ -91,9 +103,9 @@ const copyScript = (data, index) => {
 
 const store = projectStore()
 const {
-    projects, selectProject, openModal, errors } = storeToRefs(store)
+    projects, selectProject, openModal, errors, openModalInvitation, projectSuccess } = storeToRefs(store)
 
-const { getProjects } = store
+const { getProjects, quitProject } = store
 
 onMounted(async () => {
     await handleProjects()
@@ -111,6 +123,30 @@ const update = (project) => {
     selectProject.value = project
     openModal.value = true
 }
+
+const invite = (project) => {
+    selectProject.value = project
+    openModalInvitation.value = true
+}
+
+const quit = async (project) => {
+    Swal.fire({
+        title: "Etes vous sûr de vouloir quitter ce projet?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Oui, quiiter!"
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            await quitProject({ project_id: project._id })
+            if (projectSuccess.value === true) {
+                handleProjects()
+            }
+        }
+    });
+}
+
 </script>
 
 <style scoped></style>
