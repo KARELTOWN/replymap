@@ -5,6 +5,10 @@ import {
   validateShowProject,
   validateFilterProject,
   validateUpdateProject,
+  validateInviteUser,
+  validateQuitProject,
+  validateProjectIDBody,
+  validateProjectIDParam
 } from "../../validator/project/projectValidator.js";
 import projectController from "../../controllers/project/projectController.js";
 const {
@@ -13,6 +17,9 @@ const {
   showProject,
   filterProjects,
   updateProject,
+  inviteUser,
+  quitProject,
+  projectMember
 } = projectController();
 import paginateData from "../../helpers/pagination.js";
 import { validatePaginationQuery } from "../../validator/generalValidator.js";
@@ -51,6 +58,30 @@ ProjectRouter.post(
   paginateData,
   validateFilterProject,
   filterProjects
+);
+
+ProjectRouter.get(
+  "/member/:project_id",
+  isauthentificate,
+  blacklist,
+  validateProjectIDParam,
+  projectMember
+);
+
+ProjectRouter.post(
+  "/invite_user",
+  isauthentificate,
+  blacklist,
+  validateInviteUser,
+  inviteUser
+);
+
+ProjectRouter.post(
+  "/quit",
+  isauthentificate,
+  blacklist,
+  validateQuitProject,
+  quitProject
 );
 
 ProjectRouter.get("/show/:id", validateShowProject, showProject);

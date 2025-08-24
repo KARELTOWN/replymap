@@ -28,6 +28,7 @@ const corsOption = {
     "http://localhost:5173",
     "http://localhost:5175",
     "http://localhost:5176",
+    "https://esasshop.youcan.store"
   ],
   methods: ["GET", "POST", "DELETE", "PUT", "PATCH"],
   credentials: true,
@@ -35,6 +36,7 @@ const corsOption = {
     "Content-Type",
     "Authorization",
     "Access-Control-Allow-Headers",
+    "Access-Control-Allow-Origin",
     "common",
   ],
 };

@@ -34,7 +34,7 @@ export const EventModelFilter = async (
   limit,
   error = false
 ) => {
-  let admin = isAdmin(req);
+  let admin = await isAdmin(req)
   let issue_finder;
   if (error === true && !query.type) {
     let errorsType = await EventType.find({

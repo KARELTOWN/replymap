@@ -4,7 +4,7 @@ import { user_connect_projects } from "../../models/UserProject.js";
 import { isAdmin } from "../../utils/util.js";
 
 export const SessionModelFilter = async (req, query, skip, limit) => {
-  let admin = isAdmin(req);
+  let admin = await isAdmin(req)
   let session_finder;
   if (admin) {
     session_finder = Session.find(query);

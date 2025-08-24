@@ -14,6 +14,7 @@ import UserProject, {
 } from "../../models/UserProject.js";
 import { isAdmin } from "../../utils/util.js";
 import { ProjectModelFilter } from "../../services/project/projectService.js";
+import User from "../../models/User.js";
 
 export default function projectController() {
   const createProject = async (req, res, next) => {
@@ -208,11 +209,85 @@ export default function projectController() {
     }
   };
 
+  const inviteUser = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(422).json({ errors: errors.array() });
+    }
+    const data = matchedData(req);
+
+    let user = await User.findOne({ email: data.email });
+
+    let exist = await UserProject.exists({
+      project_id: data.project_id,
+      user_id: user._id,
+    });
+    if (exist) {
+      res.status(403).json({
+        message: "Utilisateur déjà associé au projet",
+      });
+    }
+    data.user_id = user._id;
+    let userAdd = await UserProject.insertOne(data);
+    res.status(200).json({
+      message: "Utilisateur ajouté au projet",
+    });
+  };
+
+  const quitProject = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(422).json({ errors: errors.array() });
+    }
+    const data = matchedData(req);
+
+    let quitProject = await UserProject.deleteMany({
+      project_id: data.project_id,
+      user_id: data.user_id ? data.user_id : req.user._id,
+    });
+    if (quitProject.deletedCount === 0) {
+      res.status(403).json({
+        message: "Utilisateur non associé au projet",
+      });
+    }
+    res.status(200).json({
+      message: "Utilisateur retiré du projet",
+    });
+  };
+
+  const projectMember = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(422).json({ errors: errors.array() });
+    }
+    const data = matchedData(req);
+
+    let projects_users = await UserProject.find({
+      project_id: data.project_id,
+    })
+      .populate({
+        path: "user_id",
+        model: User,
+        select: "firstname lastname _id",
+      })
+      .select(["user_id"])
+      .exec();
+    projects_users = projects_users.map((userproject) => userproject.user_id);
+
+    res.status(200).json({
+      message: "Utilisateur ajouté au projet",
+      data: projects_users,
+    });
+  };
+
   return {
     createProject,
     getProjects,
     showProject,
     filterProjects,
     updateProject,
+    inviteUser,
+    quitProject,
+    projectMember,
   };
 }

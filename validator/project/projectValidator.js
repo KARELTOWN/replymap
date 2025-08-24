@@ -106,3 +106,88 @@ export const validateFilterProject = [
     }
   }),
 ];
+
+export const validateInviteUser = [
+  body("email")
+    .notEmpty()
+    .withMessage("Utilisateur obligatoire")
+    .custom(async (value) => {
+      let user = await User.findOne({ email: value });
+      if (!user) {
+        throw new Error("Aucun utilisateur correspondant à cet email");
+      }
+      console.log("user", user);
+      if (user.email_verified === true && user.is_active === true) {
+        return true;
+      } else {
+        throw new Error("L'utilisateur est inactif ou non vérifié");
+      }
+    }),
+
+  body("project_id")
+    .notEmpty()
+    .withMessage("Le projet est obligatoire")
+    .custom(async (value) => {
+      if (value) {
+        let project_exist = await Project.findById(value);
+        if (!project_exist) {
+          throw new Error("Le projet n'existe pas");
+        }
+        return true;
+      }
+    }),
+];
+
+export const validateProjectIDBody = [
+  body("project_id")
+    .notEmpty()
+    .withMessage("Le projet est obligatoire")
+    .custom(async (value) => {
+      if (value) {
+        let project_exist = await Project.findById(value);
+        if (!project_exist) {
+          throw new Error("Le projet n'existe pas");
+        }
+        return true;
+      }
+    }),
+];
+
+export const validateProjectIDParam = [
+  param("project_id")
+    .notEmpty()
+    .withMessage("Le projet est obligatoire")
+    .custom(async (value) => {
+      if (value) {
+        let project_exist = await Project.findById(value);
+        if (!project_exist) {
+          throw new Error("Le projet n'existe pas");
+        }
+        return true;
+      }
+    }),
+];
+
+export const validateQuitProject = [
+  body("project_id")
+    .notEmpty()
+    .withMessage("Le projet est obligatoire")
+    .custom(async (value) => {
+      if (value) {
+        let project_exist = await Project.findById(value);
+        if (!project_exist) {
+          throw new Error("Le projet n'existe pas");
+        }
+        return true;
+      }
+    }),
+  body("user_id").custom(async (value) => {
+    if (value) {
+      let user = await User.findById(value);
+      if (!user) {
+        throw new Error("L'utilisateur n'existe pas");
+      }
+      return true;
+    }
+  }),
+];

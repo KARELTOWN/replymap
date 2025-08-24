@@ -11,14 +11,25 @@ export default function statController() {
     const sessions_count = sessions.length;
     let events = await user_connect_events(req);
     const events_count = events.length;
-    // const user_country = await Session.aggregate([
-    //   {
-    //     $group: {
-    //       country: "$metadata.localization.country",
-    //       count: { $count: "$_id" },
-    //     },
-    //   },
-    // ]);
+    const user_country = await Session.aggregate([
+      {
+        $match: {
+          "metadata.localization.country": { $exists: true, $ne: "" },
+        },
+      },
+      {
+        $group: {
+          _id: "$metadata.localization.country",
+          visit: { $sum: 1 },
+          uniqueUsers: { $addToSet: "$user_id" }, // récupérer les sessions d'utilisateurs distinct
+        },
+      },
+    ]);
+
+    let total_visit = await Session.distinct("user_id", {
+      user_id: { $exists: true },
+    }).exec();
+    total_visit = total_visit.length;
 
     res.status(200).json({
       message: "Stats",
@@ -26,7 +37,8 @@ export default function statController() {
         projects_count,
         sessions_count,
         events_count,
-        // user_country,
+        user_country,
+        total_visit,
       },
     });
   };

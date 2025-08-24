@@ -33,3 +33,11 @@ export const validateLimitSkipQuery = [
     .withMessage("SKIP est obligatoire")
     .withMessage("SKIP doit être un entier"),
 ];
+
+
+export const validateSkipQuery = [
+  query("skip")
+    .notEmpty()
+    .withMessage("SKIP est obligatoire")
+    .withMessage("SKIP doit être un entier"),
+];

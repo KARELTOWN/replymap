@@ -45,10 +45,11 @@ const EventsSchema = new mongoose.Schema(
 );
 
 export const user_connect_events = async (req) => {
-  if (isAdmin(req)) {
+  let admin = await isAdmin(req)
+  if (admin) {
     return await Events.find({}).exec();
   } else {
-    let projects = user_connect_projects(req);
+    let projects = await user_connect_projects(req);
     return await Events.find({ project: { $in: projects } }).exec();
   }
 };
