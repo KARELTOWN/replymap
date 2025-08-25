@@ -1,12 +1,13 @@
 import { matchedData, validationResult } from "express-validator";
 import FeedbackPriority from "../../models/FeedbackPriority.js";
 import FeedbackType from "../../models/FeedbackType.js";
-import fileService from "../../services/files/fileService.js";
 import Files from "../../models/Files.js";
 import Feedback from "../../models/Feedback.js";
 import FeedbackStatus from "../../models/FeedbackStatus.js";
-const { uploadFileOnS3, uploadFilesOnS3, getURLFileFromS3 } = fileService();
+import fileService from "../../services/files/fileService.js";
+const { getURLFileFromS3 } = fileService();
 import feedbackHistoryController from "./feedbackHistoryController.js";
+import { storeFeedbackJob } from "../../jobs/queue.js";
 const { storeFeedbackHistory } = feedbackHistoryController();
 
 export default function feedbackController() {
@@ -33,55 +34,21 @@ export default function feedbackController() {
       }
       const data = matchedData(req);
       const file = req.files.file ? req.files.file[0] : null;
+      console.log('file', req.files)
       const attachments = req.files.attachments ? req.files.attachments : [];
       if (!file) {
         return res
           .status(422)
           .json({ message: "La capture d'écran est obligatoire" });
       }
-      const fileResult = await uploadFileOnS3(file, data.project_id);
-      let attachmentsResult = [];
-      if (attachments.length > 0) {
-        attachmentsResult = await uploadFilesOnS3(attachments, data.project_id);
-      }
-      if (fileResult) {
-        if (attachmentsResult.length === attachments.length) {
-          const statusOpen = await FeedbackStatus.findOne({
-            libelle: "Ouvert",
-          }).exec();
 
-          console.log("metadata", data.metadata);
-          data.metadata = {
-            user_agent: data.user_agent,
-            width: data.width,
-            height: data.height,
-          };
+      await storeFeedbackJob({
+        file,
+        feedback: data,
+        attachments,
+      });
 
-          let feedbackFile = await Files.insertOne(fileResult);
-
-          const feedback = await Feedback.create({
-            ...data,
-            status: statusOpen._id,
-            file: feedbackFile._id,
-          });
-
-          let filesAttach = [];
-          for (const element of attachmentsResult) {
-            filesAttach.push({
-              key: element.key,
-              feedback_id: feedback._id,
-              name: element.name,
-              type: element.type,
-              size: element.size,
-            });
-          }
-
-          await Files.insertMany(filesAttach);
-
-          res.status(200).json({ message: "Feedback enregistré" });
-        }
-      }
-      res.status(500).json({ message: "Erreur de création du feedback" });
+      res.status(200).json({ message: "Feedback créé" });
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
@@ -244,6 +211,6 @@ export default function feedbackController() {
     getFeedbackPerProject,
     showFeedback,
     updateFeedback,
-    assignFeedback
+    assignFeedback,
   };
 }

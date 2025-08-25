@@ -3,8 +3,13 @@ import IORedis from "ioredis";
 import chunkService from "../services/chunk/chunkService.js";
 const { uploadChunksInJsonFileOnS3, uploadChunksInJsonFileLocal } =
   chunkService();
+import fileService from "../services/files/fileService.js";
+const { uploadFileOnS3, uploadFilesOnS3 } = fileService();
 import mongoose from "../config/mongodb.js";
 import { mailTransporter } from "../config/mailer.js";
+import Files from "../models/Files.js";
+import FeedbackStatus from "../models/FeedbackStatus.js";
+import Feedback from "../models/Feedback.js";
 
 const connection = new IORedis({
   host: "localhost",
@@ -73,6 +78,74 @@ const mailingWorker = new Worker(
       }
     } catch (error) {
       throw new Error("Erreur envoie de mail");
+    }
+  },
+  { connection }
+);
+
+const feedbackStore = new Worker(
+  "feedback",
+  async (job) => {
+    try {
+      // DECODER LES DONNES EN BUFFER
+      const decodedFile = {
+        ...job.data.file,
+        buffer: Buffer.from(job.data.file.buffer, "base64"),
+      };
+
+      const decodedAttachments = job.data.attachments.map((att) => ({
+        ...att,
+        buffer: Buffer.from(att.buffer, "base64"),
+      }));
+
+      const fileResult = await uploadFileOnS3(
+        decodedFile,
+        job.data.feedback.project_id
+      );
+      let attachmentsResult = [];
+      if (job.data.attachments.length > 0) {
+        attachmentsResult = await uploadFilesOnS3(
+          decodedAttachments,
+          job.data.feedback.project_id
+        );
+      }
+      if (fileResult) {
+        if (attachmentsResult.length === job.data.attachments.length) {
+          const statusOpen = await FeedbackStatus.findOne({
+            libelle: "Ouvert",
+          }).exec();
+
+          job.data.feedback.metadata = {
+            user_agent: job.data.feedback.user_agent,
+            width: job.data.feedback.width,
+            height: job.data.feedback.height,
+          };
+
+          let feedbackFile = await Files.insertOne(fileResult);
+
+          const feedback = await Feedback.create({
+            ...job.data.feedback,
+            status: statusOpen._id,
+            file: feedbackFile._id,
+          });
+
+          let filesAttach = [];
+          for (const element of attachmentsResult) {
+            filesAttach.push({
+              key: element.key,
+              feedback_id: feedback._id,
+              name: element.name,
+              type: element.type,
+              size: element.size,
+            });
+          }
+
+          await Files.insertMany(filesAttach);
+          console.log("Feedback enregistré");
+        }
+      }
+    } catch (error) {
+      throw new Error(error);
     }
   },
   { connection }

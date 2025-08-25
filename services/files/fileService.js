@@ -112,6 +112,7 @@ export default function fileService() {
     }
   };
 
+
   return {
     uploadFileOnS3,
     getFileFromS3,

@@ -262,13 +262,16 @@ export default function projectController() {
     }
     const data = matchedData(req);
 
+    let project = await Project.findOne({ _id: data.project_id }).exec();
+
     let projects_users = await UserProject.find({
       project_id: data.project_id,
+      user_id: { $ne: project.created_by },
     })
       .populate({
         path: "user_id",
         model: User,
-        select: "firstname lastname _id",
+        select: "firstname lastname _id email",
       })
       .select(["user_id"])
       .exec();

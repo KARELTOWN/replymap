@@ -1,44 +1,55 @@
 import { Queue } from "bullmq";
-const recordChunksQueues = new Queue("recording_chunk_store", {
-  defaultJobOptions: {
-    attempts: 3, // nombre de tentatives
-    backoff: {
-      type: "fixed", //
-      delay: 10000, //milliseconde : delai avant prochaine tentative
-      removeOnComplete: true, //supprimer le job si terminé
-    },
-    ttl: 1000 * 60 * 60 * 24 * 30, //durée de vie du job : en ms
-  },
-});
-const mailingQueues = new Queue("mailing", {
-  defaultJobOptions: {
-    attempts: 3, // nombre de tentatives
-    backoff: {
-      type: "fixed", //
-      delay: 10000, //milliseconde : delai avant prochaine tentative
-      removeOnComplete: true, //supprimer le job si terminé
-    },
-    ttl: 1000 * 60 * 60 * 24 * 30, //durée de vie du job : en ms
-  },
-});
+const defaultOptions = {
+  attempts: 3,
+  backoff: { type: "fixed", delay: 10000 },
+  removeOnComplete: true,
+  ttl: 1000 * 60 * 60 * 24 * 15,
+};
+
+function queueWorker(queueName) {
+  return new Queue(queueName, {
+    defaultJobOptions: defaultOptions,
+  });
+}
+
+const recordChunksQueues = queueWorker("recording_chunk_store");
+const feedbackStoreQueues = queueWorker("feedback");
+const mailingQueues = queueWorker("mailing");
+
 export const storeChunkJob = async (data) => {
   let queues = [];
   for (const dt of data.events) {
     queues.push({
       name: `recording_chunks_${Date.now()}`,
       data: { chunk: dt, project: data.project_id },
-      // opts: {
-      //   attempts: 3, // nombre de tentatives
-      //   backoff: {
-      //     type: "fixed", //
-      //     delay: 10000, //milliseconde : delai avant prochaine tentative
-      //     removeOnComplete: true, //supprimer le job si terminé
-      //   },
-      //   ttl: 1000 * 60 * 60 * 24 * 30, //durée de vie du job : en ms
-      // },
     });
   }
   await recordChunksQueues.addBulk(queues); // ajout un à un mais performant
+};
+
+export const storeFeedbackJob = async (data) => {
+  try {
+    // ENCODER LE BUFFER EN BASE 64 , BULLMQ ne traitant pas les buffers
+    const encodedFile = {
+      ...data.file,
+      buffer: data.file.buffer.toString("base64"),
+    };
+
+    const encodedAttachments = Array.from(data.attachments).map((file) => ({
+      ...file,
+      buffer: file.buffer.toString("base64"),
+    }));
+
+    console.log('encodedAttachments', encodedAttachments)
+
+    await feedbackStoreQueues.add(`feedback_${Date.now()}`, {
+      file: encodedFile,
+      attachments: encodedAttachments,
+      feedback: data.feedback,
+    });
+  } catch (error) {
+    throw new Error(error);
+  }
 };
 
 export const mailingJob = async (mail_data) => {
