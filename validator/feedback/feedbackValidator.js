@@ -170,12 +170,13 @@ export const validateUpdateFeedback = [
     .withMessage("Chaine de caractère attendu"),
 
   body("assignTo")
-    .notEmpty()
-    .withMessage("Utilisateur obligatoire")
+    .optional()
     .custom(async (value) => {
-      let user = await User.findById(value);
-      if (!user) {
-        throw new Error("L'utilisateur n'existe pas");
+      if (value) {
+        let user = await User.findById(value);
+        if (!user) {
+          throw new Error("L'utilisateur n'existe pas");
+        }
       }
       return true;
     }),
