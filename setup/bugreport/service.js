@@ -49,7 +49,7 @@ export default function service() {
         data.session_id = session_id;
       }
       data.user_agent = navigator.userAgent;
-      data.height =  window.screen.availHeight;
+      data.height = window.screen.availHeight;
       data.width = window.screen.availWidth;
 
       const formData = new FormData();
@@ -58,10 +58,9 @@ export default function service() {
       const blob = dataURLtoBlob(canva_file);
       formData.append("file", blob, `${Date.now()}.png`);
 
-      for (let i = 0; i < attachments.length; i++) {
-        formData.append("attachments", attachments[i]);
+      for (const file of attachments) {
+        formData.append("attachments", file);
       }
-
       // on ajoute les autres champs
       Object.entries(data).forEach(([key, value]) => {
         formData.append(key, value);
