@@ -17,7 +17,7 @@ async function ListIntegrationSeeder() {
       },
     ];
 
-    await ListIntegration.insertMany(data);
+    await ListIntegration.insertMany(data, {ordered: false});
     console.log("List integration insérés");
   } catch (error) {
     throw error;

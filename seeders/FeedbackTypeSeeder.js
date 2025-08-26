@@ -7,7 +7,7 @@ async function FeedbackTypeSeeder() {
     data.forEach((element) => {
       list.push({ libelle: element });
     });
-    await FeedbackType.insertMany(list);
+    await FeedbackType.insertMany(list, {ordered: false});
     console.log("Feedback types insérés");
   } catch (error) {
     throw error;

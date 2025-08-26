@@ -1,10 +1,13 @@
 export let redisClient;
+import { configDotenv } from "dotenv";
 import redis from "redis";
+configDotenv();
+
 const redisConnection = async () => {
   redisClient = redis.createClient({
     socket: {
-      host: process.env.REDIS_HOST,
-      port: process.env.REDIS_PORT,
+      host: process.env.REDIS_HOST || "redis_dev",
+      port: process.env.REDIS_PORT || 6379,
     },
   });
   redisClient.on("error", (error) => console.error(`Redis error : ${error}`));

@@ -1,7 +1,8 @@
+import { connectionRedis } from "./ioredis.js";
 import { QueueEvents } from "bullmq";
 
 function logQueueEvents(queueName) {
-  const events = new QueueEvents(queueName);
+  const events = new QueueEvents(queueName, {connection: connectionRedis});
 
   events.on('waiting', ({ jobId }) => {
     console.log(`[${queueName}] Job ${jobId} is waiting`);

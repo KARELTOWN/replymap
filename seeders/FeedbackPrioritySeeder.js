@@ -12,7 +12,7 @@ async function FeedbackPrioritySeeder() {
     data.forEach((element) => {
       list.push({ libelle: element });
     });
-    await FeedbackPriority.insertMany(list);
+    await FeedbackPriority.insertMany(list, {ordered: false});
     console.log("Feedback priority insérés");
   } catch (error) {
     throw error;

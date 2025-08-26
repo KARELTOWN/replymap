@@ -1,6 +1,7 @@
+import { connectionRedis } from "./ioredis.js";
 import { Worker } from "bullmq";
-import IORedis from "ioredis";
 import chunkService from "../services/chunk/chunkService.js";
+
 const { uploadChunksInJsonFileOnS3, uploadChunksInJsonFileLocal } =
   chunkService();
 import fileService from "../services/files/fileService.js";
@@ -11,12 +12,6 @@ import Files from "../models/Files.js";
 import FeedbackStatus from "../models/FeedbackStatus.js";
 import Feedback from "../models/Feedback.js";
 
-const connection = new IORedis({
-  host: "localhost",
-  port: 6379,
-  maxRetriesPerRequest: null,
-});
-
 const worker = new Worker(
   "recording_chunk_store",
   async (job) => {
@@ -26,34 +21,34 @@ const worker = new Worker(
       const exist = await mongoose
         .model("Chunk")
         .exists({ uniqueId: chunk.uniqueId });
-      // SAVE ON S3 STORAGE
-      // if (!exist) {
-      // const result = await uploadChunksInJsonFileOnS3(chunk, project);
-      //   if (result) {
-      //     chunk.storage_link = result;
-      //     await mongoose.model("Chunk").insertOne(chunk);
-      //     console.log(`chunk enregistré`);
-      //   } else {
-      //     throw new Error("Erreur upload de chunk");
-      //   }
-      // }
-
-      //SAVE IN DB
+      //SAVE ON S3 STORAGE
       if (!exist) {
-        const result = await uploadChunksInJsonFileLocal(chunk, project);
+      const result = await uploadChunksInJsonFileOnS3(chunk, project);
         if (result) {
           chunk.storage_link = result;
-          const save = await mongoose.model("Chunk").insertOne(chunk);
+          await mongoose.model("Chunk").insertOne(chunk);
           console.log(`chunk enregistré`);
         } else {
           throw new Error("Erreur upload de chunk");
         }
       }
+
+      //SAVE IN DB
+      // if (!exist) {
+      //   const result = await uploadChunksInJsonFileLocal(chunk, project);
+      //   if (result) {
+      //     chunk.storage_link = result;
+      //     const save = await mongoose.model("Chunk").insertOne(chunk);
+      //     console.log(`chunk enregistré`);
+      //   } else {
+      //     throw new Error("Erreur upload de chunk");
+      //   }
+      // }
     } catch (error) {
       throw new Error("Erreur upload de chunk");
     }
   },
-  { connection }
+  { connection: connectionRedis }
 );
 
 const mailingWorker = new Worker(
@@ -80,7 +75,7 @@ const mailingWorker = new Worker(
       throw new Error("Erreur envoie de mail");
     }
   },
-  { connection }
+  { connection: connectionRedis }
 );
 
 const feedbackStore = new Worker(
@@ -93,10 +88,13 @@ const feedbackStore = new Worker(
         buffer: Buffer.from(job.data.file.buffer, "base64"),
       };
 
-      const decodedAttachments = job.data.attachments.map((att) => ({
-        ...att,
-        buffer: Buffer.from(att.buffer, "base64"),
-      }));
+      let decodedAttachments = [];
+      if (job.data.attachments.length > 0) {
+        decodedAttachments = job.data.attachments.map((att) => ({
+          ...att,
+          buffer: Buffer.from(att.buffer, "base64"),
+        }));
+      }
 
       const fileResult = await uploadFileOnS3(
         decodedFile,
@@ -148,5 +146,5 @@ const feedbackStore = new Worker(
       throw new Error(error);
     }
   },
-  { connection }
+  { connection: connectionRedis }
 );

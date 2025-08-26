@@ -9,7 +9,7 @@ import bodyParser from "body-parser";
 // export const { client: elastiClient } = await initializeElasticsearch();
 // import { createAppLog } from "./services/elasticLog.js";
 import { schedule_expired_session } from "./services/schedule.js";
-schedule_expired_session.start()
+schedule_expired_session.start();
 
 import redisConnection from "./config/redis.js";
 import cors from "cors";
@@ -24,12 +24,7 @@ app.use(bodyParser.json({ limit: "10mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
 
 const corsOption = {
-  origin: [
-    "http://localhost:5173",
-    "http://localhost:5175",
-    "http://localhost:5176",
-    "https://esasshop.youcan.store"
-  ],
+  origin: "*",
   methods: ["GET", "POST", "DELETE", "PUT", "PATCH"],
   credentials: true,
   allowedHeaders: [

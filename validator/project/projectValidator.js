@@ -75,6 +75,7 @@ export const validateUpdateProject = [
       }
       return true;
     }),
+  body("track").optional().isObject(),
 ];
 
 export const validateFilterProject = [

@@ -55,6 +55,7 @@ export default function projectController() {
             createdAt: project.createdAt,
             tracking_code: project.tracking_code,
             track: project.track,
+            creator: true,
           },
         },
       });
@@ -139,9 +140,17 @@ export default function projectController() {
         res.status(422).json({ errors: errors.array() });
       }
       const data = matchedData(req);
-      let project = await Project.findByIdAndUpdate(data.project_id, data, {
-        new: true,
-      });
+      let project = await Project.findByIdAndUpdate(
+        data.project_id,
+        {
+          $set: {
+            ...data,
+          },
+        },
+        {
+          new: true,
+        }
+      );
 
       res.status(200).json({
         message: "Projet modifié",
@@ -154,6 +163,7 @@ export default function projectController() {
             createdAt: project.createdAt,
             tracking_code: project.tracking_code,
             track: project.track,
+            creator: String(project.created_by) === String(req.user._id),
           },
         },
       });

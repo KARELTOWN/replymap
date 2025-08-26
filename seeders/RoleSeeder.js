@@ -7,7 +7,7 @@ async function RoleSeeder() {
     data.forEach((element) => {
       list.push({ libelle: element });
     });
-    await Role.insertMany(list);
+    await Role.insertMany(list, {ordered: false});
     console.log("Roles insérés");
   } catch (error) {
     throw error;

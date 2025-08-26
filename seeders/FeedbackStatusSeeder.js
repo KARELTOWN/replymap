@@ -7,7 +7,7 @@ async function FeedbackStatusSeeder() {
     data.forEach((element) => {
       list.push({ libelle: element });
     });
-    await FeedbackStatus.insertMany(list);
+    await FeedbackStatus.insertMany(list, {ordered: false});
     console.log("Feedback status insérés");
   } catch (error) {
     throw error;

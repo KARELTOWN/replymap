@@ -132,7 +132,7 @@ export default function projectController() {
       //   events = JSON.parse(cached_events);
       // } else {
       session = await Session.findById(data.session_id);
-      events = await getSessionChunksLocal(data.session_id, skip, limit);
+      events = await getSessionChunks(data.session_id, skip, limit);
       // }
 
       // await redisSetKey(cache_key, session, 180);

@@ -1,4 +1,5 @@
 import { Queue } from "bullmq";
+import { connectionRedis } from "./ioredis.js";
 const defaultOptions = {
   attempts: 3,
   backoff: { type: "fixed", delay: 10000 },
@@ -9,6 +10,7 @@ const defaultOptions = {
 function queueWorker(queueName) {
   return new Queue(queueName, {
     defaultJobOptions: defaultOptions,
+    connection: connectionRedis,
   });
 }
 
@@ -35,12 +37,16 @@ export const storeFeedbackJob = async (data) => {
       buffer: data.file.buffer.toString("base64"),
     };
 
-    const encodedAttachments = Array.from(data.attachments).map((file) => ({
-      ...file,
-      buffer: file.buffer.toString("base64"),
-    }));
+    let attachments = Array.from(data.attachments);
+    let encodedAttachments = [];
+    if (attachments.length !== 0) {
+      encodedAttachments = attachments.map((file) => ({
+        ...file,
+        buffer: file.buffer.toString("base64"),
+      }));
+    }
 
-    console.log('encodedAttachments', encodedAttachments)
+    console.log("encodedAttachments", encodedAttachments);
 
     await feedbackStoreQueues.add(`feedback_${Date.now()}`, {
       file: encodedFile,
