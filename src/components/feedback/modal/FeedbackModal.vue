@@ -18,10 +18,17 @@
 
                     <!-- Partie gauche : contenu principal -->
                     <div class="w-2/3 p-6 overflow-y-auto border-r">
-                        <h2 class="text-2xl font-bold text-gray-800 mb-4">{{ feedbackSelect_data?.title }} <Badge
-                                color="primary">Crée le {{ formatTimestampToDate(feedbackSelect_data?.createdAt) }}
-                            </Badge>
-                        </h2>
+                        <div class="flex justify-between cursor-pointer">
+                            <h2 class="text-2xl font-bold text-gray-800 mb-4">{{ feedbackSelect_data?.title }} <Badge
+                                    color="primary">Crée le {{ formatTimestampToDate(feedbackSelect_data?.createdAt) }}
+                                </Badge>
+                            </h2>
+                            <h3 v-if="feedbackSelect_data?.session_id">Session : <Badge color="primary"
+                                    @click="seeSession(feedbackSelect_data?.session_id?._id)">
+                                    {{ feedbackSelect_data?.session_id?.uniqueId }} </Badge>
+                            </h3>
+                        </div>
+
                         <img :src="feedbackSelect_data?.file?.key" alt="Image du feedback"
                             class="w-full h-64 object-contain rounded-md mb-4" />
                     </div>
@@ -84,6 +91,7 @@ const { feedbackSelect_data, project_id } = storeToRefs(storeFeedback)
 const { showFeedback, feedbackParams } = storeFeedback
 import Badge from '@/components/ui/Badge.vue';
 import { formatTimestampToDate } from '@/utils/format';
+import { useRouter } from 'vue-router';
 onMounted(() => {
     feedbackParams()
 })
@@ -111,4 +119,14 @@ function tabClass(tab) {
         ? 'flex-1 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 py-2'
         : 'flex-1 text-sm text-gray-500 py-2 hover:text-blue-600'
 }
+
+const router = useRouter()
+
+const seeSession = (session) => {
+    if (session) {
+        router.push({ path: '/session/detail', query: { project: project_id.value, session: session } })
+    }
+}
+
+
 </script>

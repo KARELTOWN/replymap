@@ -1,5 +1,5 @@
 <template>
-    <Badge color="primary">{{ feedbackStatus.libelle }}</Badge>
+    <Badge color="primary">{{ feedbackSelect_data?.status?.libelle }}</Badge>
     <div>
         <label class="block text-sm font-medium text-gray-700">Description</label>
         <p class="text-gray-700 text-sm leading-relaxed">
