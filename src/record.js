@@ -1,8 +1,8 @@
-import eventTracker from "./setup/eventTracker";
-import interceptRequest from "./setup/interceptRequest";
-import { observer } from "./setup/performanceObserver";
-import initializeRecord from "./setup/recording";
-import { getProject } from "./utils/project";
+import eventTracker from "./setup/eventTracker.js";
+import interceptRequest from "./setup/interceptRequest.js";
+import { observer } from "./setup/performanceObserver.js";
+import initializeRecord from "./setup/recording.js";
+import { getProject } from "./utils/project.js";
 
 export let project_id = null;
 const script = document.getElementById("rrweb-init");
@@ -17,16 +17,16 @@ if (res?.status == "error") {
   throw new Error(res.message);
 } else if (res?.status == "success") {
   if (res.data.track.active_recording === true) {
-    // initializeRecord();
+    initializeRecord();
   }
   if (res.data.track.active_track_errors === true) {
-    // interceptRequest();
+    interceptRequest();
   }
   if (res.data.track.active_event_issues === true) {
-    // eventTracker();
+    eventTracker();
   }
   if (res.data.track.active_performance_issues === true) {
-    // observer.observe({ buffered: true, entryTypes: ["resource"] });
+    observer.observe({ buffered: true, entryTypes: ["resource"] });
   }
 }
-import './setup/bugreport/index.js';
+import "./setup/bugreport/index.js";

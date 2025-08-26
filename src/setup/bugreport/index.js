@@ -1,5 +1,6 @@
 import { head, set } from "lodash";
 import service from "./service.js";
+import html2canvas from 'html2canvas'
 
 const { getFeedbackParams, sendFeedback } = service();
 (async function () {
@@ -211,9 +212,9 @@ const { getFeedbackParams, sendFeedback } = service();
   panel.appendChild(leftPanel);
 
   // --- Charger html2canvas dynamiquement ---
-  const script = document.createElement("script");
-  script.src = "http://localhost:5174/assets/html2canvas.min.js";
-  document.head.appendChild(script);
+  // const script = document.createElement("script");
+  // script.src = "../../assets/html2canvas.min.js";
+  // document.head.appendChild(script);
 
   function hidePanel() {
     panel.style.display = "none";
