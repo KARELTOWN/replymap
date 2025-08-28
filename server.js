@@ -2,14 +2,37 @@ import express from "express";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
+import { configDotenv } from "dotenv";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+let envfile = null;
+if (process.env.NODE_ENV) {
+  // ENVIRONNEMENT DOCKER
+  if (process.env.NODE_ENV === "development") {
+    envfile = path.resolve(__dirname, `.env`);
+  } else {
+    envfile = path.resolve(__dirname, `.env.${process.env.NODE_ENV}`);
+  }
+} else {
+  // ENVIRONNEMENT LOCAL SANS DOCKER
+  envfile = path.resolve(__dirname, `.env`);
+}
+
+configDotenv({ path: envfile });
 
 const app = express();
 app.use(cors()); // Autorise toutes les origines
 
 app.use(express.static(path.join(__dirname, "dist"))); // Sert le bundle
 
-app.listen(5174, () => {
-  console.log("✅ record.js servi sur http://localhost:5174");
+console.log("process.env.PORT,", process.env.PORT);
+console.log("process.env.HOST,", process.env.HOST);
+
+app.listen(process.env.PORT, process.env.HOST, () => {
+  console.log("✅ record.js servi");
+});
+
+app.get("/", (req, res) => {
+  res.send("Record service is running");
 });

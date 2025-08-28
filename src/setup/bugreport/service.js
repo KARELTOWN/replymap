@@ -41,7 +41,7 @@ export default function service() {
     return new Blob([u8arr], { type: mime });
   }
 
-  const sendFeedback = async (canva_file, attachments, data) => {
+  const sendFeedback = async (type, recordData, attachments, data) => {
     try {
       data.project_id = project_id;
       let session_id = getSessionId();
@@ -55,8 +55,13 @@ export default function service() {
       const formData = new FormData();
 
       // Ajout du canvas en tant que "fichier"
-      const blob = dataURLtoBlob(canva_file);
-      formData.append("file", blob, `${Date.now()}.png`);
+      let blob = null;
+      if (type === "canvas") {
+        blob = dataURLtoBlob(recordData);
+      } else if (type === "video") {
+        blob = recordData;
+      }
+      formData.append("file", blob);
 
       for (const file of attachments) {
         formData.append("attachments", file);

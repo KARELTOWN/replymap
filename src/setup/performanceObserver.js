@@ -15,11 +15,15 @@ const setPerformance = (data) => {
 };
 export const observer = new PerformanceObserver((list) => {
   list.getEntries().forEach((entry) => {
-    if (entry.entryType === "resource" && !isRecordResource(entry)) {
+    if (
+      (entry.entryType === "resource" || entry.entryType === "longtask") &&
+      !isRecordResource(entry)
+    ) {
       const timeToFetch = entry.responseEnd - entry.fetchStart;
       const timeInSecond = timeToFetch / 1000;
-
-      if (timeInSecond >= 2) {
+      let entryType =
+        entry.entryType === "resource" ? "Ressource" : "Tâche longue";
+      if (timeInSecond >= 3) {
         if (!existPerformance(entry)) {
           let newPerformance = {
             type: "performance_issues",
@@ -29,6 +33,9 @@ export const observer = new PerformanceObserver((list) => {
             data: {
               name: entry.name,
               duration: timeInSecond,
+              type: entryType,
+              slow:
+                timeInSecond >= 3 && timeInSecond <= 5 ? "Lent" : "Très lent",
             },
             uniqueId: v4(),
           };

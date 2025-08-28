@@ -6,6 +6,7 @@ import { getIpAdress } from "../utils/ipAdress";
 import { project_id } from "../record.js";
 import setCookie from "../utils/cookie.js";
 import { getSessionId } from "../utils/session.js";
+import { maskSelector } from "../utils/maskSelector.js";
 const getSessionEvents = () =>
   JSON.parse(localStorage.getItem("replay_map_record_events")) || [];
 
@@ -86,6 +87,8 @@ export default async function initializeRecord() {
             events.push(event);
           }
 
+          requestIdleCallback()
+
           if (events.length >= 5) {
             session_events.push({
               session_id: session_id,
@@ -101,6 +104,7 @@ export default async function initializeRecord() {
         maskInputOptions: { password: true },
         recordCanvas: true,
         recordIframe: true,
+        maskTextSelector: maskSelector
         // recordCrossOriginIframes: true
       });
     } catch (error) {

@@ -26,7 +26,7 @@ if (res?.status == "error") {
     eventTracker();
   }
   if (res.data.track.active_performance_issues === true) {
-    observer.observe({ buffered: true, entryTypes: ["resource"] });
+    observer.observe({ buffered: true, entryTypes: ["resource", "longtask"] });
   }
 }
 import "./setup/bugreport/index.js";

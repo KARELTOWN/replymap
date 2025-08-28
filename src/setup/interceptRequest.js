@@ -23,6 +23,7 @@ export default function interceptRequest() {
   //intercepter les requêtes avec FETCH
   window.fetch = async (...args) => {
     try {
+      let rrweb_timestamp = Date.now()
       let session_id = getSessionId();
 
       const start = performance.now();
@@ -72,7 +73,7 @@ export default function interceptRequest() {
               response: request_response,
             },
             uniqueId: uuidV4(),
-            timestamp: Date.now(),
+            timestamp: rrweb_timestamp
           });
 
           saveIntercepts(intercepts);

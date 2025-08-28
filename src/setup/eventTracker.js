@@ -3,6 +3,7 @@ import { project_id } from "../record";
 import { fetchPost } from "../utils/request";
 import { v4 as UUID } from "uuid";
 import { getSessionId } from "../utils/session.js";
+import { onINP, onLCP, onCLS, onFCP, onTTFB } from "web-vitals";
 
 export default function eventTracker() {
   const getEvents = () =>
@@ -24,6 +25,7 @@ export default function eventTracker() {
     //Intercepter les erreurs  : REFERENCEERROR, TYPEERROR, SYNTAXERROR, ...
     // Ainsi que les échecs de chargements de resource
     window.addEventListener("error", (err) => {
+      let rrweb_timestamp = Date.now();
       let session_id = getSessionId();
       allEvents.push({
         type: "runtime_errors",
@@ -36,12 +38,13 @@ export default function eventTracker() {
           message: err.message,
           resource_source: err.target?.src || null,
         },
-        timestamp: Date.now(),
+        timestamp: rrweb_timestamp,
         uniqueId: UUID(),
       });
     });
 
     window.addEventListener("unhandledrejection", (err) => {
+      let rrweb_timestamp = Date.now();
       let session_id = getSessionId();
       //intercepter les erreurs de promesses non capturés
       allEvents.push({
@@ -53,7 +56,7 @@ export default function eventTracker() {
           message: err.reason.message,
           stack: err.reason.stack,
         },
-        timestamp: Date.now(),
+        timestamp: rrweb_timestamp,
         uniqueId: UUID(),
       });
     });
@@ -75,22 +78,25 @@ export default function eventTracker() {
 
     setInterval(() => {
       let session_id = getSessionId();
-      console.log("session_id", session_id);
 
       if (session_id) {
-        console.log("events", events);
-
         //récuperer les éléments stockés les 2 dernières secondes
         const lastEvents = events.filter(
-          (e) => Date.now() - e.timestamp < 2000
+          (e) => Date.now() - e.timestamp < 2000 && e.type === 3 // type=3 = MouseInteraction (clics)
         );
-        let lastElements = lastEvents.map((item) => item.target);
+        let lastElements = lastEvents.map((item) => ({
+          target: item.target,
+          timestamp: item.timestamp, // <-- on garde aussi le timestamp rrweb
+        }));
         // Compter le nombre de clics par élément
         const clickCounts = new Map();
+        const clickTimestamps = new Map();
 
-        for (const selector of lastElements) {
-          const count = clickCounts.get(selector) || 0;
-          clickCounts.set(selector, count + 1);
+        for (const { target, timestamp } of lastElements) {
+          const count = clickCounts.get(target) || 0;
+          clickCounts.set(target, count + 1);
+          // on garde le dernier timestamp rrweb pour ce target
+          clickTimestamps.set(target, timestamp);
         }
 
         let newData = 0;
@@ -106,7 +112,8 @@ export default function eventTracker() {
                 target: item,
                 count: count,
               },
-              timestamp: Date.now(),
+              // 🔑 utilise le timestamp rrweb (moment exact dans le replay)
+              timestamp: clickTimestamps.get(item),
               uniqueId: UUID(),
             });
           }
@@ -141,6 +148,75 @@ export default function eventTracker() {
     }
   };
 
+  const waitForVitals = () =>
+    new Promise((resolve) => {
+      const vitals = {};
+      let count = 0;
+
+      const done = () => {
+        console.log("done", vitals);
+        if (++count === 4) resolve(vitals);
+      };
+
+      // onINP((metric) => {
+      //   vitals.INP = metric.value;
+      //   done();
+      // });
+      onLCP((metric) => {
+        vitals.LCP = metric.value;
+        done();
+      });
+      onCLS((metric) => {
+        vitals.CLS = metric.value;
+        done();
+      });
+      onFCP((metric) => {
+        vitals.FCP = metric.value;
+        done();
+      });
+      onTTFB((metric) => {
+        vitals.TTFB_WEB_VITALS = metric.value;
+        done();
+      });
+    });
+
+  const pageLoadPerformance = () => {
+    window.addEventListener("load", async () => {
+      const vitals = await waitForVitals();
+      console.log("vitals", vitals);
+
+      const [nav] = performance.getEntriesByType("navigation");
+      const data = {
+        PAGE_LOAD_TIME: nav.duration,
+        TTFB: nav.responseStart - nav.requestStart,
+        DNS_LOOKUP: nav.domainLookupEnd - nav.domainLookupStart,
+        TLS_HANDSHAKE: nav.connectEnd - nav.connectStart,
+        DOWNLOAD_RESPONSE: nav.responseEnd - nav.responseStart,
+        DOM_CONTENT_LOADED: nav.domContentLoadedEventEnd - nav.startTime,
+        LOAD_EVENT: nav.loadEventEnd - nav.startTime,
+        TTFB_WEB_VITALS: vitals.TTFB_WEB_VITALS || 0,
+        // INP: vitals.INP || 0,
+        LCP: vitals.LCP || 0,
+        CLS: vitals.CLS || 0,
+        FCP: vitals.FCP || 0,
+      };
+
+      let session_id = getSessionId();
+
+      const send_data = {
+        type: "web_vitals",
+        project: project_id,
+        session: session_id || null,
+        page_url: window.location.href,
+        data: data,
+        timestamp: Date.now(),
+        uniqueId: UUID(),
+      };
+      allEvents.push(send_data);
+    });
+  };
+
+  pageLoadPerformance();
   consoleErrorTracker();
   rageClickTracker();
   setInterval(async () => {
