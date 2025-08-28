@@ -112,11 +112,43 @@ export default function fileService() {
     }
   };
 
+  const checkFolder = (folder) => {
+    if (!fs.existsSync(folder)) {
+      fs.mkdirSync(folder, { recursive: true }); // pour créer tous les niveaux de dossiers nécessaires . Sans recursive, seul le premier dossier (storage) sera créé
+    }
+  };
+
+  const readFileFromFolder = async (pathToFile) => {
+    try {
+      const file = fs.readFileSync(pathToFile);
+      return file;
+    } catch (error) {
+      throw new Error(error);
+    }
+  };
+
+  const deleteFiles = (paths) => {
+    try {
+      for (const e of paths) {
+        fs.unlink(e, (err) => {
+          if (err) {
+            console.error("Erreur suppression :", err.message);
+          }
+          console.log("🗑️ Fichier supprimé :", e);
+        });
+      }
+    } catch (error) {
+      throw new Error(error);
+    }
+  };
 
   return {
     uploadFileOnS3,
     getFileFromS3,
     uploadFilesOnS3,
     getURLFileFromS3,
+    checkFolder,
+    readFileFromFolder,
+    deleteFiles,
   };
 }

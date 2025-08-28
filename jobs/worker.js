@@ -1,11 +1,13 @@
 import { connectionRedis } from "./ioredis.js";
 import { Worker } from "bullmq";
 import chunkService from "../services/chunk/chunkService.js";
+import fs from "fs";
 
 const { uploadChunksInJsonFileOnS3, uploadChunksInJsonFileLocal } =
   chunkService();
 import fileService from "../services/files/fileService.js";
-const { uploadFileOnS3, uploadFilesOnS3 } = fileService();
+const { uploadFileOnS3, uploadFilesOnS3, readFileFromFolder, deleteFiles } =
+  fileService();
 import mongoose from "../config/mongodb.js";
 import { mailTransporter } from "../config/mailer.js";
 import Files from "../models/Files.js";
@@ -23,7 +25,7 @@ const worker = new Worker(
         .exists({ uniqueId: chunk.uniqueId });
       //SAVE ON S3 STORAGE
       if (!exist) {
-      const result = await uploadChunksInJsonFileOnS3(chunk, project);
+        const result = await uploadChunksInJsonFileOnS3(chunk, project);
         if (result) {
           chunk.storage_link = result;
           await mongoose.model("Chunk").insertOne(chunk);
@@ -57,8 +59,8 @@ const mailingWorker = new Worker(
     try {
       let mailinfo = job.data;
       const info = await mailTransporter.sendMail({
-        from: process.env.MAIL_FROM_NAME,
-        to: receiver.to,
+        from: mailinfo.from,
+        to: mailinfo.to,
         subject: mailinfo.subject,
         html: mailinfo.html,
       });
@@ -72,7 +74,7 @@ const mailingWorker = new Worker(
         });
       }
     } catch (error) {
-      throw new Error("Erreur envoie de mail");
+      throw new Error(error);
     }
   },
   { connection: connectionRedis }
@@ -82,18 +84,21 @@ const feedbackStore = new Worker(
   "feedback",
   async (job) => {
     try {
+      let paths = [];
+
+      let decodedFile = null;
       // DECODER LES DONNES EN BUFFER
-      const decodedFile = {
-        ...job.data.file,
-        buffer: Buffer.from(job.data.file.buffer, "base64"),
-      };
+      let bufferFile = await readFileFromFolder(job.data.file.path);
+      decodedFile = { ...job.data.file, buffer: bufferFile };
+      paths.push(decodedFile.path);
 
       let decodedAttachments = [];
       if (job.data.attachments.length > 0) {
-        decodedAttachments = job.data.attachments.map((att) => ({
-          ...att,
-          buffer: Buffer.from(att.buffer, "base64"),
-        }));
+        for (const attach of job.data.attachments) {
+          let bufferFile = await readFileFromFolder(attach.path);
+          decodedAttachments.push({ ...attach, buffer: bufferFile });
+          paths.push(attach.path);
+        }
       }
 
       const fileResult = await uploadFileOnS3(
@@ -139,6 +144,9 @@ const feedbackStore = new Worker(
           }
 
           await Files.insertMany(filesAttach);
+
+          deleteFiles(paths);
+
           console.log("Feedback enregistré");
         }
       }

@@ -13,7 +13,26 @@ schedule_expired_session.start();
 
 import redisConnection from "./config/redis.js";
 import cors from "cors";
-configDotenv();
+
+const __filename = fileURLToPath(import.meta.url);
+
+export const __dirname = path.dirname(__filename);
+
+let envfile = null;
+if (process.env.NODE_ENV) {
+  // ENVIRONNEMENT DOCKER
+  if (process.env.NODE_ENV === "development") {
+    envfile = path.resolve(__dirname, `.env.docker`);
+  } else {
+    envfile = path.resolve(__dirname, `.env.${process.env.NODE_ENV}`);
+  }
+} else {
+  // ENVIRONNEMENT LOCAL SANS DOCKER
+  envfile = path.resolve(__dirname, `.env`);
+}
+
+configDotenv({ path: envfile });
+
 redisConnection().catch((error) =>
   console.log("Erreur de configuration de redis")
 );
@@ -51,9 +70,6 @@ app.use(async (error, req, res, next) => {
     console.log("Erreur " + error);
   }
 });
-
-const __filename = fileURLToPath(import.meta.url);
-export const __dirname = path.dirname(__filename);
 
 export const viewspath = path.join(__dirname, "views");
 

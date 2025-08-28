@@ -7,7 +7,7 @@ import {
   validateFeedbackStore,
   validateFeedbackPerProject,
   validateShowFeedback,
-  validateUpdateFeedback
+  validateUpdateFeedback,
 } from "../../validator/feedback/feedbackValidator.js";
 
 import { validateCommentStore } from "../../validator/feedback/feedbackCommentValidator.js";
@@ -16,23 +16,22 @@ import multer from "multer";
 import { validateSkipQuery } from "../../validator/generalValidator.js";
 import isauthentificate from "../../middleware/isAuthentificate.js";
 import { blacklist } from "../../middleware/blacklist.js";
+import { uploadFile } from "../../services/files/multer.js";
 const {
   getFeedbackParams,
   storeFeedback,
   getFeedbackPerProject,
   updateFeedback,
-  showFeedback
+  showFeedback,
 } = feedbackController();
 const { getFeedbackComments, storeComment } = feedbackCommentController();
 
-const {
-  getFeedbackHistory
-} = feedbackHistoryController()
+const { getFeedbackHistory } = feedbackHistoryController();
 
 FeedbackRouter.get("/params", getFeedbackParams);
 FeedbackRouter.post(
   "/store",
-  multer().fields([{ name: "file", maxCount: 1 }, { name: "attachments" }]),
+  uploadFile.fields([{ name: "file", maxCount: 1 }, { name: "attachments" }]),
   validateFeedbackStore,
   storeFeedback
 );

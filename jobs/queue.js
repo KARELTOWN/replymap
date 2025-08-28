@@ -1,5 +1,6 @@
 import { Queue } from "bullmq";
 import { connectionRedis } from "./ioredis.js";
+import { performance } from "perf_hooks";
 const defaultOptions = {
   attempts: 3,
   backoff: { type: "fixed", delay: 10000 },
@@ -31,26 +32,11 @@ export const storeChunkJob = async (data) => {
 
 export const storeFeedbackJob = async (data) => {
   try {
-    // ENCODER LE BUFFER EN BASE 64 , BULLMQ ne traitant pas les buffers
-    const encodedFile = {
-      ...data.file,
-      buffer: data.file.buffer.toString("base64"),
-    };
-
     let attachments = Array.from(data.attachments);
-    let encodedAttachments = [];
-    if (attachments.length !== 0) {
-      encodedAttachments = attachments.map((file) => ({
-        ...file,
-        buffer: file.buffer.toString("base64"),
-      }));
-    }
-
-    console.log("encodedAttachments", encodedAttachments);
-
+   console.log('data.file', data.file)
     await feedbackStoreQueues.add(`feedback_${Date.now()}`, {
-      file: encodedFile,
-      attachments: encodedAttachments,
+      file: data.file,
+      attachments: attachments,
       feedback: data.feedback,
     });
   } catch (error) {

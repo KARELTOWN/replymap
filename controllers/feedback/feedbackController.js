@@ -8,6 +8,7 @@ import fileService from "../../services/files/fileService.js";
 const { getURLFileFromS3 } = fileService();
 import feedbackHistoryController from "./feedbackHistoryController.js";
 import { storeFeedbackJob } from "../../jobs/queue.js";
+import Session from "../../models/Session.js";
 const { storeFeedbackHistory } = feedbackHistoryController();
 
 export default function feedbackController() {
@@ -33,8 +34,14 @@ export default function feedbackController() {
         res.status(422).json({ errors: errors.array() });
       }
       const data = matchedData(req);
+
+      // Vérif existence en base
+      const session_exist = await Session.findById(data.session_id);
+      if (!session_exist) {
+        data.session_id = null;
+      }
+
       const file = req.files.file ? req.files.file[0] : null;
-      console.log('file', req.files)
       const attachments = req.files.attachments ? req.files.attachments : [];
       if (!file) {
         return res

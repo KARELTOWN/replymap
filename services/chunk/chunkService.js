@@ -10,6 +10,8 @@ import _ from "lodash";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import path from "path";
 import fs from "fs";
+import fileService from "../files/fileService.js";
+const { checkFolder } = fileService();
 
 // Fonction pour Uploader les fichiers event
 // au format JSON sur S3
@@ -55,9 +57,7 @@ export default function eventWorker() {
 
       let file_folder = `project_${project_id}/session_${data.session_id}`;
       let folder = path.join(base_folder, file_folder);
-      if (!fs.existsSync(folder)) {
-        fs.mkdirSync(folder, { recursive: true }); // pour créer tous les niveaux de dossiers nécessaires . Sans recursive, seul le premier dossier (storage) sera créé
-      }
+      checkFolder(folder);
       let filename = `chunk_${Date.now()}.json.gz`;
 
       const filePath = path.join(folder, filename);

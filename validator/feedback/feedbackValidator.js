@@ -69,11 +69,6 @@ export const validateFeedbackStore = [
         throw new Error("Format de session_id invalide");
       }
 
-      // Vérif existence en base
-      const session_exist = await Session.findById(value);
-      if (!session_exist) {
-        throw new Error("La session n'existe pas");
-      }
       return true;
     }),
 ];
