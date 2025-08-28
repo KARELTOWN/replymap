@@ -110,7 +110,7 @@ export const sessionStore = defineStore('session-store', () => {
 
   const showErrors = async (data) => {
     try {
-      data.is_error = true
+      data.is_error = false
       const result = await fetchPut(
         `event/filter?limit=${session_errors_limit.value}&page=${page.value}`,
         data,

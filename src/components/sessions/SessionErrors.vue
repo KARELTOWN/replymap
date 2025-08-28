@@ -40,8 +40,10 @@
                         <td class="px-4 py-2 text-center">
                             <Badge color="error">{{ req.type.libelle }}</Badge>
                         </td>
-                        <td class="px-4 py-2 text-center">{{
-                            formatTimestampToDate(req.timestamp) }}</td>
+                        <td class="px-4 py-2 text-center">
+                            <Badge color="light" @click="goToEvent(req.timestamp)"> {{
+                                formatTimestampToDate(req.timestamp) }} </Badge>
+                        </td>
                         <td class="px-4 py-2 text-center max-w-[250px] truncate" :title="req.page_url">{{ req.page_url
                             }}</td>
                         <td class="px-4 py-2 text-center">{{ req.data?.response?.status }}</td>
@@ -87,7 +89,7 @@ import Badge from '../ui/Badge.vue';
 import Pagination from '../pagination/Pagination.vue';
 import { formatTimestampToDate } from '@/utils/format';
 const store = sessionStore()
-const { session_errors, session_errors_limit, page, totalPages, total, player, canGetChunk } = storeToRefs(store)
+const { session_errors, page, totalPages, total, player, session } = storeToRefs(store)
 const { showErrors } = store
 const route = useRoute()
 
@@ -149,13 +151,25 @@ const fetchNext = async (nextpage) => {
     await showErrors({ session: session_id.value, project: project_id.value })
 }
 
+const formatSessionDate = computed(() => {
+    if (session.value) {
+        console.log('startat', session.value.startedAt)
 
-// const goToError = (timestamp) => {
-//     if (player.value) {
-//         console.log('timestamp', timestamp)
-//         player.value.goto(timestamp)
-//     }
-// }
+        return new Date(session.value.startedAt).getTime();
+    }
+    return null
+})
+
+const goToEvent = (timestamp) => {
+    if (player.value) {
+        if (formatSessionDate.value) {
+            const relativeTime = timestamp - formatSessionDate.value
+            // 2. Vérifier bornes pour éviter d'aller hors replay
+            if (relativeTime < 0) { relativeTime = 0 };
+            player.value.goto(relativeTime)
+        }
+    }
+}
 
 
 </script>

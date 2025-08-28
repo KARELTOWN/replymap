@@ -28,9 +28,15 @@
                                     {{ feedbackSelect_data?.session_id?.uniqueId }} </Badge>
                             </h3>
                         </div>
+                        <div v-if="getFileExtension(feedbackSelect_data?.file?.type) === 'image'">
+                            <img :src="feedbackSelect_data?.file?.key" alt="Image du feedback"
+                                class="w-full h-64 object-contain rounded-md mb-4" />
+                        </div>
+                        <div v-else>
+                            <video :src="feedbackSelect_data?.file?.key" autoplay="true" controls="true"></video>
 
-                        <img :src="feedbackSelect_data?.file?.key" alt="Image du feedback"
-                            class="w-full h-64 object-contain rounded-md mb-4" />
+                        </div>
+
                     </div>
 
                     <!-- Partie droite : onglets -->
@@ -128,5 +134,12 @@ const seeSession = (session) => {
     }
 }
 
+const getFileExtension = (key) => {
+    if (key) {
+        const info = key.split('/')
+        console.log('info', info)
+        return info[0]
+    }
+}
 
 </script>

@@ -144,7 +144,7 @@ const libelle = ref('')
 const link = ref('')
 const props = defineProps({
   open: {
-    type: String,
+    type: Boolean,
     required: true
   }
 })

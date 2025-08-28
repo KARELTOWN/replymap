@@ -55,7 +55,7 @@ const isOpen = ref(false)
 const email = ref('')
 const props = defineProps({
   open: {
-    type: String,
+    type: Boolean,
     required: true
   }
 })
