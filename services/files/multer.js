@@ -8,7 +8,7 @@ const storage = multer.diskStorage({
   destination: function (req, file, cb) {
      let folder = path.join(__dirname, "storage/tmp/my-uploads")
     checkFolder(folder)
-    cb(null, "./storage/tmp/my-uploads");
+    cb(null, folder);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);

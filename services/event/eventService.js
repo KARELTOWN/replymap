@@ -16,6 +16,12 @@ export const createEventsLog = async (data) => {
       if (exist) {
         continue;
       } else {
+        if (item.session) {
+          let session_exist = await Session.findById(item.session);
+          if (!session_exist) {
+            item.session = null;
+          }
+        }
         events.push(item);
       }
     }
@@ -34,7 +40,7 @@ export const EventModelFilter = async (
   limit,
   error = false
 ) => {
-  let admin = await isAdmin(req)
+  let admin = await isAdmin(req);
   let issue_finder;
   if (error === true && !query.type) {
     let errorsType = await EventType.find({

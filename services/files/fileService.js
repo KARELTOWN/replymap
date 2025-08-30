@@ -128,17 +128,13 @@ export default function fileService() {
   };
 
   const deleteFiles = (paths) => {
-    try {
-      for (const e of paths) {
-        fs.unlink(e, (err) => {
-          if (err) {
-            console.error("Erreur suppression :", err.message);
-          }
-          console.log("🗑️ Fichier supprimé :", e);
-        });
+    for (const e of paths) {
+      try {
+        fs.unlinkSync(e);
+        console.log("🗑️ Fichier supprimé :", e);
+      } catch (error) {
+        console.error("Erreur suppression :", error.message, "→", filePath);
       }
-    } catch (error) {
-      throw new Error(error);
     }
   };
 

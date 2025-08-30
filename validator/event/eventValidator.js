@@ -50,12 +50,7 @@ export const validateStoreEvent = [
         if (!item.uniqueId || !validator.isUUID(item.uniqueId)) {
           throw new Error("Identifiant d'événement invalide.");
         }
-        if (item.session) {
-          let session_exist = await Session.findById(item.session);
-          if (!session_exist) {
-            throw new Error(`La session ${item.session} n'existe pas`);
-          }
-        }
+        
         if (item.project) {
           let project_exist = await Project.findById(item.project);
           if (!project_exist) {
