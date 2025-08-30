@@ -2,19 +2,21 @@ import _ from "lodash";
 import { project_id } from "../record";
 import { fetchPost } from "../utils/request";
 import { v4 } from "uuid";
+import dbtransaction from "../utils/indexDB.js";
+const { getEvents, saveEvents, deleteEventByKeys } = dbtransaction();
+
 let performances = [];
-const getPerformance = () => {
-  return JSON.parse(localStorage.getItem("replay_map_performance_issues"));
+
+const getPerformance = async () => {
+  return await getEvents("replay_map_performance_issues");
 };
-const setPerformance = (data) => {
-  if (Array.isArray(data) && data.length > 0) {
-    localStorage.setItem("replay_map_performance_issues", JSON.stringify(data));
-  } else {
-    localStorage.removeItem("replay_map_performance_issues");
-  }
+
+const setPerformance = async (data) => {
+  await saveEvents("replay_map_performance_issues", data);
 };
-export const observer = new PerformanceObserver((list) => {
-  list.getEntries().forEach((entry) => {
+
+export const observer = new PerformanceObserver(async (list) => {
+  for (const entry of list.getEntries()) {
     if (
       (entry.entryType === "resource" || entry.entryType === "longtask") &&
       !isRecordResource(entry)
@@ -24,7 +26,8 @@ export const observer = new PerformanceObserver((list) => {
       let entryType =
         entry.entryType === "resource" ? "Ressource" : "Tâche longue";
       if (timeInSecond >= 3) {
-        if (!existPerformance(entry)) {
+        let exist = await existPerformance(entry);
+        if (exist === false) {
           let newPerformance = {
             type: "performance_issues",
             project: project_id,
@@ -40,20 +43,24 @@ export const observer = new PerformanceObserver((list) => {
             uniqueId: v4(),
           };
           performances.push(newPerformance);
-          setPerformance(performances);
-          if (performances.length > 0) {
+          let performances_to_save = performances;
+          performances = [];
+          await setPerformance(performances_to_save);
+          if (performances_to_save.length > 0) {
             storePerformance();
           }
         }
       }
     }
-  });
+  }
 });
 
-const existPerformance = (entry) => {
-  const performances = getPerformance();
-  if (performances !== null) {
-    let exist = performances.find((item) => item.data.name === entry.name);
+const existPerformance = async (entry) => {
+  const performances = await getPerformance();
+  if (performances && performances.events_data.length > 0) {
+    let exist = performances.events_data.find(
+      (item) => item.data.name === entry.name
+    );
     return exist === undefined ? false : true;
   }
   return false;
@@ -66,26 +73,32 @@ const isRecordResource = (entry) => {
 //envoyer les evenements vers le serveur backend pour stockage
 const storePerformance = _.debounce(async () => {
   try {
-    let data = getPerformance();
-    const response = await fetchPost("event/store", { events: data });
-    if (!response.ok) {
-      throw new Error("Erreur d'enregistrement des problèmes de performance");
-    } else {
-      performances = _.differenceWith(performances, data, _.isEqual);
-      setPerformance(performances);
+    let data = await getPerformance();
+    if (data && data.events_data.length > 0) {
+      const response = await fetchPost("event/store", {
+        events: data.events_data,
+      });
+      if (!response.ok) {
+        throw new Error("Erreur d'enregistrement des problèmes de performance");
+      } else {
+        deleteEventByKeys("replay_map_performance_issues", data.events_keys);
+      }
     }
   } catch (error) {
     throw new Error(error);
   }
 }, 4000);
 
-window.addEventListener("unload", () => {
-  const performances = getPerformance();
-  if (performances.length > 0) {
+window.addEventListener("unload", async () => {
+  const performances = await getPerformance();
+  if (performances.events_data.length > 0) {
     navigator.sendBeacon(
       "event/store",
-      JSON.stringify({ events: performances })
+      JSON.stringify({ events: performances.events_data })
     );
-    setPerformance([]);
+    deleteEventByKeys(
+      "replay_map_performance_issues",
+      performances.events_keys
+    );
   }
 });

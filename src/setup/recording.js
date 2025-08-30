@@ -7,20 +7,21 @@ import { project_id } from "../record.js";
 import setCookie from "../utils/cookie.js";
 import { getSessionId } from "../utils/session.js";
 import { maskSelector } from "../utils/maskSelector.js";
-const getSessionEvents = () =>
-  JSON.parse(localStorage.getItem("replay_map_record_events")) || [];
+import pako from "pako";
+import dbtransaction from "../utils/indexDB.js";
+const { getEvents, saveEvents, deleteEventByKeys } = dbtransaction();
 
-const saveSessionEvents = (data) => {
-  if (Array.isArray(data) && data.length > 0) {
-    localStorage.setItem("replay_map_record_events", JSON.stringify(data));
-  } else {
-    localStorage.removeItem("replay_map_record_events"); // nettoie quand vide
-  }
+const getSessionEvents = async () => {
+  return await getEvents('replay_map_record_events');
+};
+
+const saveSessionEvents = async (data) => {
+  await saveEvents("replay_map_record_events", data);
 };
 
 export default async function initializeRecord() {
   let session_id = getSessionId();
-  let session_events = getSessionEvents();
+  let session_events = [];
   let sessionCreate = false;
   let events = [];
   let stopRecording = null;
@@ -55,21 +56,23 @@ export default async function initializeRecord() {
   const uploadChunk = async (chunks) => {
     if (!project_id) return;
 
-    const payload = { project_id, events: chunks };
+    const payload = { project_id, events: chunks.events_data };
     try {
       const res = await fetchPost("chunk/store", payload);
       const result = await res.json();
-      session_events = _.differenceWith(session_events, chunks, _.isEqual);
-      saveSessionEvents(session_events);
+      session_events = [];
+      console.log("save chunk");
+      deleteEventByKeys("replay_map_record_events", chunks.events_keys);
     } catch (error) {
       console.error(error);
     }
   };
 
-  const saveChunk = _.debounce(() => {
-    const data = getSessionEvents();
+  const saveChunk = _.debounce(async () => {
+    const data = await getSessionEvents();
     if (data) {
-      if (data.length > 0) {
+      if (data.events_data.length > 0) {
+        // const output = pako.deflate(data);
         uploadChunk(data);
       }
     }
@@ -77,17 +80,25 @@ export default async function initializeRecord() {
 
   const record = () => {
     try {
+      let lastMouseMove = 0;
+
       stopRecording = rrweb.record({
-        emit(event) {
+        emit: async function (event) {
           resetInactivityTimeout();
+
+          const MOUSE_INTERVAL = 500;
+
+          if (event.type === "mousemove") {
+            const now = Date.now();
+            if (now - lastMouseMove < MOUSE_INTERVAL) return;
+            lastMouseMove = now;
+          }
 
           const lastEvent = events[events.length - 1];
           // Cela empêche l’enregistrement d’un événement identique consécutif.
           if (!_.isEqual(lastEvent, event)) {
             events.push(event);
           }
-
-          requestIdleCallback()
 
           if (events.length >= 5) {
             session_events.push({
@@ -97,14 +108,16 @@ export default async function initializeRecord() {
               uniqueId: uuidV4(),
             });
             events = [];
-            saveSessionEvents(session_events);
+            let session_events_to_send = session_events;
+            session_events = [];
+            await saveSessionEvents(session_events_to_send);
             saveChunk();
           }
         },
         maskInputOptions: { password: true },
         recordCanvas: true,
         recordIframe: true,
-        maskTextSelector: maskSelector
+        maskTextSelector: maskSelector,
         // recordCrossOriginIframes: true
       });
     } catch (error) {
@@ -152,6 +165,8 @@ export default async function initializeRecord() {
         console.error(
           "REPLAY MAP : Impossible de récupérer les informations de la session existante"
         );
+        localStorage.removeItem("track_bug_session_id");
+        session_id = null;
       }
     }
     if (!session_id || (session_id && isEnded === true)) {
@@ -232,7 +247,6 @@ export default async function initializeRecord() {
         "/chunk/store",
         JSON.stringify({ project_id, events: session_events })
       );
-      saveSessionEvents([]);
     }
   });
 

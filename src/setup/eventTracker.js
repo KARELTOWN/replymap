@@ -4,20 +4,19 @@ import { fetchPost } from "../utils/request";
 import { v4 as UUID } from "uuid";
 import { getSessionId } from "../utils/session.js";
 import { onINP, onLCP, onCLS, onFCP, onTTFB } from "web-vitals";
+import dbtransaction from "../utils/indexDB.js";
+const { getEvents, saveEvents, deleteEventByKeys } = dbtransaction();
 
 export default function eventTracker() {
-  const getEvents = () =>
-    JSON.parse(localStorage.getItem("replay_map_events_tracker")) || [];
-
-  const saveEvents = (data) => {
-    if (Array.isArray(data) && data.length > 0) {
-      localStorage.setItem("replay_map_events_tracker", JSON.stringify(data));
-    } else {
-      localStorage.removeItem("replay_map_events_tracker"); // nettoie quand vide
-    }
+  const getEventsTrack = async () => {
+    return await getEvents("replay_map_events_tracker");
   };
 
-  let allEvents = getEvents();
+  const saveEventsTrack = async (data) => {
+    await saveEvents("replay_map_events_tracker", data);
+  };
+
+  let allEvents = [];
 
   //suivi de l'internaute pour identifier les pages visités
 
@@ -120,7 +119,9 @@ export default function eventTracker() {
         }
         if (newData > 0) {
           events = [];
-          saveEvents(allEvents);
+          // let events_to_save = allEvents
+          // allEvents = []
+          // saveEventsTrack(events_to_save);
         }
       }
     }, 2000);
@@ -137,14 +138,16 @@ export default function eventTracker() {
     }
     return element.tagName.toLowerCase();
   };
+
   //envoyer les evenements vers le serveur backend pour stockage
   const storeEvents = async (data) => {
-    const response = await fetchPost("event/store", { events: data });
+    const response = await fetchPost("event/store", {
+      events: data.events_data,
+    });
     if (!response.ok) {
       throw new Error("Erreur d'enregistrement des evenements");
     } else {
-      allEvents = _.differenceWith(allEvents, data, _.isEqual);
-      saveEvents(allEvents);
+      deleteEventByKeys("replay_map_events_tracker", data.events_keys);
     }
   };
 
@@ -154,7 +157,6 @@ export default function eventTracker() {
       let count = 0;
 
       const done = () => {
-        console.log("done", vitals);
         if (++count === 4) resolve(vitals);
       };
 
@@ -183,7 +185,6 @@ export default function eventTracker() {
   const pageLoadPerformance = () => {
     window.addEventListener("load", async () => {
       const vitals = await waitForVitals();
-      console.log("vitals", vitals);
 
       const [nav] = performance.getEntriesByType("navigation");
       const data = {
@@ -220,11 +221,19 @@ export default function eventTracker() {
   consoleErrorTracker();
   rageClickTracker();
   setInterval(async () => {
-    if (allEvents.length > 0) {
-      saveEvents(allEvents);
-      await storeEvents(allEvents);
-    }
-  }, 4000);
+    const save = _.debounce(async () => {
+      if (allEvents.length > 0) {
+        let events_to_save = allEvents;
+        allEvents = [];
+        await saveEventsTrack(events_to_save);
+        let toSave = await getEventsTrack();
+        if (toSave && toSave.events_data.length > 0) {
+          await storeEvents(toSave);
+        }
+      }
+    }, 2000);
+    save();
+  }, 2000);
 
   window.addEventListener("beforeunload", () => {
     if (allEvents.length > 0) {
@@ -232,7 +241,6 @@ export default function eventTracker() {
         "event/store",
         JSON.stringify({ events: allEvents })
       );
-      saveEvents([]);
     }
   });
 }

@@ -3,19 +3,18 @@ import { fetchPost } from "../utils/request.js";
 import { project_id } from "../record.js";
 import { v4 as uuidV4 } from "uuid";
 import { getSessionId } from "../utils/session.js";
+import dbtransaction from "../utils/indexDB.js";
+const { getEvents, saveEvents, deleteEventByKeys } = dbtransaction();
 
-const getIntercepts = () =>
-  JSON.parse(localStorage.getItem("replay_map_events_tracker")) || [];
-
-const saveIntercepts = async (data) => {
-  if (Array.isArray(data) && data.length > 0) {
-    localStorage.setItem("replay_map_events_tracker", JSON.stringify(data));
-  } else {
-    localStorage.removeItem("replay_map_events_tracker"); // nettoie quand vide
-  }
+const getIntercepts = async () => {
+  return await getEvents("replay_map_events_tracker");
 };
 
-let intercepts = getIntercepts();
+const saveIntercepts = async (data) => {
+  await saveEvents("replay_map_events_tracker", data);
+};
+
+let intercepts = [];
 
 export default function interceptRequest() {
   const originalFetch = window.fetch;
@@ -23,7 +22,7 @@ export default function interceptRequest() {
   //intercepter les requêtes avec FETCH
   window.fetch = async (...args) => {
     try {
-      let rrweb_timestamp = Date.now()
+      let rrweb_timestamp = Date.now();
       let session_id = getSessionId();
 
       const start = performance.now();
@@ -73,11 +72,12 @@ export default function interceptRequest() {
               response: request_response,
             },
             uniqueId: uuidV4(),
-            timestamp: rrweb_timestamp
+            timestamp: rrweb_timestamp,
           });
-
-          saveIntercepts(intercepts);
-          if (intercepts.length > 0) {
+          let intercepts_to_save = intercepts;
+          intercepts = [];
+          await saveIntercepts(intercepts_to_save);
+          if (intercepts_to_save.length > 0) {
             sendInterceptData();
           }
         }
@@ -92,14 +92,13 @@ export default function interceptRequest() {
 
 const sendInterceptData = _.debounce(async () => {
   try {
-    const data = getIntercepts();
-    if (data && data.length > 0) {
+    const data = await getIntercepts();
+    if (data && data.events_data.length > 0) {
       const response = await fetchPost("event/store", {
-        events: data,
+        events: data.events_data,
       });
       if (response.ok) {
-        intercepts = [];
-        saveIntercepts(intercepts);
+        deleteEventByKeys("replay_map_events_tracker", data.events_keys);
       }
     }
   } catch (error) {
@@ -110,7 +109,6 @@ const sendInterceptData = _.debounce(async () => {
 window.addEventListener("beforeunload", () => {
   if (intercepts.length > 0) {
     navigator.sendBeacon("event/store", JSON.stringify({ events: intercepts }));
-    saveIntercepts([]);
   }
 });
 
