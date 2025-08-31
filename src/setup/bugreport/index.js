@@ -23,6 +23,10 @@ const { getFeedbackParams, sendFeedback } = service();
     );
   }
   // --- Créer le panel ---
+
+  const MAX_SIZE_MB = 50;
+  const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
+
   let mode = "draw"; // "draw" ou "text"
   const panel = document.createElement("div");
   panel.id = "replaymap_capture-panel";
@@ -485,7 +489,6 @@ replaymap_editmodezone button:hover {
     let canvas = document.createElement("canvas");
     canvas.width = bitmap.width;
     canvas.height = bitmap.height;
-    console.log("step1");
     canvas.getContext("2d").drawImage(bitmap, 0, 0);
 
     showEditableCanvas(canvas);
@@ -723,6 +726,18 @@ replaymap_editmodezone button:hover {
       for (let file of e.target.files) {
         if (!allowedTypes.includes(file.type)) {
           alert(`Type de fichier non autorisé : ${file.name}`);
+          e.target.value = "";
+          break;
+        }
+
+        if (file.size > MAX_SIZE_BYTES) {
+          alert(
+            `Fichier trop volumineux : ${file.name} (${(
+              file.size /
+              1024 /
+              1024
+            ).toFixed(2)} MB)`
+          );
           e.target.value = "";
           break;
         }
@@ -1148,7 +1163,6 @@ replaymap_editmodezone button:hover {
   function saveHistory(action) {
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     history.push({ imageData, action });
-    console.log("push last action", history);
   }
 
   function undo() {
@@ -1156,7 +1170,6 @@ replaymap_editmodezone button:hover {
       history.pop(); // retire dernière action
       const last = history[history.length - 1];
       ctx.putImageData(last.imageData, 0, 0);
-      console.log("Undo last action", history);
     }
   }
 

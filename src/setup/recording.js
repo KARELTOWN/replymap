@@ -61,7 +61,6 @@ export default async function initializeRecord() {
       const res = await fetchPost("chunk/store", payload);
       const result = await res.json();
       session_events = [];
-      console.log("save chunk");
       deleteEventByKeys("replay_map_record_events", chunks.events_keys);
     } catch (error) {
       console.error(error);

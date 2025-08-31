@@ -21,8 +21,21 @@ if (process.env.NODE_ENV) {
 
 configDotenv({ path: envfile });
 
+const corsOption = {
+  origin: ["https://app.bugreveal.com"],
+  methods: ["GET", "POST", "DELETE", "PUT", "PATCH"],
+  credentials: true,
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "Access-Control-Allow-Headers",
+    "Access-Control-Allow-Origin",
+    "common",
+  ],
+};
+
 const app = express();
-app.use(cors()); // Autorise toutes les origines
+app.use(cors(corsOption)); // Autorise toutes les origines
 
 app.use(express.static(path.join(__dirname, "dist"))); // Sert le bundle
 

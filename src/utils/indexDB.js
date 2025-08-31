@@ -13,14 +13,11 @@ export default function dbtransaction() {
             db.createObjectStore(table, {
               autoIncrement: true,
             });
-            console.log(`${table} créé`);
           }
         }
       };
 
       record_events_connection.onerror = () => {
-        console.log(record_events_connection.error);
-
         reject(record_events_connection.error);
       };
 
@@ -30,8 +27,6 @@ export default function dbtransaction() {
           db.close();
           alert("Database is outdated, please reload the page.");
         };
-        console.log("record_events_connection effectué");
-
         resolve();
       };
 
@@ -66,7 +61,6 @@ export default function dbtransaction() {
       };
 
       request.onerror = function () {
-        console.log(request.error);
         reject(request.error);
       };
     });
@@ -80,11 +74,9 @@ export default function dbtransaction() {
 
       const transaction = db.transaction(table, "readwrite");
       const store = transaction.objectStore(table);
-      console.log("data size", data.length);
       const request = store.add(data);
 
       request.onsuccess = () => {
-        console.log("Events saved");
         resolve();
       };
 
@@ -113,14 +105,11 @@ export default function dbtransaction() {
         request.onsuccess = () => {
           completed++;
           if (completed === keys.length && !hasError) {
-            console.log("tout supprimer", keys.length);
-
             resolve(); // toutes les suppressions sont terminées
           }
         };
 
         request.onerror = () => {
-          console.log("erreur suppresion", request.error);
           hasError = true;
           reject(request.error);
         };
