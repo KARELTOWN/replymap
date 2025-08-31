@@ -39,11 +39,11 @@ redisConnection().catch((error) =>
 const app = express();
 
 // Augmenter la limite à 10 Mo par exemple
-app.use(bodyParser.json({ limit: "10mb" }));
-app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
+app.use(bodyParser.json({ limit: "50mb" }));
+app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 
 const corsOption = {
-  origin: "*",
+  origin: ["https://record.bugreveal.com", "https://app.bugreveal.com"],
   methods: ["GET", "POST", "DELETE", "PUT", "PATCH"],
   credentials: true,
   allowedHeaders: [

@@ -31,22 +31,18 @@ export const decompressPako = (req, res, next) => {
 
   let attachments = [];
   for (const attachment of req.body.attachments) {
-    console.log("attachment", attachment);
 
     const byteArrayFile = new Uint8Array(Object.values(attachment));
     const arrayBase64Attachment = inflate(byteArrayFile, { raw: true });
-            console.log("CSSCSCCC", arrayBase64Attachment);
 
     const decodedAttachment = new TextDecoder().decode(arrayBase64Attachment);
-    console.log("decodedAttachment", decodedAttachment);
 
     let blob = dataURLToBlob(decodedAttachment);
-    console.log("blob", blob);
 
     attachments.push(blob);
   }
   req.body.attachments = attachments;
-  // next();
+  next();
 };
 
 export const encodePako = (req, res, next) => {

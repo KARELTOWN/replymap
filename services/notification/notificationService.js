@@ -5,14 +5,11 @@ export default function notificationService() {
   const sendMailNotification = async (data) => {
     try {
       const { receivers, params, model_name } = data;
-      console.log("model_name", model_name);
-      console.log("receivers", receivers);
 
       let model = await NotificationModel.findOne({
         unique: model_name,
       }).exec();
       let original_title = model.title;
-      console.log("original_title", original_title);
       let original_content = model.content;
 
       let title_params = original_title;
@@ -32,7 +29,6 @@ export default function notificationService() {
           email: receiver.email,
           _id: receiver._id,
         };
-        console.log("info", info);
 
         let mailData = {
           subject: title_params,
@@ -41,7 +37,6 @@ export default function notificationService() {
           user_id: info._id,
           model: model._id
         };
-        console.log("maildata", mailData);
         await mailingJob(mailData);
       }
       return true;
