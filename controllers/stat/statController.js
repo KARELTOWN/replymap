@@ -1,7 +1,8 @@
-import Events, { user_connect_events } from "../../models/Events.js";
 import Project from "../../models/Project.js";
-import Session, { user_connect_sessions } from "../../models/Session.js";
-import { user_connect_projects } from "../../models/UserProject.js";
+import Session from "../../models/Session.js";
+import { user_connect_events } from "../../services/event/eventService.js";
+import { user_connect_projects } from "../../services/project/projectService.js";
+import { user_connect_sessions } from "../../services/session/sessionService.js";
 
 export default function statController() {
   const getStats = async (req, res) => {

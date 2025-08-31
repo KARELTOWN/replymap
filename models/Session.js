@@ -3,8 +3,6 @@ import mongoose from "../config/mongodb.js";
 import Project from "./Project.js";
 import { sessionRequestErrors } from "../services/interceptRequest/interceptRequestService.js";
 import _ from "lodash";
-import { user_connect_projects } from "./UserProject.js";
-import { isAdmin } from "../utils/util.js";
 
 const SessionSchema = new mongoose.Schema(
   {
@@ -54,15 +52,6 @@ SessionSchema.statics.count = async function () {
 //   }
 // });
 
-export const user_connect_sessions = async (req) => {
-  let admin = await isAdmin(req);
-  if (admin) {
-    return await Session.find({}).exec();
-  } else {
-    let projects = await user_connect_projects(req);
-    return await Session.find({ project_id: { $in: projects } }).exec();
-  }
-};
 
 const Session = mongoose.model("Session", SessionSchema);
 export default Session;

@@ -4,6 +4,8 @@ import Session from "../../models/Session.js";
 import EventType from "../../models/EventType.js";
 import validator from "validator";
 import moment from "moment";
+import { checkProjectExist } from "../../services/project/projectService.js";
+import { checkSessionExist } from "../../services/session/sessionService.js";
 
 export const editEventType = async (req, res, next) => {
   const { events } = req.body;
@@ -52,7 +54,7 @@ export const validateStoreEvent = [
         }
         
         if (item.project) {
-          let project_exist = await Project.findById(item.project);
+          let project_exist = await checkProjectExist(item.project);
           if (!project_exist) {
             throw new Error(`Le projet ${item.project} n'existe pas`);
           }
@@ -93,7 +95,7 @@ export const validateEventFilter = [
 
   body("session").custom(async (value) => {
     if (value) {
-      let session_exist = await Session.findById(value);
+      let session_exist = await checkSessionExist(value);
       if (!session_exist) {
         throw new Error("La session n'existe pas");
       }
@@ -102,7 +104,7 @@ export const validateEventFilter = [
   }),
   body("project").custom(async (value) => {
     if (value) {
-      let project_exist = await Project.findById(value);
+      let project_exist = await checkProjectExist(value);
       if (!project_exist) {
         throw new Error("Le projet n'existe pas");
       }

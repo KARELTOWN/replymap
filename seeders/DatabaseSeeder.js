@@ -7,6 +7,7 @@ import FeedbackPrioritySeeder from "./FeedbackPrioritySeeder.js";
 import FeedbackStatusSeeder from "./FeedbackStatusSeeder.js";
 import FeedbackTypeSeeder from "./FeedbackTypeSeeder.js";
 import ListIntegrationSeeder from "./ListIntegrationSeeder.js";
+import NotificationModelSeeder from "./NotificationModelSeeder.js";
 import RoleSeeder from "./RoleSeeder.js";
 
 try {
@@ -16,6 +17,7 @@ try {
   // await FeedbackTypeSeeder();
   // await ListIntegrationSeeder();
   // await FeedbackStatusSeeder();
+  // await NotificationModelSeeder();
   // await FonctionSeeder();
   // await ModuleSeeder();
   // await FeatureSeeder();

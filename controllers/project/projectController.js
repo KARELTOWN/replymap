@@ -9,11 +9,15 @@ import {
 import Project from "../../models/Project.js";
 import crypto from "crypto";
 import moment from "moment";
-import UserProject, {
-  user_connect_projects,
-} from "../../models/UserProject.js";
-import { isAdmin } from "../../utils/util.js";
-import { ProjectModelFilter } from "../../services/project/projectService.js";
+import UserProject from "../../models/UserProject.js";
+import {
+  ProjectModelFilter,
+  createProjectNotification,
+  inviteUserNotification,
+  projectData,
+  quitProjectNotification,
+  user_in_projects,
+} from "../../services/project/projectService.js";
 import User from "../../models/User.js";
 
 export default function projectController() {
@@ -38,6 +42,8 @@ export default function projectController() {
         user_id: req.user._id,
         project_id: project._id,
       });
+
+      await createProjectNotification(req.user, data.libelle)
 
       // await redisDeleteMultipleKeys([
       //   `${req.user._id}_projects_page_*`,
@@ -77,7 +83,7 @@ export default function projectController() {
       // if (cached_project) {
       //   project = JSON.parse(cached_project);
       // } else {
-      project = await Project.findOne({ _id: data.id }).exec();
+      project = await projectData(data.id);
       // }
       if (!project) {
         res.status(403).json({ message: "Projet non trouvé" });
@@ -238,7 +244,10 @@ export default function projectController() {
       });
     }
     data.user_id = user._id;
-    let userAdd = await UserProject.insertOne(data);
+    await UserProject.insertOne(data);
+
+    await inviteUserNotification(data.project_id, user);
+
     res.status(200).json({
       message: "Utilisateur ajouté au projet",
     });
@@ -260,6 +269,9 @@ export default function projectController() {
         message: "Utilisateur non associé au projet",
       });
     }
+
+    await quitProjectNotification(data.project_id, data.user_id)
+
     res.status(200).json({
       message: "Utilisateur retiré du projet",
     });
@@ -272,7 +284,7 @@ export default function projectController() {
     }
     const data = matchedData(req);
 
-    let project = await Project.findOne({ _id: data.project_id }).exec();
+    let project = await projectData(data.project_id);
 
     let projects_users = await UserProject.find({
       project_id: data.project_id,

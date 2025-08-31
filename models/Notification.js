@@ -1,15 +1,20 @@
 import { SchemaTypes } from "mongoose";
 import mongoose from "../config/mongodb.js";
-import User from "./User.js";
+const NotifEnum = ["email", "autres"];
+
 const NotificationSchema = new mongoose.Schema(
   {
-    email: {
+    type: {
       type: String,
+      enum: NotifEnum,
       required: true,
     },
-    user_id: {
+    mail_to: {
       type: SchemaTypes.ObjectId,
-      ref: User,
+      ref: "User",
+    },
+    send_to: {
+      type: String,
     },
     title: {
       type: String,
@@ -17,6 +22,11 @@ const NotificationSchema = new mongoose.Schema(
     },
     content: {
       type: String,
+      required: true,
+    },
+    notification_model: {
+      type: SchemaTypes.ObjectId,
+      ref: "NotificationModel",
       required: true,
     },
     sendAt: {

@@ -8,8 +8,10 @@ import fileService from "../../services/files/fileService.js";
 const { getURLFileFromS3 } = fileService();
 import feedbackHistoryController from "./feedbackHistoryController.js";
 import { storeFeedbackJob } from "../../jobs/queue.js";
-import Session from "../../models/Session.js";
+import { checkSessionExist } from "../../services/session/sessionService.js";
 const { storeFeedbackHistory } = feedbackHistoryController();
+import feedbackService from "../../services/feedback/feedbackService.js";
+const { feedbackData } = feedbackService();
 
 export default function feedbackController() {
   const getFeedbackParams = async (req, res) => {
@@ -36,7 +38,7 @@ export default function feedbackController() {
       const data = matchedData(req);
 
       // Vérif existence en base
-      const session_exist = await Session.findById(data.session_id);
+      const session_exist = await checkSessionExist(data.session_id);
       if (!session_exist) {
         data.session_id = null;
       }
@@ -124,41 +126,7 @@ export default function feedbackController() {
     }
     const data = matchedData(req);
 
-    let feedback = await Feedback.findOne({
-      _id: data.feedback_id,
-    })
-      .populate([
-        {
-          path: "type",
-          model: "FeedbackType",
-          select: "libelle",
-        },
-        {
-          path: "priority",
-          model: "FeedbackPriority",
-          select: "libelle",
-        },
-        {
-          path: "assignTo",
-          model: "User",
-          select: "lastname firstname",
-        },
-        {
-          path: "session_id",
-          model: "Session",
-          select: "_id uniqueId",
-        },
-        {
-          path: "status",
-          model: "FeedbackStatus",
-          select: "_id libelle",
-        },
-        {
-          path: "file",
-          model: "Files",
-        },
-      ])
-      .exec();
+    let feedback = await feedbackData(data.feedback_id);
 
     feedback.file.key = await getURLFileFromS3(feedback.file.key);
 

@@ -2,6 +2,8 @@ import { connectionRedis } from "./ioredis.js";
 import { Worker } from "bullmq";
 import chunkService from "../services/chunk/chunkService.js";
 import fs from "fs";
+import feedbackService from "../services/feedback/feedbackService.js";
+const { createFeedbackNotification } = feedbackService();
 
 const { uploadChunksInJsonFileOnS3, uploadChunksInJsonFileLocal } =
   chunkService();
@@ -59,17 +61,18 @@ const mailingWorker = new Worker(
     try {
       let mailinfo = job.data;
       const info = await mailTransporter.sendMail({
-        from: mailinfo.from,
+        from: process.env.MAIL_FROM,
         to: mailinfo.to,
         subject: mailinfo.subject,
         html: mailinfo.html,
       });
       if (info) {
         await mongoose.model("Notification").insertOne({
-          email: mailinfo.to,
-          user_id: mailinfo.user_id,
+          type: 'email',
+          mail_to: mailinfo.user_id,
           title: mailinfo.subject,
           content: mailinfo.html,
+          notification_model: mailinfo.model,
           sendAt: Date.now(),
         });
       }
@@ -145,6 +148,7 @@ const feedbackStore = new Worker(
 
           await Files.insertMany(filesAttach);
 
+          await createFeedbackNotification(feedback._id);
           deleteFiles(paths);
 
           console.log("Feedback enregistré");

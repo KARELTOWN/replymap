@@ -7,6 +7,7 @@ import mongoose from "../../config/mongodb.js";
 import FeedbackStatus from "../../models/FeedbackStatus.js";
 import Feedback from "../../models/Feedback.js";
 import User from "../../models/User.js";
+import { checkProjectExist } from "../../services/project/projectService.js";
 
 export const validateFeedbackStore = [
   body("title").notEmpty().withMessage("Le titre est obligatoire"),
@@ -47,7 +48,7 @@ export const validateFeedbackStore = [
     .withMessage("Le projet est obligatoire")
     .custom(async (value) => {
       if (value !== null) {
-        let project_exist = await Project.findById(value);
+        let project_exist = await checkProjectExist(value);
         if (!project_exist) {
           throw new Error("Le projet n'existe pas");
         }
@@ -79,7 +80,7 @@ export const validateFeedbackPerProject = [
     .withMessage("Le projet est obligatoire")
     .custom(async (value) => {
       if (value !== null) {
-        let project_exist = await Project.findById(value);
+        let project_exist = await checkProjectExist(value);
         if (!project_exist) {
           throw new Error("Le projet n'existe pas");
         }

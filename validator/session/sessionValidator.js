@@ -3,6 +3,8 @@ import Project from "../../models/Project.js";
 import Session from "../../models/Session.js";
 import moment from "moment";
 import validator from "validator";
+import { checkProjectExist } from "../../services/project/projectService.js";
+import { checkSessionExist } from "../../services/session/sessionService.js";
 
 export const validateCreateSession = [
   body("project_id")
@@ -10,7 +12,7 @@ export const validateCreateSession = [
     .withMessage("Le projet est obligatoire")
     .custom(async (value) => {
       if (value) {
-        let project_exist = await Project.findById(value);
+        let project_exist = await checkProjectExist(value);
         if (!project_exist) {
           throw new Error("Le projet n'existe pas");
         }
@@ -45,7 +47,7 @@ export const validateUpdateEndAt = [
     .withMessage("La session est obligatoire")
     .custom(async (value) => {
       if (value) {
-        let session_exist = await Session.findById(value);
+        let session_exist = await checkSessionExist(value);
         if (!session_exist) {
           throw new Error("La session n'existe pas");
         }
@@ -63,7 +65,7 @@ export const validateShowSession = [
     .withMessage("La session est obligatoire")
     .custom(async (value) => {
       if (value) {
-        let session_exist = await Session.findById(value);
+        let session_exist = await checkSessionExist(value);
         if (!session_exist) {
           throw new Error("La session n'existe pas");
         }
@@ -78,7 +80,7 @@ export const validateShowSessionWithChunks = [
     .withMessage("La session est obligatoire")
     .custom(async (value) => {
       if (value) {
-        let session_exist = await Session.findById(value);
+        let session_exist = await checkSessionExist(value);
         if (!session_exist) {
           throw new Error("La session n'existe pas");
         }
@@ -92,7 +94,7 @@ export const validateFilterSession = [
     .optional()
     .custom(async (value) => {
       if (value) {
-        let project_exist = await Project.findById(value);
+        let project_exist = await checkProjectExist(value);
         if (!project_exist) {
           throw new Error("Le projet n'existe pas");
         }

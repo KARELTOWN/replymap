@@ -33,7 +33,6 @@ export const storeChunkJob = async (data) => {
 export const storeFeedbackJob = async (data) => {
   try {
     let attachments = Array.from(data.attachments);
-   console.log('data.file', data.file)
     await feedbackStoreQueues.add(`feedback_${Date.now()}`, {
       file: data.file,
       attachments: attachments,

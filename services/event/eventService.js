@@ -4,9 +4,22 @@ import _ from "lodash";
 import Events from "../../models/Events.js";
 import EventType from "../../models/EventType.js";
 import { isAdmin } from "../../utils/util.js";
-import { user_connect_projects } from "../../models/UserProject.js";
 import Project from "../../models/Project.js";
 import Session from "../../models/Session.js";
+import { checkSessionExist } from "../session/sessionService.js";
+import { user_connect_projects } from "../project/projectService.js";
+
+
+export const user_connect_events = async (req) => {
+  let admin = await isAdmin(req)
+  if (admin) {
+    return await Events.find({}).exec();
+  } else {
+    let projects = await user_connect_projects(req);
+    return await Events.find({ project: { $in: projects } }).exec();
+  }
+};
+
 
 export const createEventsLog = async (data) => {
   try {
@@ -17,7 +30,7 @@ export const createEventsLog = async (data) => {
         continue;
       } else {
         if (item.session) {
-          let session_exist = await Session.findById(item.session);
+          let session_exist = await checkSessionExist(item.session);
           if (!session_exist) {
             item.session = null;
           }

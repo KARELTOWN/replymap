@@ -22,17 +22,4 @@ const UserProjectSchema = new mongoose.Schema(
 UserProjectSchema.index({ user_id: 1, project_id: 1 }, { unique: true });
 const UserProject = mongoose.model("UserProject", UserProjectSchema);
 
-export const user_connect_projects = async (req) => {
-  let admin = await isAdmin(req);
-  if (admin) {
-    return await UserProject.find({}).distinct("project_id").exec();
-  } else {
-    return await UserProject.find({
-      user_id: req.user._id,
-    })
-      .distinct("project_id")
-      .exec();
-  }
-};
-
 export default UserProject;

@@ -4,12 +4,15 @@ import FeedbackStatus from "../../models/FeedbackStatus.js";
 import FeedbackType from "../../models/FeedbackType.js";
 import FeedbackPriority from "../../models/FeedbackPriority.js";
 import User from "../../models/User.js";
-
+import feedbackService from "../../services/feedback/feedbackService.js";
+const { updateFeedbackNotification, feedbackData } = feedbackService();
 export default function feedbackHistoryController() {
   const storeFeedbackHistory = async (data, feedback, user_id) => {
     try {
       let description = "";
       let newData = [];
+      let content = {};
+      let feedback_data = await feedbackData(feedback);
       if (data.status) {
         let status = await FeedbackStatus.findById(data.status).exec();
         description = `Statut modifié à ${status.libelle}`;
@@ -18,6 +21,7 @@ export default function feedbackHistoryController() {
           feedback_id: feedback,
           createdBy: user_id,
         });
+        content.status = description;
       }
       if (data.type) {
         let type = await FeedbackType.findById(data.type).exec();
@@ -27,6 +31,7 @@ export default function feedbackHistoryController() {
           feedback_id: feedback,
           createdBy: user_id,
         });
+        content.type = description;
       }
       if (data.priority) {
         let priority = await FeedbackPriority.findById(data.priority).exec();
@@ -36,6 +41,7 @@ export default function feedbackHistoryController() {
           feedback_id: feedback,
           createdBy: user_id,
         });
+        content.priority = description;
       }
       if (data.assignTo) {
         let user = await User.findById(data.assignTo).exec();
@@ -45,9 +51,11 @@ export default function feedbackHistoryController() {
           feedback_id: feedback,
           createdBy: user_id,
         });
+        content.assignTo = description;
       }
 
       const history = await FeedbackHistory.insertMany(newData);
+      await updateFeedbackNotification(content, feedback_data );
       return history;
     } catch (error) {
       throw new Error(error);

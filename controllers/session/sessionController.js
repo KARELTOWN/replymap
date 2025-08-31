@@ -25,7 +25,6 @@ export default function projectController() {
       }
       const data = matchedData(req);
       const lastsession = await Session.findOne().sort({ createdAt: -1 });
-      console.log("lastsession", lastsession);
       if (lastsession !== null) {
         let lastIndex = lastsession.uniqueId.split("-")[1];
         let nextIndex = parseInt(lastIndex) + 1;

@@ -3,7 +3,6 @@ import User from "../../models/User.js";
 import VerificationCode, {
   verificationType,
 } from "../../models/VerificationCode.js";
-import mailing from "../../services/mailing.js";
 import PasswordResetToken from "../../models/PasswordResetToken.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -12,8 +11,14 @@ import { encrypt, createTokenString, decrypt } from "../../helpers/encrypt.js";
 import generateUsername from "../../helpers/generateUsername.js";
 import { generateOTP } from "../../helpers/OTPCode.js";
 import Role from "../../models/Role.js";
-import mongoose from "../../config/mongodb.js";
 import { redisClient } from "../../config/redis.js";
+import authService from "../../services/auth/authService.js";
+const {
+  registerNotification,
+  confirmRegisterNotification,
+  forgotPasswordNotification,
+  resetPasswordNotification,
+} = authService();
 
 export default function authController() {
   const generateRefreshToken = (user) => {
@@ -132,19 +137,9 @@ export default function authController() {
             type: verificationType.register,
             expires_at: moment().add("1", "hours").toDate(),
           });
-          mailing(
-            { email: result.email, user_id: user._id },
-            "Code de vérification de votre compte",
-            "auth/verificationcode.pug",
-            {
-              firstname: result.firstname,
-              lastname: result.lastname,
-              email: result.email,
-              code: codeOTP,
-            }
-          );
 
-          console.log("user._id.toString()", user._id.toString());
+          await registerNotification(user, codeOTP);
+
           res.status(200).json({
             message: "Account create",
             data: encrypt(user._id.toString()),
@@ -170,9 +165,6 @@ export default function authController() {
           user_id: user._id,
           used_at: { $exists: false },
         }).exec();
-        console.log("result", result);
-        console.log("result.code", result.code);
-        console.log("data.code", data.code);
 
         if (result) {
           if (result.code !== data.code) {
@@ -192,6 +184,8 @@ export default function authController() {
               .exec();
             await result.updateOne({ used_at: moment().toDate() });
             if (response) {
+              await confirmRegisterNotification(user);
+
               res.status(200).json({
                 message: "Account validate",
               });
@@ -253,18 +247,8 @@ export default function authController() {
           "urpi=" +
           token;
 
-        mailing(
-          { email: result.email, user_id: user._id },
-          "Réinitialisation de mot de passe",
-          "auth/forgotpassword.pug",
-          {
-            firstname: user.firstname,
-            lastname: user.lastname,
-            email: email,
-            link: link,
-            reject: reject,
-          }
-        );
+        await forgotPasswordNotification(user, link, reject);
+
         res.status(200).json({
           message: "Mail de réinitialisation envoyé",
           data: {},
@@ -342,7 +326,10 @@ export default function authController() {
           await resetToken.updateOne({
             used_at: moment().toDate(),
           });
+
           if (user) {
+            await resetPasswordNotification(user);
+
             res.status(200).json({
               message: "Mot de passe réinitialisé",
               data: user,
