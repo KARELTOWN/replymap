@@ -14,4 +14,7 @@ export default defineConfig({
     },
     extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json', '.vue'], // bien inclure .ts
   },
+  server: {
+    allowedHosts: ['app.bugreveal.com'],
+  },
 })

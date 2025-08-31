@@ -10,14 +10,14 @@
     },
   ]" @mouseenter="!isExpanded && (isHovered = true)" @mouseleave="isHovered = false">
     <div :class="[
-      'py-8 flex',
+      'flex',
       !isExpanded && !isHovered ? 'lg:justify-center' : 'justify-center',
     ]">
       <router-link to="/">
         <img v-if="isExpanded || isHovered || isMobileOpen" class="dark:hidden" src="/images/logo/logo.png" alt="Logo"
-          width="150" height="40" />
+          width="120" height="40" />
         <img v-if="isExpanded || isHovered || isMobileOpen" class="hidden dark:block" src="/images/logo/auth-logo.png"
-          alt="Logo" width="150" height="40" />
+          alt="Logo" width="90" height="40" />
         <img v-else src="/images/logo/logo-icon.svg" alt="Logo" width="32" height="32" />
       </router-link>
     </div>
