@@ -1,5 +1,5 @@
-import { fetchGet, fetchPostWithFile } from "../../utils/request.js";
-import { project_id } from "../../record.js";
+import { fetchGet, fetchPost, fetchPostWithFile } from "../../utils/request.js";
+import { bugRevealUser, project_id } from "../../record.js";
 import { getSessionId } from "../../utils/session.js";
 
 export default function service() {
@@ -23,6 +23,34 @@ export default function service() {
         throw new Error(
           `Erreur lors de la récupération des paramètres pour le feedback : ${res.status}`
         );
+      }
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const checkMemberInProject = async () => {
+    try {
+      let data = {
+        user_id: bugRevealUser,
+      };
+      const res = await fetchPost(`project/get_users/${project_id}`, data);
+      if (res.ok) {
+        if (res.status === 200) {
+          const response = await res.json();
+          console.log("member in project", response.data);
+          if (response.data) {
+            if (response.data.member_is_in_project === true) {
+              return [true, response.data.members];
+            } else {
+              return [false];
+            }
+          }
+        } else {
+          `Erreur checkMemberInProject: ${res.status}`;
+        }
+      } else {
+        throw new Error(`Erreur checkMemberInProject : ${res.status}`);
       }
     } catch (error) {
       throw error;
@@ -90,5 +118,5 @@ export default function service() {
     }
   };
 
-  return { getFeedbackParams, sendFeedback };
+  return { getFeedbackParams, sendFeedback, checkMemberInProject };
 }

@@ -2,8 +2,9 @@ import service from "./service.js";
 import html2canvas from "html2canvas";
 import RecordRTC from "recordrtc";
 import { saveAs } from "file-saver";
+import { bugRevealUser } from "../../record.js";
 
-const { getFeedbackParams, sendFeedback } = service();
+const { getFeedbackParams, sendFeedback, checkMemberInProject } = service();
 (async function () {
   let types = [];
   let priority = [];
@@ -11,11 +12,23 @@ const { getFeedbackParams, sendFeedback } = service();
   let videoBlob = null;
   let micStream = null;
   let screenStream = null;
+  let userIsInProject = false;
+  let project_members = [];
   try {
     const data = await getFeedbackParams();
     if (data) {
       types = data.types;
-      priority = data.priority;
+      if (bugRevealUser !== null) {
+        priority = data.priority;
+      }
+    }
+
+    if (bugRevealUser !== null) {
+      let response = await checkMemberInProject();
+      if (response[0] === true) {
+        userIsInProject = true;
+        project_members = response[1];
+      }
     }
   } catch (error) {
     console.error(
@@ -255,7 +268,7 @@ replaymap_editmodezone button:hover {
       object-fit: contain;
       box-shadow: 0 15px 20px rgba(0,0,0,0.2);
     }
-    #replaymap_capture-desc, #replaymap_capture-title, #replaymap_capture-feedbackType, #replaymap_capture-feedbackPriority, #replaymap_capture-attachment {
+    #replaymap_capture-desc, #replaymap_capture-title, #replaymap_capture-feedbackType, #replaymap_capture-feedbackPriority, #replaymap_capture-attachment, #replaymap_capture-feedbackAssignTo {
       margin-top: 10px;
       width: 100%;
       padding: 8px;
@@ -684,21 +697,44 @@ replaymap_editmodezone button:hover {
     leftPanel.appendChild(textarea);
 
     // priorité
-    let feedbackPriority = document.createElement("select");
-    feedbackPriority.id = "replaymap_capture-feedbackPriority";
-    let option = document.createElement("option");
-    option.value = "";
-    option.text = "Choisir la priorité";
-    feedbackPriority.appendChild(option);
-    if (priority && priority.length > 0) {
-      priority.forEach((e) => {
-        let option = document.createElement("option");
-        option.value = e._id;
-        option.text = e.libelle;
-        feedbackPriority.appendChild(option);
-      });
+    let feedbackPriority = null;
+    if (userIsInProject === true) {
+      feedbackPriority = document.createElement("select");
+      feedbackPriority.id = "replaymap_capture-feedbackPriority";
+      let option = document.createElement("option");
+      option.value = "";
+      option.text = "Choisir la priorité";
+      feedbackPriority.appendChild(option);
+      if (priority && priority.length > 0) {
+        priority.forEach((e) => {
+          let option = document.createElement("option");
+          option.value = e._id;
+          option.text = e.libelle;
+          feedbackPriority.appendChild(option);
+        });
+      }
+      leftPanel.appendChild(feedbackPriority);
     }
-    leftPanel.appendChild(feedbackPriority);
+
+    // priorité
+    let feedbackAssignTo = null;
+    if (userIsInProject === true) {
+      feedbackAssignTo = document.createElement("select");
+      feedbackAssignTo.id = "replaymap_capture-feedbackAssignTo";
+      let option = document.createElement("option");
+      option.value = "";
+      option.text = "Assigné à ";
+      feedbackAssignTo.appendChild(option);
+      if (project_members && project_members.length > 0) {
+        project_members.forEach((e) => {
+          let option = document.createElement("option");
+          option.value = e._id;
+          option.text = e.lastname + " " + e.firstname;
+          feedbackAssignTo.appendChild(option);
+        });
+      }
+      leftPanel.appendChild(feedbackAssignTo);
+    }
 
     // attachments
     let attachment = document.createElement("input");
@@ -757,10 +793,17 @@ replaymap_editmodezone button:hover {
         notify("info", "Le titre doit faire au moins 3 caractères");
         return;
       }
-      if (feedbackPriority.value == "" || feedbackType.value == "") {
-        notify("info", "Priorité ou Type obligatoire");
+      if (feedbackType.value == "") {
+        notify("info", "Type obligatoire");
         return;
       }
+      if (userIsInProject === true) {
+        if (feedbackPriority.value == "") {
+          notify("info", "Priorité obligatoire");
+          return;
+        }
+      }
+
       let attachments = attachment.files;
       let canva_file = canvas.toDataURL("image/png");
 
@@ -771,12 +814,21 @@ replaymap_editmodezone button:hover {
         "replaymap_capture-feedbackPriority"
       );
 
+      const assignToSelect = document.getElementById(
+        "replaymap_capture-feedbackAssignTo"
+      );
+
       let data = {
         title: title.value,
         description: textarea.value,
         type: typeSelect.value,
-        priority: prioritySelect.value,
       };
+      if (prioritySelect && prioritySelect.value) {
+        data.priority = prioritySelect.value;
+      }
+      if (assignToSelect && assignToSelect.value) {
+        data.assignTo = assignToSelect.value;
+      }
       sendCapture("canvas", canva_file, attachments, data);
     };
     leftPanel.appendChild(sendBtn);
@@ -896,21 +948,44 @@ replaymap_editmodezone button:hover {
     leftPanel.appendChild(textarea);
 
     // priorité
-    let feedbackPriority = document.createElement("select");
-    feedbackPriority.id = "replaymap_capture-feedbackPriority";
-    let option = document.createElement("option");
-    option.value = "";
-    option.text = "Choisir la priorité";
-    feedbackPriority.appendChild(option);
-    if (priority && priority.length > 0) {
-      priority.forEach((e) => {
-        let option = document.createElement("option");
-        option.value = e._id;
-        option.text = e.libelle;
-        feedbackPriority.appendChild(option);
-      });
+    let feedbackPriority = null;
+    if (userIsInProject === true) {
+      feedbackPriority = document.createElement("select");
+      feedbackPriority.id = "replaymap_capture-feedbackPriority";
+      let option = document.createElement("option");
+      option.value = "";
+      option.text = "Choisir la priorité";
+      feedbackPriority.appendChild(option);
+      if (priority && priority.length > 0) {
+        priority.forEach((e) => {
+          let option = document.createElement("option");
+          option.value = e._id;
+          option.text = e.libelle;
+          feedbackPriority.appendChild(option);
+        });
+      }
+      leftPanel.appendChild(feedbackPriority);
     }
-    leftPanel.appendChild(feedbackPriority);
+
+    // priorité
+    let feedbackAssignTo = null;
+    if (userIsInProject === true) {
+      feedbackAssignTo = document.createElement("select");
+      feedbackAssignTo.id = "replaymap_capture-feedbackAssignTo";
+      let option = document.createElement("option");
+      option.value = "";
+      option.text = "Assigné à ";
+      feedbackAssignTo.appendChild(option);
+      if (project_members && project_members.length > 0) {
+        project_members.forEach((e) => {
+          let option = document.createElement("option");
+          option.value = e._id;
+          option.text = e.lastname + " " + e.firstname;
+          feedbackAssignTo.appendChild(option);
+        });
+      }
+      leftPanel.appendChild(feedbackAssignTo);
+    }
 
     // attachments
     let attachment = document.createElement("input");
@@ -957,9 +1032,15 @@ replaymap_editmodezone button:hover {
         notify("info", "Le titre doit faire au moins 3 caractères");
         return;
       }
-      if (feedbackPriority.value == "" || feedbackType.value == "") {
-        notify("info", "Priorité ou Type obligatoire");
+      if (feedbackType.value == "") {
+        notify("info", "Type obligatoire");
         return;
+      }
+      if (userIsInProject === true) {
+        if (feedbackPriority.value == "") {
+          notify("info", "Priorité obligatoire");
+          return;
+        }
       }
       let attachments = attachment.files;
 
@@ -972,12 +1053,22 @@ replaymap_editmodezone button:hover {
         "replaymap_capture-feedbackPriority"
       );
 
+      const assignToSelect = document.getElementById(
+        "replaymap_capture-feedbackAssignTo"
+      );
+
       let data = {
         title: title.value,
         description: textarea.value,
         type: typeSelect.value,
-        priority: prioritySelect.value,
       };
+
+      if (prioritySelect && prioritySelect.value) {
+        data.priority = prioritySelect.value;
+      }
+      if (assignToSelect && assignToSelect.value) {
+        data.assignTo = assignToSelect.value;
+      }
       sendCapture("video", recordData, attachments, data);
     };
     leftPanel.appendChild(sendBtn);
