@@ -77,13 +77,21 @@ export const ProjectModelFilter = async (req, query, skip = 0, limit = 0) => {
   };
 };
 
-export const user_in_projects = async (project_id) => {
-  let user_projects = await UserProject.find({ project_id: project_id })
-    .populate("user_id")
+
+export const user_in_projects = async (project_id, user_exclude = null) => {
+  let projects_users = await UserProject.find({
+    project_id: project_id,
+    user_id: { $ne: user_exclude },
+  })
+    .populate({
+      path: "user_id",
+      model: User,
+      select: "firstname lastname _id email",
+    })
     .select("user_id")
     .exec();
-  user_projects = user_projects.map((e) => e.user_id);
-  return user_projects;
+  projects_users = projects_users.map((userproject) => userproject.user_id);
+  return projects_users;
 };
 
 export const projectData = async (project_id) => {

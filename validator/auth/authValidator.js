@@ -3,6 +3,7 @@ import User from "../../models/User.js";
 import bcrypt from "bcrypt";
 import validator from "validator";
 const { isUUID } = validator;
+import { decrypt } from "../../helpers/encrypt.js";
 
 export const validateLogin = [
   body("email")
@@ -177,4 +178,29 @@ export const validateResetPassword = [
       }
       return true;
     }),
+];
+
+export const validateUser = [
+  body("user_id").custom(async (value) => {
+    if (value && value !== null) {
+      let user = await User.findById(value);
+      if (!user) {
+        throw new Error("L'utilisateur n'existe pas");
+      }
+      return true;
+    }
+  }),
+];
+
+export const validateUserEncrypt = [
+  body("user_id").custom(async (value) => {
+    if (value && value !== null) {
+      let user_id = decrypt(value);
+      let user = await User.findById(user_id);
+      if (!user) {
+        throw new Error("L'utilisateur n'existe pas");
+      }
+      return true;
+    }
+  }),
 ];

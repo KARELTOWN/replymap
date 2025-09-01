@@ -8,8 +8,11 @@ import {
   validateInviteUser,
   validateQuitProject,
   validateProjectIDBody,
-  validateProjectIDParam
+  validateProjectIDParam,
 } from "../../validator/project/projectValidator.js";
+
+import { validateUserEncrypt } from "../../validator/auth/authValidator.js";
+
 import projectController from "../../controllers/project/projectController.js";
 const {
   createProject,
@@ -19,7 +22,8 @@ const {
   updateProject,
   inviteUser,
   quitProject,
-  projectMember
+  projectMember,
+  projectAllMembers,
 } = projectController();
 import paginateData from "../../helpers/pagination.js";
 import { validatePaginationQuery } from "../../validator/generalValidator.js";
@@ -82,6 +86,13 @@ ProjectRouter.post(
   blacklist,
   validateQuitProject,
   quitProject
+);
+
+ProjectRouter.post(
+  "/get_users/:project_id",
+  validateProjectIDParam,
+  validateUserEncrypt,
+  projectAllMembers
 );
 
 ProjectRouter.get("/show/:id", validateShowProject, showProject);

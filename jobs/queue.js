@@ -2,7 +2,7 @@ import { Queue } from "bullmq";
 import { connectionRedis } from "./ioredis.js";
 import { performance } from "perf_hooks";
 const defaultOptions = {
-  attempts: 3,
+  attempts: 5,
   backoff: { type: "fixed", delay: 10000 },
   removeOnComplete: true,
   ttl: 1000 * 60 * 60 * 24 * 15,

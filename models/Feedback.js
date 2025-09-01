@@ -11,8 +11,7 @@ const FeedbackSchema = new mongoose.Schema(
     },
     priority: {
       type: SchemaTypes.ObjectId,
-      ref: "FeedbackPriority",
-      required: true,
+      ref: "FeedbackPriority"
     },
     title: {
       type: String,

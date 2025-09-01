@@ -29,18 +29,26 @@ export const validateFeedbackStore = [
         return true;
       }
     }),
-  body("priority")
-    .notEmpty()
-    .withMessage("La priorité est obligatoire")
-    .custom(async (value) => {
-      if (value) {
-        let type_exist = await FeedbackPriority.findById(value);
-        if (!type_exist) {
-          throw new Error("La priorité de feedback n'existe pas");
-        }
-        return true;
+  body("priority").custom(async (value) => {
+    if (value) {
+      let type_exist = await FeedbackPriority.findById(value);
+      if (!type_exist) {
+        throw new Error("La priorité de feedback n'existe pas");
       }
-    }),
+      return true;
+    }
+  }),
+  body("assignTo").custom(async (value) => {
+    if (value) {
+      let type_exist = await User.findById(value);
+      if (!type_exist) {
+        throw new Error(
+          "L'utilisateur auquel le feedback doit être assigné n'existe pas"
+        );
+      }
+      return true;
+    }
+  }),
   body("attachments").optional(),
 
   body("project_id")

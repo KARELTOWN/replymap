@@ -19,6 +19,7 @@ import {
   user_in_projects,
 } from "../../services/project/projectService.js";
 import User from "../../models/User.js";
+import { encrypt, createTokenString, decrypt } from "../../helpers/encrypt.js";
 
 export default function projectController() {
   const createProject = async (req, res, next) => {
@@ -43,7 +44,7 @@ export default function projectController() {
         project_id: project._id,
       });
 
-      await createProjectNotification(req.user, data.libelle)
+      await createProjectNotification(req.user, data.libelle);
 
       // await redisDeleteMultipleKeys([
       //   `${req.user._id}_projects_page_*`,
@@ -270,7 +271,7 @@ export default function projectController() {
       });
     }
 
-    await quitProjectNotification(data.project_id, data.user_id)
+    await quitProjectNotification(data.project_id, data.user_id);
 
     res.status(200).json({
       message: "Utilisateur retiré du projet",
@@ -283,25 +284,44 @@ export default function projectController() {
       res.status(422).json({ errors: errors.array() });
     }
     const data = matchedData(req);
-
     let project = await projectData(data.project_id);
 
-    let projects_users = await UserProject.find({
-      project_id: data.project_id,
-      user_id: { $ne: project.created_by },
-    })
-      .populate({
-        path: "user_id",
-        model: User,
-        select: "firstname lastname _id email",
-      })
-      .select(["user_id"])
-      .exec();
-    projects_users = projects_users.map((userproject) => userproject.user_id);
+    let projects_users = await user_in_projects(
+      data.project_id,
+      project.created_by
+    );
 
     res.status(200).json({
-      message: "Utilisateur ajouté au projet",
+      message: "Get successfully",
       data: projects_users,
+    });
+  };
+
+  const projectAllMembers = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(422).json({ errors: errors.array() });
+    }
+    const data = matchedData(req);
+
+    let members = await user_in_projects(data.project_id);
+    let member_is_in_project = false;
+    if (data.user_id) {
+      let user_id = decrypt(data.user_id);
+      console.log("user_id", user_id);
+      let find = members.find((e) => e._id.toString() === user_id.toString());
+      console.log("find", find);
+
+      find && find !== undefined
+        ? (member_is_in_project = true)
+        : (member_is_in_project = false);
+    }
+    res.status(200).json({
+      message: "Get successfully",
+      data: {
+        members,
+        member_is_in_project,
+      },
     });
   };
 
@@ -314,5 +334,6 @@ export default function projectController() {
     inviteUser,
     quitProject,
     projectMember,
+    projectAllMembers,
   };
 }
