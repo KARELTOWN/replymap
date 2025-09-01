@@ -8,52 +8,71 @@ const { getEvents, saveEvents, deleteEventByKeys } = dbtransaction();
 let performances = [];
 
 const getPerformance = async () => {
-  return await getEvents("replay_map_performance_issues");
+  try {
+    return await getEvents("replay_map_performance_issues");
+  } catch (err) {
+    console.warn("Erreur getPerformance", err);
+  }
 };
 
 const setPerformance = async (data) => {
-  await saveEvents("replay_map_performance_issues", data);
+  try {
+    await saveEvents("replay_map_performance_issues", data);
+  } catch (err) {
+    console.warn("Erreur setperformance", err);
+  }
 };
 
 export const observer = new PerformanceObserver(async (list) => {
-  for (const entry of list.getEntries()) {
-    if (
-      (entry.entryType === "resource" || entry.entryType === "longtask") &&
-      !isRecordResource(entry)
-    ) {
-      const timeToFetch = entry.responseEnd - entry.fetchStart;
-      const timeInSecond = timeToFetch / 1000;
-      let entryType =
-        entry.entryType === "resource" ? "Ressource" : "Tâche longue";
-      if (timeInSecond >= 3) {
-        let exist = await existPerformance(entry);
-        if (exist === false) {
-          let newPerformance = {
-            type: "performance_issues",
-            project: project_id,
-            page_url: window.location.href,
-            timestamp: Date.now(),
-            data: {
-              name: entry.name,
-              duration: timeInSecond,
-              type: entryType,
-              slow:
-                timeInSecond >= 3 && timeInSecond <= 5 ? "Lent" : "Très lent",
-            },
-            uniqueId: v4(),
-          };
-          performances.push(newPerformance);
-          let performances_to_save = performances;
-          performances = [];
-          await setPerformance(performances_to_save);
-          if (performances_to_save.length > 0) {
-            storePerformance();
+  let entries = list.getEntries();
+  setTimeout(() => {
+    processEntries(entries);
+  }, 0);
+});
+
+const processEntries = async (entries) => {
+  try {
+    for (const entry of entries) {
+      if (
+        (entry.entryType === "resource" || entry.entryType === "longtask") &&
+        !isRecordResource(entry)
+      ) {
+        const timeToFetch = entry.responseEnd - entry.fetchStart;
+        const timeInSecond = timeToFetch / 1000;
+        let entryType =
+          entry.entryType === "resource" ? "Ressource" : "Tâche longue";
+        if (timeInSecond >= 3) {
+          let exist = await existPerformance(entry);
+          if (exist === false) {
+            let newPerformance = {
+              type: "performance_issues",
+              project: project_id,
+              page_url: window.location.href,
+              timestamp: Date.now(),
+              data: {
+                name: entry.name,
+                duration: timeInSecond,
+                type: entryType,
+                slow:
+                  timeInSecond >= 3 && timeInSecond <= 5 ? "Lent" : "Très lent",
+              },
+              uniqueId: v4(),
+            };
+            performances.push(newPerformance);
+            let performances_to_save = performances;
+            performances = [];
+            await setPerformance(performances_to_save);
+            if (performances_to_save.length > 0) {
+              storePerformance();
+            }
           }
         }
       }
     }
+  } catch (err) {
+    console.error("Erreur processEntries", err);
   }
-});
+};
 
 const existPerformance = async (entry) => {
   const performances = await getPerformance();
@@ -90,15 +109,19 @@ const storePerformance = _.debounce(async () => {
 }, 4000);
 
 window.addEventListener("unload", async () => {
-  const performances = await getPerformance();
-  if (performances.events_data.length > 0) {
-    navigator.sendBeacon(
-      "event/store",
-      JSON.stringify({ events: performances.events_data })
-    );
-    deleteEventByKeys(
-      "replay_map_performance_issues",
-      performances.events_keys
-    );
+  try {
+    const performances = await getPerformance();
+    if (performances.events_data.length > 0) {
+      navigator.sendBeacon(
+        "event/store",
+        JSON.stringify({ events: performances.events_data })
+      );
+      deleteEventByKeys(
+        "replay_map_performance_issues",
+        performances.events_keys
+      );
+    }
+  } catch (err) {
+    console.warn("Erreur unload performanceObserver", err);
   }
 });

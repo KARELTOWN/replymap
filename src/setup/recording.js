@@ -12,11 +12,19 @@ import dbtransaction from "../utils/indexDB.js";
 const { getEvents, saveEvents, deleteEventByKeys } = dbtransaction();
 
 const getSessionEvents = async () => {
-  return await getEvents('replay_map_record_events');
+  try {
+    return await getEvents("replay_map_record_events");
+  } catch (err) {
+    console.warn("Erreur getSessionEvents", err);
+  }
 };
 
 const saveSessionEvents = async (data) => {
-  await saveEvents("replay_map_record_events", data);
+  try {
+    await saveEvents("replay_map_record_events", data);
+  } catch (err) {
+    console.warn("Erreur getSessionEvents", err);
+  }
 };
 
 export default async function initializeRecord() {
@@ -82,7 +90,7 @@ export default async function initializeRecord() {
       let lastMouseMove = 0;
 
       stopRecording = rrweb.record({
-        emit: async function (event) {
+        emit: function (event) {
           resetInactivityTimeout();
 
           const MOUSE_INTERVAL = 500;
@@ -109,8 +117,12 @@ export default async function initializeRecord() {
             events = [];
             let session_events_to_send = session_events;
             session_events = [];
-            await saveSessionEvents(session_events_to_send);
-            saveChunk();
+            setTimeout(() => {
+              saveSessionEvents(session_events_to_send).catch((err) => {
+                console.warn("Erreur save session events", err);
+              });
+              saveChunk();
+            }, 0);
           }
         },
         maskInputOptions: { password: true },
@@ -235,17 +247,21 @@ export default async function initializeRecord() {
   };
 
   window.addEventListener("beforeunload", () => {
-    if (events.length > 0) {
-      session_events.push({
-        session_id,
-        events,
-        timestamp: Date.now(),
-        uniqueId: uuidV4(),
-      });
-      navigator.sendBeacon(
-        "/chunk/store",
-        JSON.stringify({ project_id, events: session_events })
-      );
+    try {
+      if (events.length > 0) {
+        session_events.push({
+          session_id,
+          events,
+          timestamp: Date.now(),
+          uniqueId: uuidV4(),
+        });
+        navigator.sendBeacon(
+          "/chunk/store",
+          JSON.stringify({ project_id, events: session_events })
+        );
+      }
+    } catch (err) {
+      console.warn("Erreur beforeunload session record", err);
     }
   });
 

@@ -1,6 +1,7 @@
 import service from "./service.js";
 import html2canvas from "html2canvas";
 import RecordRTC from "recordrtc";
+import { saveAs } from "file-saver";
 
 const { getFeedbackParams, sendFeedback } = service();
 (async function () {
@@ -835,12 +836,12 @@ replaymap_editmodezone button:hover {
   async function stopRecord() {
     await recorderVideo.stopRecording();
     videoBlob = await recorderVideo.getBlob();
-    const blobUrl = URL.createObjectURL(videoBlob);
+    const videoBlobUrl = URL.createObjectURL(videoBlob);
     hideRecordPanel();
     recorderVideo.destroy();
     screenStream.getTracks().forEach((track) => track.stop());
     micStream.getTracks().forEach((track) => track.stop());
-    showVideoRecord(blobUrl);
+    showVideoRecord(videoBlobUrl);
   }
 
   function showVideoRecord(blobUrl) {
@@ -850,6 +851,8 @@ replaymap_editmodezone button:hover {
     preview.innerHTML = "";
     leftPanel.innerHTML = "";
     leftPanel.style.display = "flex";
+
+    addEditImageBtn(false, false, false, false, true, false);
 
     let video = document.createElement("video");
     video.id = "replay_map_record_video";
@@ -985,51 +988,99 @@ replaymap_editmodezone button:hover {
     return await recorderVideo.getState();
   }
 
-  function addEditImageBtn() {
+  function addEditImageBtn(
+    draw = true,
+    text = true,
+    arrow = true,
+    undo = true,
+    save = true,
+    copy = true
+  ) {
     const editmodezone = document.createElement("div");
     editmodezone.id = "replaymap_editmodezone";
     // 🔘 Boutons pour changer de mode
-    const btnDraw = document.createElement("button");
-    btnDraw.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="#ffffff" width="800px" height="800px" viewBox="0 0 1920 1920">
+    if (draw === true) {
+      const btnDraw = document.createElement("button");
+      btnDraw.title = "Dessiner";
+      btnDraw.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="#ffffff" width="800px" height="800px" viewBox="0 0 1920 1920">
     <path d="M517.257 1127.343c72.733 0 148.871 36.586 221.274 107.45 87.455 110.418 114.922 204.135 81.632 278.296-72.733 162.274-412.664 234.897-618.666 259.178 34.609-82.62 75.15-216.88 75.15-394.645 0-97.123 66.47-195.455 157.88-233.689 26.698-11.097 54.494-16.59 82.73-16.59Zm229.404-167.109c54.055 28.895 106.462 65.371 155.133 113.494l13.844 15.6c28.016 35.378 50.649 69.987 70.425 104.155-29.554 26.259-59.878 52.737-90.75 79.545-18.898-35.488-43.069-71.964-72.843-109.319l-4.285-4.834c-48.342-47.683-99.43-83.39-151.727-107.011 26.368-30.653 53.066-61.196 80.203-91.63Zm1046.49-803.133c7.801 7.8 18.129 21.754 16.92 52.187-6.043 155.683-284.338 494.405-740.509 909.266-19.995-32.302-41.969-64.822-67.788-97.453l-22.523-25.27c-49.22-48.671-101.408-88.883-156.012-121.074 350.588-385.855 728.203-734.356 910.254-741.828 30.983-.109 44.497 9.01 59.658 24.172Zm126.678 56.472c2.087-53.615-14.832-99.98-56.142-141.29-34.28-34.279-81.962-51.198-134.588-49.11-304.554 12.414-912.232 683.377-1179.54 996.17-53.616-5.383-106.682 2.088-157.441 23.402-132.61 55.263-225.339 193.038-225.339 334.877 0 268.517-103.935 425.737-104.923 427.275L0 1896.747l110.307-6.153c69.217-3.735 681.29-45.375 810.165-332.46 24.39-54.604 29.225-113.163 15.93-175.239 374.32-321.802 972.11-879.71 983.427-1169.322" fill-rule="evenodd"/>
 </svg>`;
-    btnDraw.onclick = () => {
-      let writezones = document.getElementsByClassName("replaymap_writezone");
+      btnDraw.onclick = () => {
+        let writezones = document.getElementsByClassName("replaymap_writezone");
 
-      // comme c'est une collection vivante, on doit le transformer en tableau
-      [...writezones].forEach((zone) => {
-        preview.removeChild(zone);
-      });
-      mode = "draw";
-    };
-    editmodezone.appendChild(btnDraw);
+        // comme c'est une collection vivante, on doit le transformer en tableau
+        [...writezones].forEach((zone) => {
+          preview.removeChild(zone);
+        });
+        mode = "draw";
+      };
+      editmodezone.appendChild(btnDraw);
+    }
 
-    const btnText = document.createElement("button");
-    btnText.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="800px" height="800px" viewBox="0 0 24 24" fill="none">
+    if (text === true) {
+      const btnText = document.createElement("button");
+      btnText.title = "Texte";
+      btnText.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="800px" height="800px" viewBox="0 0 24 24" fill="none">
 <path d="M1 22C1 21.4477 1.44772 21 2 21H22C22.5523 21 23 21.4477 23 22C23 22.5523 22.5523 23 22 23H2C1.44772 23 1 22.5523 1 22Z" fill="#ffffff"/>
 <path fill-rule="evenodd" clip-rule="evenodd" d="M18.3056 1.87868C17.1341 0.707107 15.2346 0.707107 14.063 1.87868L3.38904 12.5526C2.9856 12.9561 2.70557 13.4662 2.5818 14.0232L2.04903 16.4206C1.73147 17.8496 3.00627 19.1244 4.43526 18.8069L6.83272 18.2741C7.38969 18.1503 7.89981 17.8703 8.30325 17.4669L18.9772 6.79289C20.1488 5.62132 20.1488 3.72183 18.9772 2.55025L18.3056 1.87868ZM15.4772 3.29289C15.8677 2.90237 16.5009 2.90237 16.8914 3.29289L17.563 3.96447C17.9535 4.35499 17.9535 4.98816 17.563 5.37868L15.6414 7.30026L13.5556 5.21448L15.4772 3.29289ZM12.1414 6.62869L4.80325 13.9669C4.66877 14.1013 4.57543 14.2714 4.53417 14.457L4.0014 16.8545L6.39886 16.3217C6.58452 16.2805 6.75456 16.1871 6.88904 16.0526L14.2272 8.71448L12.1414 6.62869Z" fill="#ffffff"/>
 </svg>`;
-    btnText.onclick = () => (mode = "text");
-    editmodezone.appendChild(btnText);
+      btnText.onclick = () => (mode = "text");
+      editmodezone.appendChild(btnText);
+    }
 
     // Bouton pour activer le mode flèche
-    const arrowBtn = document.createElement("button");
-    arrowBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="800px" height="800px" viewBox="0 0 16 16" fill="none">
+    if (arrow === true) {
+      const arrowBtn = document.createElement("button");
+      arrowBtn.title = "Flèche";
+      arrowBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="800px" height="800px" viewBox="0 0 16 16" fill="none">
 <path d="M14 2H5.50003L4.00003 3.5L6.83581 6.33579L0.585815 12.5858L3.41424 15.4142L9.66424 9.16421L12.5 12L14 10.5L14 2Z" fill="#ffffff"/>
 </svg>`;
-    arrowBtn.onclick = () => {
-      mode = "arrow";
-    };
-    editmodezone.appendChild(arrowBtn);
+      arrowBtn.onclick = () => {
+        mode = "arrow";
+      };
+      editmodezone.appendChild(arrowBtn);
+    }
 
-    const undoBtn = document.createElement("button");
-    undoBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="800px" height="800px" viewBox="0 0 24 24" fill="none">
+    // UNDO BTN
+    if (undo === true) {
+      const undoBtn = document.createElement("button");
+      undoBtn.title = "Retour";
+      undoBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="800px" height="800px" viewBox="0 0 24 24" fill="none">
 <path d="M4 7H15C17.7614 7 20 9.23857 20 12C20 14.7614 17.7614 17 15 17M4 7L7 4M4 7L7 10M8.00001 17H11" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
-    undoBtn.onclick = () => {
-      undo();
-    };
-    editmodezone.appendChild(undoBtn);
+      undoBtn.onclick = () => {
+        undoAction();
+      };
+      editmodezone.appendChild(undoBtn);
+    }
+
+    // SAVE CANVAS IMAGE OR VIDEO TO LOCAL
+    if (save === true) {
+      const saveBtn = document.createElement("button");
+      saveBtn.title = "Télécharger";
+      saveBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#ffffff"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 1.25C11.5858 1.25 11.25 1.58579 11.25 2V12.9726L9.56944 11.0119C9.29988 10.6974 8.8264 10.661 8.51191 10.9306C8.19741 11.2001 8.16099 11.6736 8.43056 11.9881L11.4306 15.4881C11.573 15.6543 11.7811 15.75 12 15.75C12.2189 15.75 12.427 15.6543 12.5694 15.4881L15.5694 11.9881C15.839 11.6736 15.8026 11.2001 15.4881 10.9306C15.1736 10.661 14.7001 10.6974 14.4306 11.0119L12.75 12.9726L12.75 2C12.75 1.58579 12.4142 1.25 12 1.25Z" fill="#ffffff"></path> <path d="M14.25 9V9.37828C14.9836 9.11973 15.8312 9.2491 16.4642 9.79167C17.4077 10.6004 17.517 12.0208 16.7083 12.9643L13.7083 16.4643C13.2808 16.963 12.6568 17.25 12 17.25C11.3431 17.25 10.7191 16.963 10.2916 16.4643L7.29163 12.9643C6.48293 12.0208 6.5922 10.6004 7.53568 9.79167C8.16868 9.2491 9.01637 9.11973 9.74996 9.37828V9H8C5.17157 9 3.75736 9 2.87868 9.87868C2 10.7574 2 12.1716 2 15V16C2 18.8284 2 20.2426 2.87868 21.1213C3.75736 22 5.17157 22 7.99999 22H16C18.8284 22 20.2426 22 21.1213 21.1213C22 20.2426 22 18.8284 22 16V15C22 12.1716 22 10.7574 21.1213 9.87868C20.2426 9 18.8284 9 16 9H14.25Z" fill="#ffffff"></path> </g></svg>`;
+      saveBtn.onclick = () => {
+        setTimeout(() => {
+          saveFile();
+        }, 0);
+      };
+      editmodezone.appendChild(saveBtn);
+    }
+
+    // SAVE CANVAS IMAGE OR VIDEO TO LOCAL
+    if (copy === true) {
+      const copyBtn = document.createElement("button");
+      copyBtn.title = "Copier dans le presse papier";
+      copyBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#ffffff"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M15 1.25H10.9436C9.10583 1.24998 7.65019 1.24997 6.51098 1.40314C5.33856 1.56076 4.38961 1.89288 3.64124 2.64124C2.89288 3.38961 2.56076 4.33856 2.40314 5.51098C2.24997 6.65019 2.24998 8.10582 2.25 9.94357V16C2.25 17.8722 3.62205 19.424 5.41551 19.7047C5.55348 20.4687 5.81753 21.1208 6.34835 21.6517C6.95027 22.2536 7.70814 22.5125 8.60825 22.6335C9.47522 22.75 10.5775 22.75 11.9451 22.75H15.0549C16.4225 22.75 17.5248 22.75 18.3918 22.6335C19.2919 22.5125 20.0497 22.2536 20.6517 21.6517C21.2536 21.0497 21.5125 20.2919 21.6335 19.3918C21.75 18.5248 21.75 17.4225 21.75 16.0549V10.9451C21.75 9.57754 21.75 8.47522 21.6335 7.60825C21.5125 6.70814 21.2536 5.95027 20.6517 5.34835C20.1208 4.81753 19.4687 4.55348 18.7047 4.41551C18.424 2.62205 16.8722 1.25 15 1.25ZM17.1293 4.27117C16.8265 3.38623 15.9876 2.75 15 2.75H11C9.09318 2.75 7.73851 2.75159 6.71085 2.88976C5.70476 3.02502 5.12511 3.27869 4.7019 3.7019C4.27869 4.12511 4.02502 4.70476 3.88976 5.71085C3.75159 6.73851 3.75 8.09318 3.75 10V16C3.75 16.9876 4.38624 17.8265 5.27117 18.1293C5.24998 17.5194 5.24999 16.8297 5.25 16.0549V10.9451C5.24998 9.57754 5.24996 8.47522 5.36652 7.60825C5.48754 6.70814 5.74643 5.95027 6.34835 5.34835C6.95027 4.74643 7.70814 4.48754 8.60825 4.36652C9.47522 4.24996 10.5775 4.24998 11.9451 4.25H15.0549C15.8297 4.24999 16.5194 4.24998 17.1293 4.27117ZM7.40901 6.40901C7.68577 6.13225 8.07435 5.9518 8.80812 5.85315C9.56347 5.75159 10.5646 5.75 12 5.75H15C16.4354 5.75 17.4365 5.75159 18.1919 5.85315C18.9257 5.9518 19.3142 6.13225 19.591 6.40901C19.8678 6.68577 20.0482 7.07435 20.1469 7.80812C20.2484 8.56347 20.25 9.56458 20.25 11V16C20.25 17.4354 20.2484 18.4365 20.1469 19.1919C20.0482 19.9257 19.8678 20.3142 19.591 20.591C19.3142 20.8678 18.9257 21.0482 18.1919 21.1469C17.4365 21.2484 16.4354 21.25 15 21.25H12C10.5646 21.25 9.56347 21.2484 8.80812 21.1469C8.07435 21.0482 7.68577 20.8678 7.40901 20.591C7.13225 20.3142 6.9518 19.9257 6.85315 19.1919C6.75159 18.4365 6.75 17.4354 6.75 16V11C6.75 9.56458 6.75159 8.56347 6.85315 7.80812C6.9518 7.07435 7.13225 6.68577 7.40901 6.40901Z" fill="#ffffff"></path> </g></svg>`;
+      copyBtn.onclick = () => {
+        notify(
+          "info",
+          "Pour copier, faites un clique droit sur l'image et cliquez sur COPIER L'IMAGE",
+          6000
+        );
+      };
+      editmodezone.appendChild(copyBtn);
+    }
 
     preview.prepend(editmodezone);
   }
@@ -1165,11 +1216,26 @@ replaymap_editmodezone button:hover {
     history.push({ imageData, action });
   }
 
-  function undo() {
+  function undoAction() {
     if (history.length > 1) {
       history.pop(); // retire dernière action
       const last = history[history.length - 1];
       ctx.putImageData(last.imageData, 0, 0);
+    }
+  }
+
+  async function saveFile() {
+    try {
+      if (canvas) {
+        let canva_url = canvas.toDataURL("image/png");
+        let response = await fetch(canva_url);
+        const blob = await response.blob();
+        saveAs(blob, `video-${Date.now()}`);
+      } else if (videoBlob) {
+        saveAs(videoBlob, `video-${Date.now()}`);
+      }
+    } catch (err) {
+      console.error("Téléchargement fichier feedback", err);
     }
   }
 
@@ -1217,7 +1283,7 @@ replaymap_editmodezone button:hover {
     btn.style.opacity = status ? 0.5 : 1;
   };
 
-  function notify(type, message) {
+  function notify(type, message, duration = 3000) {
     const alert = document.createElement("div");
     alert.className = `replaymap_custom-notification replaymap_custom-notification-${type}`;
     alert.innerText = message;
@@ -1227,6 +1293,6 @@ replaymap_editmodezone button:hover {
       if (document.body.contains(alert)) {
         document.body.removeChild(alert);
       }
-    }, 3000);
+    }, duration);
   }
 })();

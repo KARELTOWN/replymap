@@ -9,11 +9,19 @@ const { getEvents, saveEvents, deleteEventByKeys } = dbtransaction();
 
 export default function eventTracker() {
   const getEventsTrack = async () => {
-    return await getEvents("replay_map_events_tracker");
+    try {
+      return await getEvents("replay_map_events_tracker");
+    } catch (err) {
+      console.warn("Erreur saveEventsTrack", err);
+    }
   };
 
   const saveEventsTrack = async (data) => {
-    await saveEvents("replay_map_events_tracker", data);
+    try {
+      await saveEvents("replay_map_events_tracker", data);
+    } catch (err) {
+      console.warn("Erreur saveEventsTrack", err);
+    }
   };
 
   let allEvents = [];
@@ -81,7 +89,7 @@ export default function eventTracker() {
       if (session_id) {
         //récuperer les éléments stockés les 2 dernières secondes
         const lastEvents = events.filter(
-          (e) => Date.now() - e.timestamp < 2000 && e.type === 3 // type=3 = MouseInteraction (clics)
+          (e) => Date.now() - e.timestamp < 2000
         );
         let lastElements = lastEvents.map((item) => ({
           target: item.target,
@@ -222,25 +230,33 @@ export default function eventTracker() {
   rageClickTracker();
   setInterval(async () => {
     const save = _.debounce(async () => {
-      if (allEvents.length > 0) {
-        let events_to_save = allEvents;
-        allEvents = [];
-        await saveEventsTrack(events_to_save);
-        let toSave = await getEventsTrack();
-        if (toSave && toSave.events_data.length > 0) {
-          await storeEvents(toSave);
+      try {
+        if (allEvents.length > 0) {
+          let events_to_save = allEvents;
+          allEvents = [];
+          await saveEventsTrack(events_to_save);
+          let toSave = await getEventsTrack();
+          if (toSave && toSave.events_data.length > 0) {
+            await storeEvents(toSave);
+          }
         }
+      } catch (error) {
+        console.error("error", error);
       }
     }, 2000);
     save();
   }, 2000);
 
   window.addEventListener("beforeunload", () => {
-    if (allEvents.length > 0) {
-      navigator.sendBeacon(
-        "event/store",
-        JSON.stringify({ events: allEvents })
-      );
+    try {
+      if (allEvents.length > 0) {
+        navigator.sendBeacon(
+          "event/store",
+          JSON.stringify({ events: allEvents })
+        );
+      }
+    } catch (err) {
+      console.warn("Erreur beforeunload eventTracker", err);
     }
   });
 }

@@ -7,11 +7,19 @@ import dbtransaction from "../utils/indexDB.js";
 const { getEvents, saveEvents, deleteEventByKeys } = dbtransaction();
 
 const getIntercepts = async () => {
-  return await getEvents("replay_map_events_tracker");
+  try {
+    return await getEvents("replay_map_events_tracker");
+  } catch (error) {
+    console.warn("Erreur saveIntercepts", error);
+  }
 };
 
 const saveIntercepts = async (data) => {
-  await saveEvents("replay_map_events_tracker", data);
+  try {
+    await saveEvents("replay_map_events_tracker", data);
+  } catch (error) {
+    console.warn("Erreur saveIntercepts", error);
+  }
 };
 
 let intercepts = [];
@@ -23,71 +31,92 @@ export default function interceptRequest() {
   window.fetch = async (...args) => {
     try {
       let rrweb_timestamp = Date.now();
-      let session_id = getSessionId();
-
       const start = performance.now();
       // Modify request if needed
       const [url, config] = args;
 
       const response = await originalFetch(url, config);
       const end = performance.now();
-
-      const clonedResponse = response.clone();
-      if (!clonedResponse.ok) {
-        const avoid_urls = avoid_records_urls(url);
-        if (avoid_urls === false) {
-          const contentType = clonedResponse.headers.get("Content-Type");
-
-          let jsonData;
-          if (contentType && contentType.includes("application/json")) {
-            try {
-              jsonData = await clonedResponse.json();
-            } catch (err) {
-              jsonData = await clonedResponse.text();
-            }
-          } else {
-            jsonData = await clonedResponse.text();
-          }
-          const duration = (end - start) / 1000;
-          const request_general = {
-            url: url,
-            body: config.body,
-            headers: config.headers,
-            method: config.method || "GET",
-          };
-          const request_response = {
-            status: response.status,
-            statusText: response.statusText,
-            response: jsonData,
-            duration: duration + "s",
-          };
-
-          intercepts.push({
-            type: "request_errors",
-            project: project_id,
-            session: session_id || null,
-            page_url: window.location.href,
-            data: {
-              general: request_general,
-              response: request_response,
-            },
-            uniqueId: uuidV4(),
-            timestamp: rrweb_timestamp,
-          });
-          let intercepts_to_save = intercepts;
-          intercepts = [];
-          await saveIntercepts(intercepts_to_save);
-          if (intercepts_to_save.length > 0) {
-            sendInterceptData();
-          }
-        }
-      }
-
+      // ISOLE LE HANDLE INTERCEPT DU THREAD PRINCIPAL
+      setTimeout(() => {
+        handleIntercept(
+          response,
+          url,
+          config,
+          rrweb_timestamp,
+          start,
+          end
+        ).catch((err) => {
+          console.warn("Erreur dans handleIntercept", err);
+        });
+      }, 0);
       return response;
     } catch (error) {
       console.error("error", error);
     }
   };
+}
+
+async function handleIntercept(
+  response,
+  url,
+  config,
+  rrweb_timestamp,
+  start,
+  end
+) {
+  let session_id = getSessionId();
+
+  const clonedResponse = response.clone();
+  if (!clonedResponse.ok) {
+    const avoid_urls = avoid_records_urls(url);
+    if (avoid_urls === false) {
+      const contentType = clonedResponse.headers.get("Content-Type");
+
+      let jsonData;
+      if (contentType && contentType.includes("application/json")) {
+        try {
+          jsonData = await clonedResponse.json();
+        } catch (err) {
+          jsonData = await clonedResponse.text();
+        }
+      } else {
+        jsonData = await clonedResponse.text();
+      }
+      const duration = (end - start) / 1000;
+      const request_general = {
+        url: url,
+        body: config.body,
+        headers: config.headers,
+        method: config.method || "GET",
+      };
+      const request_response = {
+        status: response.status,
+        statusText: response.statusText,
+        response: jsonData,
+        duration: duration + "s",
+      };
+
+      intercepts.push({
+        type: "request_errors",
+        project: project_id,
+        session: session_id || null,
+        page_url: window.location.href,
+        data: {
+          general: request_general,
+          response: request_response,
+        },
+        uniqueId: uuidV4(),
+        timestamp: rrweb_timestamp,
+      });
+      let intercepts_to_save = intercepts;
+      intercepts = [];
+      await saveIntercepts(intercepts_to_save);
+      if (intercepts_to_save.length > 0) {
+        sendInterceptData();
+      }
+    }
+  }
 }
 
 const sendInterceptData = _.debounce(async () => {
@@ -107,8 +136,15 @@ const sendInterceptData = _.debounce(async () => {
 }, 5000);
 
 window.addEventListener("beforeunload", () => {
-  if (intercepts.length > 0) {
-    navigator.sendBeacon("event/store", JSON.stringify({ events: intercepts }));
+  try {
+    if (intercepts.length > 0) {
+      navigator.sendBeacon(
+        "event/store",
+        JSON.stringify({ events: intercepts })
+      );
+    }
+  } catch (err) {
+    console.warn("Erreur beforeunload interceptRequest", err);
   }
 });
 

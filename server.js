@@ -35,7 +35,7 @@ const corsOption = {
 };
 
 const app = express();
-app.use(cors(corsOption)); // Autorise toutes les origines
+app.use(cors()); // Autorise toutes les origines
 
 app.use(express.static(path.join(__dirname, "dist"))); // Sert le bundle
 
