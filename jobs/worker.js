@@ -129,13 +129,11 @@ const feedbackStore = new Worker(
 
           let feedbackFile = await Files.insertOne(fileResult);
 
-          console.log('job.data.feedback', job.data.feedback)
           const feedback = await Feedback.create({
             ...job.data.feedback,
             status: statusOpen._id,
             file: feedbackFile._id,
           });
-          console.log('job.data.feedback success')
 
           let filesAttach = [];
           for (const element of attachmentsResult) {

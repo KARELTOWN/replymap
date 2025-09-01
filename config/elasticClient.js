@@ -8,11 +8,11 @@ export default async function initializeElasticsearch() {
   });
   try {
     const exists = await client.indices.exists({
-      index: `replay_map_clients_app_logs_errors`,
+      index: `bugreveal_app_logs`,
     });
     if (!exists) {
       await client.indices.create({
-        index: `replay_map_clients_app_logs_errors`,
+        index: `bugreveal_app_logs`,
         mappings: {
           properties: {
             project: { type: "text" },

@@ -14,7 +14,7 @@ export default function feedbackService() {
       let users_in_project = await user_in_projects(project_id._id);
       let params = {
         type: type.libelle,
-        priority: priority.libelle,
+        priority: priority ? priority.libelle : null,
         status: status.libelle,
         title,
         description,
