@@ -29,7 +29,7 @@
         <div class="flex flex-wrap gap-2 mb-3">
             <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">{{ props.feedback.type.libelle
                 }}</span>
-            <span class="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full">{{ props.feedback.priority.libelle
+            <span v-if="props.feedback?.priority" class="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full">{{ props.feedback?.priority?.libelle
                 }}</span>
             <span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full"
                 v-if="props.feedback.assignTo">Assigné à:

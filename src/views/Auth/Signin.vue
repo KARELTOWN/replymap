@@ -189,6 +189,7 @@ import 'vue-toast-notification/dist/theme-sugar.css';
 import { handleCatchError, handleLoginError } from '@/utils/handleAppError'
 import { errorNotify, successNotify } from '@/utils/notification'
 import { useRouter } from 'vue-router'
+import setCookie from '@/composables/cookie'
 //validator YUP
 const schemaLogin = validateLogin()
 const router = useRouter()
@@ -223,6 +224,7 @@ const handleSubmit = async () => {
       if (response?.data) {
         successNotify("Connexion réussie")
         localStorage.setItem('replay_map_token', JSON.stringify(response.data))
+        setCookie('bugreveal_app_user', response.data.data)
         router.push({ path: "/" })
       }
 
