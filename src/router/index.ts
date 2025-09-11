@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, useRoute } from 'vue-router'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -93,6 +93,14 @@ const router = createRouter({
       },
     },
     {
+      path: '/recorder-login',
+      name: 'Recorder Signin',
+      component: () => import('../views/Auth/RecorderSignin.vue'),
+      meta: {
+        title: 'Recorder Signin',
+      },
+    },
+    {
       path: '/signup',
       name: 'Signup',
       component: () => import('../views/Auth/Signup.vue'),
@@ -124,6 +132,25 @@ const router = createRouter({
         title: 'NewPassword',
       },
     },
+    {
+      path: '/integration-finalize/:project_id/:integration',
+      name: 'IntegrationFinalize',
+      component: () => import('../views/Pages/Integration/Finalize.vue'),
+      meta: {
+        title: 'Intégration finalisée',
+        requiredAuth: true,
+      },
+    },
+
+    {
+      path: '/integration-configuration',
+      name: 'IntegrationConfiguration',
+      component: () => import('../views/Pages/Integration/Configuration.vue'),
+      meta: {
+        title: "Configuration de l'intégration",
+        requiredAuth: true,
+      },
+    },
   ],
 })
 
@@ -131,12 +158,17 @@ export default router
 
 router.beforeEach((to, from, next) => {
   document.title = `${to.meta.title} | Replay MAP`
-  const replay_map_token = localStorage.getItem('replay_map_token')
-  const data = replay_map_token !== null ? JSON.parse(replay_map_token) : null
+  const bugreveal_app_token = localStorage.getItem('bugreveal_app_token')
+  const data = bugreveal_app_token !== null ? JSON.parse(bugreveal_app_token) : null
 
   const token = data?.token
-
-  if (to.meta.requiredAuth && !token) {
+  if (to.path == '/recorder-login') {
+    if (token) {
+      let url = to.query.from
+      window?.opener?.postMessage({ token }, url)
+      window?.close()
+    }
+  } else if (to.meta.requiredAuth && !token) {
     return next('/signin')
   } else if (!to.meta.requiredAuth && token) {
     return next('/')

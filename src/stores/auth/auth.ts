@@ -11,7 +11,7 @@ export const authStore = defineStore('auth', () => {
     const result = await fetchGet('auth/deconnect')
     const response = await handleAppError(result)
     if (response.status === false) {
-      localStorage.removeItem('replay_map_token')
+      localStorage.removeItem('bugreveal_app_token')
       successNotify('Vous êtes déconnecté"')
       router.push({ path: '/signin' })
     }

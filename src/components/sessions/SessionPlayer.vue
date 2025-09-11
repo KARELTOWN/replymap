@@ -54,7 +54,7 @@ import { sessionStore } from "@/stores/session/sessionStore";
 import { storeToRefs } from "pinia";
 import { errorNotify } from '@/utils/notification';
 import ReplayWorker from '@/composables/replay-worker?worker'
-import { api, getToken } from '@/composables/request';
+import { api, getAp, getAppToken } from '@/composables/request';
 const store = sessionStore()
 const { session, player } = storeToRefs(store)
 
@@ -122,7 +122,7 @@ const readChunksContinuously = async () => {
         }
         worker.postMessage({
             param: { session_id: session_id.value, project_id: project_id.value },
-            token: getToken(),
+            token: getAppToken(),
             api: api
         })
     }

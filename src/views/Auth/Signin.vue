@@ -223,8 +223,7 @@ const handleSubmit = async () => {
     else {
       if (response?.data) {
         successNotify("Connexion réussie")
-        localStorage.setItem('replay_map_token', JSON.stringify(response.data))
-        setCookie('bugreveal_app_user', response.data.data)
+        localStorage.setItem('bugreveal_app_token', JSON.stringify(response.data))
         router.push({ path: "/" })
       }
 

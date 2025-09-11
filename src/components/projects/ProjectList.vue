@@ -67,6 +67,10 @@
                                 <Button @click="quit(project)" v-if="project.creator === false" size="sm"
                                     variant="outline" :startIcon="LogoutIcon" title="Quitter le projet">
                                 </Button>
+                                <div>
+                                    <Button variant="outline"
+                                        @click="openIntegrationModal(project._id)">Intégrations</Button>
+                                </div>
                             </div>
                         </td>
 
@@ -88,6 +92,13 @@ import { projectStore } from "@/stores/project/projectStore";
 import { storeToRefs } from "pinia";
 import moment from 'moment';
 import Swal from 'sweetalert2'
+import { useRouter } from 'vue-router';
+
+const router = useRouter()
+
+const openIntegrationModal = (project) => {
+    router.push({ path: '/integration-configuration', query: { project } })
+}
 
 const copyScript = (data, index) => {
     navigator.clipboard.writeText(data)
