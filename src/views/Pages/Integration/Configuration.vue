@@ -92,7 +92,7 @@
 import { integrationStore } from '@/stores/integration/integrationStore';
 import { errorNotify, warningNotify } from '@/utils/notification';
 import { storeToRefs } from 'pinia';
-import { onMounted, reactive, ref, watchEffect } from 'vue';
+import { onMounted, onUnmounted, reactive, ref, watchEffect } from 'vue';
 import { useRoute } from 'vue-router';
 import Modal from '@/components/profile/Modal.vue';
 import Button from '@/components/ui/Button.vue';
@@ -222,4 +222,10 @@ const handleSubmit = async () => {
     })
 
 }
+
+onUnmounted(()=> {
+    defaultBoard.value = null
+    boards.value = []
+    errors.value = {}
+})
 </script>
