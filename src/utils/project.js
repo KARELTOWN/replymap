@@ -31,18 +31,3 @@ export const getProject = async (project_id) => {
     console.log(error);
   }
 };
-
-export const isAppUser = () => {
-  let libelle = "bugreveal_app_user";
-  let cookie = document.cookie
-    .split("; ")
-    .find((item) => item.startsWith(`${libelle}=`));
-
-  if (!cookie) {
-    return null;
-  }
-  let data = cookie.split(`${libelle}=`);
-
-  let user_id = data[1];
-  return user_id;
-};

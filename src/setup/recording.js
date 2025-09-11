@@ -4,7 +4,7 @@ import * as rrweb from "rrweb";
 import { fetchGet, fetchPost } from "../utils/request";
 import { getIpAdress } from "../utils/ipAdress";
 import { project_id } from "../record.js";
-import setCookie from "../utils/cookie.js";
+import setCookieUser from "../utils/cookie.js";
 import { getSessionId } from "../utils/session.js";
 import { maskSelector } from "../utils/maskSelector.js";
 import pako from "pako";
@@ -181,7 +181,7 @@ export default async function initializeRecord() {
       }
     }
     if (!session_id || (session_id && isEnded === true)) {
-      let cookie = setCookie();
+      let cookie = setCookieUser();
       const localization = await getIpAdress();
       let session_data = {
         project_id,

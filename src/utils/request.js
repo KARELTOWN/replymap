@@ -1,3 +1,17 @@
+import { bugRevealToken } from "./cookie";
+
+export const fetchPostMember = (path, body) => {
+  return fetch(`${import.meta.env.VITE_BACKEND_URL}/${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json;charset=utf-8",
+      Authorization: `Bearer ${bugRevealToken}`,
+    },
+    body: JSON.stringify(body),
+  });
+};
+
 export const fetchPost = (path, body) => {
   return fetch(`${import.meta.env.VITE_BACKEND_URL}/${path}`, {
     method: "POST",
@@ -8,10 +22,14 @@ export const fetchPost = (path, body) => {
   });
 };
 
-export const fetchPostWithFile = (path, body) => {
+export const fetchGetMember = (path, body) => {
   return fetch(`${import.meta.env.VITE_BACKEND_URL}/${path}`, {
-    method: "POST",
-    body: body,
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${bugRevealToken}`,
+    },
+    body: JSON.stringify(body),
   });
 };
 
@@ -21,5 +39,22 @@ export const fetchGet = (path) => {
     headers: {
       "Content-Type": "application/json",
     },
+  });
+};
+
+export const fetchPostWithFile = (path, body) => {
+  return fetch(`${import.meta.env.VITE_BACKEND_URL}/${path}`, {
+    method: "POST",
+    body: body,
+  });
+};
+
+export const fetchPostWithFileForMember = (path, body) => {
+  return fetch(`${import.meta.env.VITE_BACKEND_URL}/${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${bugRevealToken}`,
+    },
+    body: body,
   });
 };

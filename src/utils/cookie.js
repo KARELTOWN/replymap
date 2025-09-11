@@ -1,5 +1,5 @@
 import { v4 as uuidV4 } from "uuid";
-export default function setCookie() {
+export default function setCookieUser() {
   let user_id = null;
   let first_visit = false;
   let cookie = document.cookie
@@ -19,3 +19,5 @@ export default function setCookie() {
   return { user: user_id, first_visit: first_visit };
 }
 
+export const bugRevealToken =
+  JSON.parse(localStorage.getItem("bugreveal_record_app_user")) || null;

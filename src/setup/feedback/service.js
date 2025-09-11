@@ -1,23 +1,31 @@
-import { fetchGet, fetchPost, fetchPostWithFile } from "../../utils/request.js";
-import { bugRevealUser, project_id } from "../../record.js";
+import {
+  fetchGet,
+  fetchGetMember,
+  fetchPostWithFile,
+  fetchPostWithFileForMember,
+  fetchPostMember,
+} from "../../utils/request.js";
+import { project_id } from "../../record.js";
 import { getSessionId } from "../../utils/session.js";
+import { bugRevealToken } from "../../utils/cookie.js";
 
 export default function service() {
   let types = [];
   let priority = [];
+
   const getFeedbackParams = async () => {
     try {
       const res = await fetchGet("feedback/params");
+
       if (res.ok) {
         if (res.status === 200) {
           const data = await res.json();
+          console.log("getFeedbackParams", data);
           if (data.data) {
             types = data.data.type;
             priority = data.data.priority;
             return { types, priority };
           }
-        } else {
-          `Erreur lors de la récupération des paramètres pour le feedback : ${res.status}`;
         }
       } else {
         throw new Error(
@@ -31,14 +39,10 @@ export default function service() {
 
   const checkMemberInProject = async () => {
     try {
-      let data = {
-        user_id: bugRevealUser,
-      };
-      const res = await fetchPost(`project/get_users/${project_id}`, data);
+      const res = await fetchGetMember(`project/get_users/${project_id}`);
       if (res.ok) {
         if (res.status === 200) {
           const response = await res.json();
-          console.log("member in project", response.data);
           if (response.data) {
             if (response.data.member_is_in_project === true) {
               return [true, response.data.members];
@@ -46,11 +50,31 @@ export default function service() {
               return [false];
             }
           }
-        } else {
-          `Erreur checkMemberInProject: ${res.status}`;
         }
       } else {
         throw new Error(`Erreur checkMemberInProject : ${res.status}`);
+      }
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const getBoardLists = async (integration) => {
+    try {
+      let data = {
+        project_id,
+        integration,
+      };
+      const res = await fetchPostMember(`integration/get_board_lists`, data);
+      if (res.ok) {
+        if (res.status === 200) {
+          const response = await res.json();
+          if (response.data) {
+            return response.data;
+          }
+        }
+      } else {
+        throw new Error(`Erreur getBoardLists : ${res.status}`);
       }
     } catch (error) {
       throw error;
@@ -84,10 +108,11 @@ export default function service() {
 
       // Ajout du canvas en tant que "fichier"
       let blob = null;
+      let filename = "";
       if (type === "canvas") {
         blob = dataURLtoBlob(recordData);
       } else if (type === "video") {
-        blob = recordData;
+        blob = new Blob([recordData], { type: "video/webm" });
       }
       formData.append("file", blob);
 
@@ -98,7 +123,15 @@ export default function service() {
       Object.entries(data).forEach(([key, value]) => {
         formData.append(key, value);
       });
-      const res = await fetchPostWithFile("feedback/store", formData);
+      let res = null;
+      if (bugRevealToken) {
+        res = await fetchPostWithFileForMember(
+          "feedback/store_member",
+          formData
+        );
+      } else {
+        res = await fetchPostWithFile("feedback/store", formData);
+      }
       if (res.ok) {
         if (res.status === 200) {
           return ["success"];
@@ -118,5 +151,10 @@ export default function service() {
     }
   };
 
-  return { getFeedbackParams, sendFeedback, checkMemberInProject };
+  return {
+    getFeedbackParams,
+    sendFeedback,
+    checkMemberInProject,
+    getBoardLists,
+  };
 }

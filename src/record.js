@@ -2,9 +2,9 @@ import eventTracker from "./setup/eventTracker.js";
 import interceptRequest from "./setup/interceptRequest.js";
 import { observer } from "./setup/performanceObserver.js";
 import initializeRecord from "./setup/recording.js";
-import { getProject, isAppUser } from "./utils/project.js";
+import { getProject } from "./utils/project.js";
 import dbtransaction from "./utils/indexDB.js";
-import "./setup/bugreport/index.js";
+import "./setup/feedback/index.js";
 const tableList = [
   "replay_map_record_events",
   "replay_map_events_tracker",
@@ -12,7 +12,6 @@ const tableList = [
 ];
 const { initDB } = dbtransaction();
 export let project_id = null;
-export const bugRevealUser = isAppUser();
 
 async function initRecord() {
   try {
