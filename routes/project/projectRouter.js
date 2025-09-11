@@ -88,10 +88,11 @@ ProjectRouter.post(
   quitProject
 );
 
-ProjectRouter.post(
+ProjectRouter.get(
   "/get_users/:project_id",
+  isauthentificate,
+  blacklist,
   validateProjectIDParam,
-  validateUserEncrypt,
   projectAllMembers
 );
 

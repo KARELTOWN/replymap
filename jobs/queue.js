@@ -17,6 +17,10 @@ function queueWorker(queueName) {
 
 const recordChunksQueues = queueWorker("recording_chunk_store");
 const feedbackStoreQueues = queueWorker("feedback");
+const feedbackStoreInIntegrationQueues = queueWorker(
+  "feedbackSaveInIntegration"
+);
+
 const mailingQueues = queueWorker("mailing");
 
 export const storeChunkJob = async (data) => {
@@ -38,6 +42,22 @@ export const storeFeedbackJob = async (data) => {
       attachments: attachments,
       feedback: data.feedback,
     });
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+export const storeFeedbackInIntegrationJob = async (data) => {
+  try {
+    let attachments = Array.from(data.attachments);
+    await feedbackStoreInIntegrationQueues.add(
+      `feedback_save_in_${data.feedback.integration}_${Date.now()}`,
+      {
+        file: data.file,
+        attachments: attachments,
+        feedback: data.feedback,
+      }
+    );
   } catch (error) {
     throw new Error(error);
   }

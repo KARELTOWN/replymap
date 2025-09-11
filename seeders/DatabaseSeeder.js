@@ -11,13 +11,13 @@ import NotificationModelSeeder from "./NotificationModelSeeder.js";
 import RoleSeeder from "./RoleSeeder.js";
 
 try {
-  // await RoleSeeder();
-  // await EventTypeSeeder();
-  // await FeedbackPrioritySeeder();
-  // await FeedbackTypeSeeder();
-  // await ListIntegrationSeeder();
-  // await FeedbackStatusSeeder();
-  // await NotificationModelSeeder();
+  await RoleSeeder();
+  await EventTypeSeeder();
+  await FeedbackPrioritySeeder();
+  await FeedbackTypeSeeder();
+  await ListIntegrationSeeder();
+  await FeedbackStatusSeeder();
+  await NotificationModelSeeder();
   // await FonctionSeeder();
   // await ModuleSeeder();
   // await FeatureSeeder();

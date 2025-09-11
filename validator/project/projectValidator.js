@@ -5,7 +5,7 @@ import moment from "moment";
 import _ from "lodash";
 import Session from "../../models/Session.js";
 import Events from "../../models/Events.js";
-import { checkProjectExist } from "../../services/project/projectService.js";
+import { checkProjectExist, projectData } from "../../services/project/projectService.js";
 
 export const validateProject = [
   body("libelle").notEmpty().withMessage("Le libelle est obligatoire"),

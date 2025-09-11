@@ -7,7 +7,10 @@ import FeedbackStatus from "../../models/FeedbackStatus.js";
 import fileService from "../../services/files/fileService.js";
 const { getURLFileFromS3 } = fileService();
 import feedbackHistoryController from "./feedbackHistoryController.js";
-import { storeFeedbackJob } from "../../jobs/queue.js";
+import {
+  storeFeedbackInIntegrationJob,
+  storeFeedbackJob,
+} from "../../jobs/queue.js";
 import { checkSessionExist } from "../../services/session/sessionService.js";
 const { storeFeedbackHistory } = feedbackHistoryController();
 import feedbackService from "../../services/feedback/feedbackService.js";
@@ -56,6 +59,48 @@ export default function feedbackController() {
         feedback: data,
         attachments,
       });
+
+      res.status(200).json({ message: "Feedback créé" });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  };
+
+  const storeFeedbackMember = async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(422).json({ errors: errors.array() });
+      }
+      const data = matchedData(req);
+
+      // Vérif existence en base
+      const session_exist = await checkSessionExist(data.session_id);
+      if (!session_exist) {
+        data.session_id = null;
+      }
+
+      const file = req.files.file ? req.files.file[0] : null;
+      const attachments = req.files.attachments ? req.files.attachments : [];
+      if (!file) {
+        return res
+          .status(422)
+          .json({ message: "La capture d'écran est obligatoire" });
+      }
+
+      await storeFeedbackJob({
+        file,
+        feedback: data,
+        attachments,
+      });
+
+      if (data.integration && data.list_id) {
+        await storeFeedbackInIntegrationJob({
+          file,
+          feedback: data,
+          attachments,
+        });
+      }
 
       res.status(200).json({ message: "Feedback créé" });
     } catch (error) {
@@ -187,5 +232,6 @@ export default function feedbackController() {
     showFeedback,
     updateFeedback,
     assignFeedback,
+    storeFeedbackMember,
   };
 }

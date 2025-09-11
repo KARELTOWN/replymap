@@ -47,7 +47,9 @@ const corsOption = {
     "https://record.bugreveal.com",
     "https://app.bugreveal.com",
     "http://localhost:5173",
-    "http://localhost:5175"
+    "http://localhost:5175",
+    "http://localhost:5176",
+    "https://surveymc.bugreveal.com"
   ],
   methods: ["GET", "POST", "DELETE", "PUT", "PATCH"],
   credentials: true,

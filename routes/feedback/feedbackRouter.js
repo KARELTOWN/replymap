@@ -8,6 +8,7 @@ import {
   validateFeedbackPerProject,
   validateShowFeedback,
   validateUpdateFeedback,
+  validateFeedbackStoreMember,
 } from "../../validator/feedback/feedbackValidator.js";
 
 import { validateCommentStore } from "../../validator/feedback/feedbackCommentValidator.js";
@@ -24,6 +25,7 @@ const {
   getFeedbackPerProject,
   updateFeedback,
   showFeedback,
+  storeFeedbackMember,
 } = feedbackController();
 const { getFeedbackComments, storeComment } = feedbackCommentController();
 
@@ -35,6 +37,15 @@ FeedbackRouter.post(
   uploadFile.fields([{ name: "file", maxCount: 1 }, { name: "attachments" }]),
   validateFeedbackStore,
   storeFeedback
+);
+
+FeedbackRouter.post(
+  "/store_member",
+  isauthentificate,
+  blacklist,
+  uploadFile.fields([{ name: "file", maxCount: 1 }, { name: "attachments" }]),
+  validateFeedbackStoreMember,
+  storeFeedbackMember
 );
 
 FeedbackRouter.post(

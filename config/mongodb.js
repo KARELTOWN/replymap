@@ -12,6 +12,7 @@ async function connectDB() {
   let retryDelayMs = 3000;
   while (retryCount < maxRetries) {
     try {
+      console.log('uri', uri)
       const connect = await mongoose.connect(uri, clientOptions);
       await mongoose.connection.db.admin().command({ ping: 1 });
       console.log("Connexion réussie à MongoDB!");

@@ -8,8 +8,64 @@ import FeedbackStatus from "../../models/FeedbackStatus.js";
 import Feedback from "../../models/Feedback.js";
 import User from "../../models/User.js";
 import { checkProjectExist } from "../../services/project/projectService.js";
+import integrationService from "../../services/integration/integrationService.js";
+const { integrationList } = integrationService();
+
 
 export const validateFeedbackStore = [
+  body("title").notEmpty().withMessage("Le titre est obligatoire"),
+  body("description").optional(),
+  body("user_agent")
+    .notEmpty()
+    .withMessage("Information du navigateur obligatoire"),
+  body("width").notEmpty().withMessage("Largeur ecran obligatoire"),
+  body("height").notEmpty().withMessage("Hauteur ecran obligatoire"),
+  body("type")
+    .notEmpty()
+    .withMessage("Le type de feedback est obligatoire")
+    .custom(async (value) => {
+      if (value) {
+        let type_exist = await FeedbackType.findById(value);
+        if (!type_exist) {
+          throw new Error("Le type de feedback n'existe pas");
+        }
+        return true;
+      }
+    }),
+  body("attachments").optional(),
+
+  body("project_id")
+    .notEmpty()
+    .withMessage("Le projet est obligatoire")
+    .custom(async (value) => {
+      if (value !== null) {
+        let project_exist = await checkProjectExist(value);
+        if (!project_exist) {
+          throw new Error("Le projet n'existe pas");
+        }
+        return true;
+      }
+      return true;
+    }),
+
+  body("session_id")
+    .optional()
+    .custom(async (value) => {
+      // Ignore vide, null ou "null"
+      if (!value || value === "null") {
+        return true;
+      }
+
+      // Vérifier format ObjectId
+      if (!mongoose.Types.ObjectId.isValid(value)) {
+        throw new Error("Format de session_id invalide");
+      }
+
+      return true;
+    }),
+];
+
+export const validateFeedbackStoreMember = [
   body("title").notEmpty().withMessage("Le titre est obligatoire"),
   body("description").optional(),
   body("user_agent")
@@ -49,6 +105,7 @@ export const validateFeedbackStore = [
       return true;
     }
   }),
+  
   body("attachments").optional(),
 
   body("project_id")
@@ -80,6 +137,20 @@ export const validateFeedbackStore = [
 
       return true;
     }),
+
+  body("integration")
+    .optional()
+    .isString()
+    .custom((value) => {
+      if (value && value !== undefined) {
+        if (!integrationList.includes(value)) {
+          throw new Error("Intégration inconnue");
+        }
+      }
+      return true;
+    }),
+
+  body("list_id").optional().isString(),
 ];
 
 export const validateFeedbackPerProject = [

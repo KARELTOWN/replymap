@@ -15,7 +15,8 @@ import { mailTransporter } from "../config/mailer.js";
 import Files from "../models/Files.js";
 import FeedbackStatus from "../models/FeedbackStatus.js";
 import Feedback from "../models/Feedback.js";
-
+import integrationService from "../services/integration/integrationService.js";
+const { createCardIntegration } = integrationService();
 const worker = new Worker(
   "recording_chunk_store",
   async (job) => {
@@ -68,7 +69,7 @@ const mailingWorker = new Worker(
       });
       if (info) {
         await mongoose.model("Notification").insertOne({
-          type: 'email',
+          type: "email",
           mail_to: mailinfo.user_id,
           title: mailinfo.subject,
           content: mailinfo.html,
@@ -87,6 +88,17 @@ const feedbackStore = new Worker(
   "feedback",
   async (job) => {
     try {
+      let cardData = {
+        file: "",
+        files: [],
+        title: job.data.feedback.title,
+        description: job.data.feedback.description || "",
+        priority: "",
+        type: "",
+        integration: job.data.feedback.integration || null,
+        list_id: job.data.feedback.list_id || null,
+        project_id: job.data.feedback.project_id,
+      };
       let paths = [];
 
       let decodedFile = null;
@@ -95,11 +107,15 @@ const feedbackStore = new Worker(
       decodedFile = { ...job.data.file, buffer: bufferFile };
       paths.push(decodedFile.path);
 
+      cardData.file = decodedFile;
+
       let decodedAttachments = [];
       if (job.data.attachments.length > 0) {
         for (const attach of job.data.attachments) {
           let bufferFile = await readFileFromFolder(attach.path);
-          decodedAttachments.push({ ...attach, buffer: bufferFile });
+          let file = { ...attach, buffer: bufferFile };
+          decodedAttachments.push(file);
+          cardData.files.push(file);
           paths.push(attach.path);
         }
       }
@@ -149,11 +165,52 @@ const feedbackStore = new Worker(
           await Files.insertMany(filesAttach);
 
           await createFeedbackNotification(feedback._id);
+
           deleteFiles(paths);
 
           console.log("Feedback enregistré");
         }
       }
+    } catch (error) {
+      throw new Error(error);
+    }
+  },
+  { connection: connectionRedis }
+);
+
+const feedbackSaveInIntegration = new Worker(
+  "feedbackSaveInIntegration",
+  async (job) => {
+    try {
+      let cardData = {
+        file: "",
+        files: [],
+        title: job.data.feedback.title,
+        description: job.data.feedback.description || "",
+        priority: job.data.feedback.priority,
+        type: job.data.feedback.type,
+        integration: job.data.feedback.integration || null,
+        list_id: job.data.feedback.list_id || null,
+        project_id: job.data.feedback.project_id,
+      };
+
+      let decodedFile = null;
+      // DECODER LES DONNES EN BUFFER
+      console.log('job.data.file', job.data.file)
+      let bufferFile = await readFileFromFolder(job.data.file.path);
+      decodedFile = { ...job.data.file, buffer: bufferFile };
+      cardData.file = decodedFile;
+
+      if (job.data.attachments.length > 0) {
+        for (const attach of job.data.attachments) {
+          let bufferFile = await readFileFromFolder(attach.path);
+          let file = { ...attach, buffer: bufferFile };
+          cardData.files.push(file);
+        }
+      }
+      await createCardIntegration(cardData);
+
+      console.log("Feedback save in integration");
     } catch (error) {
       throw new Error(error);
     }

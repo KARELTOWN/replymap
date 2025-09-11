@@ -10,6 +10,7 @@ import { blacklist } from "../middleware/blacklist.js";
 import eventRouter from "./event/eventRouter.js";
 import statRouter from './stat/statRouter.js'
 import FeedbackRouter from "./feedback/feedbackRouter.js";
+import IntegrationRouter from "./integration/integrationRouter.js";
 
 router.use("/auth/", AuthRouter);
 router.use("/project/", ProjectRouter);
@@ -19,5 +20,6 @@ router.use("/chunk/", chunkRouter);
 router.use("/event/", eventRouter);
 router.use("/stat/", statRouter);
 router.use("/feedback/", FeedbackRouter);
+router.use('/integration/', isauthentificate, blacklist, IntegrationRouter)
 
 export default router;

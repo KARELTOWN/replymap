@@ -20,6 +20,8 @@ import {
 } from "../../services/project/projectService.js";
 import User from "../../models/User.js";
 import { encrypt, createTokenString, decrypt } from "../../helpers/encrypt.js";
+import integrationService from "../../services/integration/integrationService.js";
+const { integrationLoginUrl } = integrationService();
 
 export default function projectController() {
   const createProject = async (req, res, next) => {
@@ -306,8 +308,8 @@ export default function projectController() {
 
     let members = await user_in_projects(data.project_id);
     let member_is_in_project = false;
-    if (data.user_id) {
-      let user_id = decrypt(data.user_id);
+  
+      let user_id = req.user._id
       console.log("user_id", user_id);
       let find = members.find((e) => e._id.toString() === user_id.toString());
       console.log("find", find);
@@ -315,7 +317,7 @@ export default function projectController() {
       find && find !== undefined
         ? (member_is_in_project = true)
         : (member_is_in_project = false);
-    }
+    
     res.status(200).json({
       message: "Get successfully",
       data: {
