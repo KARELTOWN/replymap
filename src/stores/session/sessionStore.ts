@@ -24,6 +24,8 @@ export const sessionStore = defineStore('session-store', () => {
     start_date: '',
     end_date: '',
   })
+
+  const loggers = ref([])
   const player = ref(null)
 
   const updatePagination = () => {
@@ -150,6 +152,7 @@ export const sessionStore = defineStore('session-store', () => {
     search_errors,
     errorMessage,
     session_errors_limit,
-    player
+    player,
+    loggers
   }
 })

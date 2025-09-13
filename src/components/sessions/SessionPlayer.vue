@@ -18,6 +18,7 @@
             </div>
         </div>
     </div>
+
     <div v-if="loading == true && errorMessage == ''">
         <div
             class="mb-3 rounded-xl border p-4 border-blue-light-500 bg-blue-light-50 dark:border-blue-light-500/30 dark:bg-blue-light-500/15">
@@ -35,15 +36,17 @@
             </div>
         </div>
     </div>
+
     <div>
         <div id="player" />
     </div>
+
 </template>
 
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
 import rrwebPlayer from 'rrweb-player';
-import { nextTick, onMounted, onUnmounted } from 'vue';
+import { nextTick, onMounted, onUnmounted, reactive } from 'vue';
 import { ref } from 'vue';
 const session_id = ref('')
 const project_id = ref('')
@@ -56,7 +59,8 @@ import { errorNotify } from '@/utils/notification';
 import ReplayWorker from '@/composables/replay-worker?worker'
 import { api, getAp, getAppToken } from '@/composables/request';
 const store = sessionStore()
-const { session, player } = storeToRefs(store)
+const { session, player, loggers } = storeToRefs(store)
+import { getReplayConsolePlugin } from '@rrweb/rrweb-plugin-console-replay';
 
 onMounted(async () => {
     try {
@@ -85,11 +89,28 @@ const initializePlayer = (events) => {
         props: {
             events: events,
             autoPlay: false,
-            width: 850
+            width: 850,
+            // plugins: [
+            //     getReplayConsolePlugin({
+            //         level: ['info', 'log', 'warn', 'error'],
+            //     }),
+            // ]
         },
-    });
-}
 
+    });
+    player.value.addEventListener('event-cast', (event) => {
+        console.log('event', event)
+        if (event.type === 6) { // console event
+            loggers.value.push({
+                level: event.data.payload.level,
+                payload: event.data.payload.payload,
+                trace: event.data.payload.trace,
+                timestamp: event.timestamp
+            });
+        }
+    });
+
+}
 
 const readChunksContinuously = async () => {
     try {
@@ -137,6 +158,7 @@ onUnmounted(() => {
     session_id.value = ''
     project_id.value = ''
     player.value = null
+    loggers.value = []
 });
 
 </script>
