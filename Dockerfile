@@ -1,5 +1,5 @@
 FROM node:18-alpine
-WORKDIR /app/replaymap/record
+WORKDIR /app/bugreveal/record
 COPY package*.json ./
 RUN npm install
 COPY . .

@@ -9,6 +9,7 @@ import { getSessionId } from "../utils/session.js";
 import { maskSelector } from "../utils/maskSelector.js";
 import pako from "pako";
 import dbtransaction from "../utils/indexDB.js";
+import { getRecordConsolePlugin } from "@rrweb/rrweb-plugin-console-record";
 const { getEvents, saveEvents, deleteEventByKeys } = dbtransaction();
 
 const getSessionEvents = async () => {
@@ -91,6 +92,10 @@ export default async function initializeRecord() {
 
       stopRecording = rrweb.record({
         emit: function (event) {
+          const defaultLog = console.log["__rrweb_original__"]
+            ? console.log["__rrweb_original__"]
+            : console.log;
+
           resetInactivityTimeout();
 
           const MOUSE_INTERVAL = 500;
@@ -125,10 +130,27 @@ export default async function initializeRecord() {
             }, 0);
           }
         },
-        maskInputOptions: { password: true },
+        maskInputOptions: {
+          password: true,
+          email: true,
+          tel: true,
+        },
         recordCanvas: true,
         recordIframe: true,
         maskTextSelector: maskSelector,
+        plugins: [
+          getRecordConsolePlugin({
+            level: ["warn", "error"],
+            lengthThreshold: 10000,
+            stringifyOptions: {
+              stringLengthLimit: 1000,
+              numOfKeysLimit: 100,
+              depthOfLimit: 1,
+            },
+            logger: window.console,
+          }),
+        ],
+
         // recordCrossOriginIframes: true
       });
     } catch (error) {

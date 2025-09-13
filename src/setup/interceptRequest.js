@@ -68,8 +68,11 @@ async function handleIntercept(
   let session_id = getSessionId();
 
   const clonedResponse = response.clone();
+        console.log('clonedResponse function')
+
   if (!clonedResponse.ok) {
     const avoid_urls = avoid_records_urls(url);
+
     if (avoid_urls === false) {
       const contentType = clonedResponse.headers.get("Content-Type");
 
