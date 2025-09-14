@@ -30,7 +30,7 @@ export default function projectController() {
         let nextIndex = parseInt(lastIndex) + 1;
         data.uniqueId = `session-${nextIndex}`;
       } else {
-        data.uniqueId = `session` + 1;
+        data.uniqueId = `session-` + 1;
       }
 
       let session = await Session.insertOne(data);

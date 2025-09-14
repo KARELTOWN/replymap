@@ -43,14 +43,7 @@ app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 
 const corsOption = {
-  origin: [
-    "https://record.bugreveal.com",
-    "https://app.bugreveal.com",
-    "http://localhost:5173",
-    "http://localhost:5175",
-    "http://localhost:5176",
-    "https://surveymc.bugreveal.com"
-  ],
+  origin: "*",
   methods: ["GET", "POST", "DELETE", "PUT", "PATCH"],
   credentials: true,
   allowedHeaders: [

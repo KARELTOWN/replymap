@@ -11,6 +11,7 @@ export const schedule_expired_session = cron.schedule(
   async () => {
     try {
       const thirtyMinutes = moment().subtract(30, "minutes").toDate();
+      const threeMinutes = moment().subtract(3, "minutes").toDate();
       let sessions = await Chunk.distinct("session_id");
       await Session.deleteMany({
         _id: { $nin: sessions },
@@ -26,7 +27,7 @@ export const schedule_expired_session = cron.schedule(
         },
         {
           $match: {
-            lastChunkAt: { $lt: thirtyMinutes },
+            lastChunkAt: { $lt: threeMinutes },
           },
         },
       ]);
