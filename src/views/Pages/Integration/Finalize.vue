@@ -1,16 +1,38 @@
 <template>
-    <h1 class="text-3xl flex justify-center my-5">Intégration de {{ $route.params.integration }} à BUGREVEAL</h1>
-    <div v-if="integrationSuccess === false && loading === true" class="flex justify-center mt-5">
-        <div class="loader-animation"></div>
+  <div class="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
+    <!-- Header -->
+    <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 text-center mb-8">
+      Intégration de <span class="text-blue-600">{{ $route.params.integration }}</span> à BUGREVEAL
+    </h1>
+
+    <!-- Loader -->
+    <div v-if="integrationSuccess === false && loading === true" class="flex justify-center">
+      <div class="loader-animation w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
     </div>
-    <div v-if="integrationSuccess === false && loading === false" class="flex justify-center mt-5">
-        <Alert variant="error">L'intégration a échouée. Veuillez rééssayer</Alert>
-        <router-link to="/projects">Revenez à la liste des projets</router-link>
+
+    <!-- Error -->
+    <div v-if="integrationSuccess === false && loading === false" class="flex flex-col items-center text-center space-y-4">
+      <div class="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg shadow-md">
+        L'intégration a échouée. Veuillez rééssayer.
+      </div>
+      <router-link 
+        to="/projets" 
+        class="text-blue-600 hover:underline font-semibold"
+      >
+        Revenez à la liste des projets
+      </router-link>
     </div>
-    <div v-if="integrationSuccess === true && loading === false" class="flex flex-col justify-center my-5">
-        <h1 class="text-2xl">L'intégration de {{ $route.params.integration }} à BUGREVEAL a réussie</h1>
-        <div class="text-xl font-bold text-brand-600 mt-4">Vous serez rediriger dans 2 secondes</div>
+
+    <!-- Success -->
+    <div v-if="integrationSuccess === true && loading === false" class="flex flex-col items-center text-center space-y-4">
+      <div class="bg-green-100 border border-green-400 text-green-700 px-6 py-4 rounded-lg shadow-md text-xl sm:text-2xl font-semibold">
+        L'intégration de <span class="text-green-600">{{ $route.params.integration }}</span> à BUGREVEAL a réussie
+      </div>
+      <div class="text-gray-700 mt-2 text-lg sm:text-xl">
+        Vous serez redirigé dans 2 secondes
+      </div>
     </div>
+  </div>
 </template>
 
 <script setup>
