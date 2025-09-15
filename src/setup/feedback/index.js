@@ -23,7 +23,7 @@ async function initializeRecorder() {
   let userIsInProject = false;
   let project_members = [];
   let integrationBoardLists = [];
-  let redirectURL = `http://localhost:5176`;
+  let redirectURL = `${import.meta.env.VITE_SSO_URL}`;
 
   try {
     console.log("bugRevealToken", bugRevealToken);
@@ -108,11 +108,7 @@ async function initializeRecorder() {
 
         const response = await originalFetch(url, config);
         const clonedResponse = response.clone();
-        console.log("url", url);
-        console.log(
-          "url.includes(import.meta.env.VITE_BACKEND_URL)",
-          import.meta.env.VITE_BACKEND_URL
-        );
+
         if (url.includes(import.meta.env.VITE_BACKEND_URL)) {
           if (clonedResponse.status === 401) {
             localStorage.removeItem("bugreveal_record_app_user");
@@ -137,7 +133,7 @@ async function initializeRecorder() {
     let connexionBtn = document.createElement("button");
     connexionBtn.id = "bugreveal_capture_connexion";
     connexionBtn.innerText = "Se connecter";
-    redirectURL = `http://localhost:5176`;
+    redirectURL = `${import.meta.env.VITE_SSO_URL}`;
     let urlParent = encodeURIComponent(window.location.href);
     redirectURL = `${redirectURL}?from=${urlParent}`;
     connexionBtn.onclick = () => {
