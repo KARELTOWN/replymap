@@ -7,9 +7,9 @@
             <div class="my-5">
                 <SessionPlayer />
             </div>
-            <div class="my-5">
+            <!-- <div class="my-5">
                 <SessionLogs />
-            </div>
+            </div> -->
             <SessionInfo />
         </div>
     </admin-layout>
