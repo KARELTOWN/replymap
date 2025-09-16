@@ -4,7 +4,7 @@ export const getKeysIntegration = (integration) => {
       apiTrello: "2e6d5aa96409ba0011fe8dd7633e5822",
       secretTrello:
         "0e512fd9deef712e44f358f29c3ca8ed2c73413d46a864470739689e0bb2704f",
-      returnURLTrello: "http://localhost:5173/integration-finalize",
+      returnURLTrello: `${process.env.FRONT_URL}/integration-finalize`,
       expirationTokenTrello: "30days",
       scopeTrello: "read,write",
       trelloReturnType: "token",

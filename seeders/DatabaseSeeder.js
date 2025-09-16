@@ -10,20 +10,29 @@ import ListIntegrationSeeder from "./ListIntegrationSeeder.js";
 import NotificationModelSeeder from "./NotificationModelSeeder.js";
 import RoleSeeder from "./RoleSeeder.js";
 
-try {
-  await RoleSeeder();
-  await EventTypeSeeder();
-  await FeedbackPrioritySeeder();
-  await FeedbackTypeSeeder();
-  await ListIntegrationSeeder();
-  await FeedbackStatusSeeder();
-  await NotificationModelSeeder();
-  // await FonctionSeeder();
-  // await ModuleSeeder();
-  // await FeatureSeeder();
-  // await PermissionSeeder();
-  process.exit(0);
-} catch (error) {
-  console.log("Erreur d'exécution des seeders");
-  throw error;
+const seeders = [
+  RoleSeeder,
+  EventTypeSeeder,
+  FeedbackPrioritySeeder,
+  FeedbackTypeSeeder,
+  ListIntegrationSeeder,
+  FeedbackStatusSeeder,
+  NotificationModelSeeder,
+  // FonctionSeeder();
+  // ModuleSeeder();
+  // FeatureSeeder();
+  // PermissionSeeder();
+];
+
+for (const seeder of seeders) {
+  try {
+    await seeder();
+    console.log(`${seeder.name} exécuté avec succès`);
+  } catch (err) {
+    console.error(`Erreur dans ${seeder.name}:`, err.message);
+    // Ici on continue quand même avec les seeders suivants
+  }
 }
+
+console.log("Tous les seeders ont été exécutés (avec ou sans erreurs)");
+process.exit(0);

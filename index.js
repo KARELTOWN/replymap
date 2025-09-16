@@ -42,20 +42,43 @@ const app = express();
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 
-const corsOption = {
-  origin: "*",
-  methods: ["GET", "POST", "DELETE", "PUT", "PATCH"],
-  credentials: true,
-  allowedHeaders: [
-    "Content-Type",
-    "Access-Control-Allow-Headers",
-    "Access-Control-Allow-Origin",
-    "common",
-    "Authorization",
-  ],
+const corsOption = (req, callback) => {
+  const originHeader = req.header("Origin");
+  const authorize = [
+    "https://app.bugreveal.com",
+    "https://sso.bugreveal.com",
+    "https://record.bugreveal.com",
+  ];
+  if (authorize.includes(originHeader)) {
+    callback(null, {
+      origin: authorize,
+      methods: ["GET", "POST", "DELETE", "PUT", "PATCH"],
+      credentials: true,
+      allowedHeaders: [
+        "Content-Type",
+        "Access-Control-Allow-Headers",
+        "Access-Control-Allow-Origin",
+        "common",
+        "Authorization",
+      ],
+    });
+  }
+  else {
+    callback(null, {
+      origin: '*',
+      methods: ["GET", "POST", "DELETE", "PUT", "PATCH"],
+      credentials: false,
+      allowedHeaders: [
+        "Content-Type",
+        "Access-Control-Allow-Headers",
+        "Access-Control-Allow-Origin",
+        "common",
+        "Authorization",
+      ],
+    });
+  }
 };
 
-console.log(corsOption.origin)
 app.use(cors(corsOption));
 
 app.use(async (error, req, res, next) => {
