@@ -4,13 +4,15 @@ import * as rrweb from "rrweb";
 import { fetchGet, fetchPost } from "../utils/request";
 import { getIpAdress } from "../utils/ipAdress";
 import { project_id } from "../record.js";
-import setCookieUser from "../utils/cookie.js";
+import setCookieUser, { bugRevealToken } from "../utils/cookie.js";
 import { getSessionId } from "../utils/session.js";
 import { maskSelector } from "../utils/maskSelector.js";
 import pako from "pako";
 import dbtransaction from "../utils/indexDB.js";
 import { getRecordConsolePlugin } from "@rrweb/rrweb-plugin-console-record";
 const { getEvents, saveEvents, deleteEventByKeys } = dbtransaction();
+const backURL = `${import.meta.env.VITE_BACKEND_URL}`;
+import recordWorker from "../../public/workers/recordWorker.js?raw";
 
 const getSessionEvents = async () => {
   try {
@@ -67,10 +69,32 @@ export default async function initializeRecord() {
 
     const payload = { project_id, events: chunks.events_data };
     try {
-      const res = await fetchPost("chunk/store", payload);
-      const result = await res.json();
-      session_events = [];
-      deleteEventByKeys("replay_map_record_events", chunks.events_keys);
+      const blob = new Blob([recordWorker], { type: "application/javascript" });
+      const worker = new Worker(URL.createObjectURL(blob));
+
+      worker.postMessage({
+        param: {
+          url: `${backURL}/chunk/store`,
+          payload: payload,
+          token: bugRevealToken,
+          method: "POST",
+        },
+        action: "storeChunk",
+      });
+      worker.onmessage = (e) => {
+        const { type, data, error } = e.data;
+        if (type === "done") {
+          session_events = [];
+          deleteEventByKeys("replay_map_record_events", chunks.events_keys);
+        } else if (type === "error") {
+          console.error(error);
+        }
+      };
+      worker.onerror = (e) => {
+        console.error("Erreur dans le worker :", e.message);
+        console.error("Fichier source :", e.filename);
+        console.error("Ligne :", e.lineno, "Colonne :", e.colno);
+      };
     } catch (error) {
       console.error(error);
     }
@@ -112,7 +136,7 @@ export default async function initializeRecord() {
             events.push(event);
           }
 
-          if (events.length >= 5) {
+          if (events.length >= 25) {
             session_events.push({
               session_id: session_id,
               events: events,
@@ -138,18 +162,18 @@ export default async function initializeRecord() {
         recordCanvas: true,
         recordIframe: true,
         maskTextSelector: maskSelector,
-        plugins: [
-          getRecordConsolePlugin({
-            level: ["warn", "error"],
-            lengthThreshold: 10000,
-            stringifyOptions: {
-              stringLengthLimit: 1000,
-              numOfKeysLimit: 100,
-              depthOfLimit: 1,
-            },
-            logger: window.console,
-          }),
-        ],
+        // plugins: [
+        //   getRecordConsolePlugin({
+        //     level: ["warn", "error"],
+        //     lengthThreshold: 10000,
+        //     stringifyOptions: {
+        //       stringLengthLimit: 1000,
+        //       numOfKeysLimit: 100,
+        //       depthOfLimit: 1,
+        //     },
+        //     logger: window.console,
+        //   }),
+        // ],
 
         // recordCrossOriginIframes: true
       });
