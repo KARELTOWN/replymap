@@ -8,10 +8,14 @@ import {
 import { project_id } from "../../record.js";
 import { getSessionId } from "../../utils/session.js";
 import { bugRevealToken } from "../../utils/cookie.js";
+import feedbackWorker from "../../../public/workers/feedbackWorker.js?raw";
 
 export default function service() {
   let types = [];
   let priority = [];
+  const blob = new Blob([feedbackWorker], { type: "application/javascript" });
+  const worker = new Worker(URL.createObjectURL(blob));
+  const backURL = `${import.meta.env.VITE_BACKEND_URL}`;
 
   const getFeedbackParams = async () => {
     try {
@@ -93,8 +97,8 @@ export default function service() {
     return new Blob([u8arr], { type: mime });
   }
 
-  const sendFeedback = async (type, recordData, attachments, data) => {
-    try {
+  const sendFeedback = (type, recordData, attachments, data) => {
+    return new Promise((resolve, reject) => {
       data.project_id = project_id;
       let session_id = getSessionId();
       if (session_id) {
@@ -104,7 +108,7 @@ export default function service() {
       data.height = window.screen.availHeight;
       data.width = window.screen.availWidth;
 
-      const formData = new FormData();
+      // const formData = new FormData();
 
       // Ajout du canvas en tant que "fichier"
       let blob = null;
@@ -114,41 +118,56 @@ export default function service() {
       } else if (type === "video") {
         blob = new Blob([recordData], { type: "video/webm" });
       }
-      formData.append("file", blob);
+      let infos = [];
 
-      for (const file of attachments) {
-        formData.append("attachments", file);
-      }
-      // on ajoute les autres champs
+      infos["file"] = blob;
+
       Object.entries(data).forEach(([key, value]) => {
-        formData.append(key, value);
+        infos[key] = value;
       });
-      let res = null;
+
+      console.log("attachments", attachments);
+      const attachmentsArray = Array.from(attachments);
       if (bugRevealToken) {
-        res = await fetchPostWithFileForMember(
-          "feedback/store_member",
-          formData
-        );
+        worker.postMessage({
+          param: {
+            url: `${backURL}/feedback/store_member`,
+            payload: infos,
+            method: "POST",
+            attachments: attachmentsArray,
+          },
+          action: "storeFeedbackMember",
+        });
       } else {
-        res = await fetchPostWithFile("feedback/store", formData);
+        worker.postMessage({
+          param: {
+            url: `${backURL}/feedback/store`,
+            payload: infos,
+            token: bugRevealToken,
+            method: "POST",
+            attachments: attachmentsArray,
+          },
+          action: "storeFeedback",
+        });
       }
-      if (res.ok) {
-        if (res.status === 200) {
-          return ["success"];
+
+      worker.onmessage = (e) => {
+        const { type, data, message, errors } = e.data;
+        if (type === "done") {
+          resolve(["success"]);
+        } else if (type === "error") {
+          if (errors) {
+            reject(["error", { errors }]);
+          }
+          reject(`Erreur lors de l'enregistrement du feedback : ${message}`);
         }
-      } else {
-        const result = await res.json();
-        if (res.status === 422 && result.errors) {
-          const errors = result.errors.map((e) => e.msg);
-          return ["error", { errors: errors }];
-        }
-        throw new Error(
-          `Erreur lors de l'enregistrement du feedback : ${res.status}`
-        );
-      }
-    } catch (error) {
-      throw error;
-    }
+      };
+      worker.onerror = (e) => {
+        console.error("Erreur dans le worker :", e.message);
+        console.error("Fichier source :", e.filename);
+        console.error("Ligne :", e.lineno, "Colonne :", e.colno);
+      };
+    });
   };
 
   return {

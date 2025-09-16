@@ -41,7 +41,7 @@ export default async function initializeRecord() {
   const INACTIVITY_LIMIT = 30 * 60 * 1000;
   let inactivityTimeout = null;
   let retryFetchSessionInfo = 0;
-  let maxFetchSessionInfo = 5;
+  let maxFetchSessionInfo = 1;
 
   const setInactivityTimeout = () => {
     return setTimeout(async () => {
@@ -108,7 +108,7 @@ export default async function initializeRecord() {
         uploadChunk(data);
       }
     }
-  }, 2000);
+  }, 5000);
 
   const record = () => {
     try {
@@ -136,7 +136,8 @@ export default async function initializeRecord() {
             events.push(event);
           }
 
-          if (events.length >= 25) {
+          if (events.length >= 100) {
+            console.log('events.length', events.length)
             session_events.push({
               session_id: session_id,
               events: events,
@@ -188,7 +189,7 @@ export default async function initializeRecord() {
     if (session_id) {
       while (
         session_info == null &&
-        retryFetchSessionInfo <= maxFetchSessionInfo
+        retryFetchSessionInfo < maxFetchSessionInfo
       ) {
         try {
           const response = await fetchGet(`session/show/${session_id}`);
