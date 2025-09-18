@@ -167,12 +167,12 @@ const resetData = () => {
 const getBoardList = async (integration) => {
     try {
         resetData()
-        let data = { project_id: form.project_id, integration }
+        const data = { project_id: form.project_id, integration }
         form.integration = integration
         await getBoards(data)
     }
-    catch (err) {
-        throw new Error()
+    catch (error) {
+        throw new Error(error)
     }
 }
 

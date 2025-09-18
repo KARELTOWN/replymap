@@ -194,7 +194,7 @@ import setCookie from '@/composables/cookie'
 const schemaLogin = validateLogin()
 const router = useRouter()
 // ✅ Erreurs de validation
-const errors = ref({})
+const errors = ref<{ email?: string; password?: string }>({})
 const errorsBack = ref([])
 
 const email = ref('')
@@ -213,9 +213,9 @@ const handleSubmit = async () => {
       password: password.value,
     }, { abortEarly: false })
     const result = await fetchPost("auth/login", data)
-    const response = await handleLoginError(result)
-    if (response.status) {
-      if (response.errors) {
+    const response = await handleLoginError(result) as { status?: boolean; errors?: any; data?: any }
+    if (response?.status) {
+      if (response?.errors) {
         errors.value = response.errors
       }
       return
@@ -233,7 +233,18 @@ const handleSubmit = async () => {
   catch (err) {
     const result = handleCatchError(err)
     if (result) {
-      errors.value = result
+      // If result is an array, convert it to an object with email/password keys
+      if (Array.isArray(result)) {
+        const errorObj: { email?: string; password?: string } = {};
+        result.forEach((error: any) => {
+          if (error.path && (error.path === 'email' || error.path === 'password')) {
+            errorObj[error.path as 'email' | 'password'] = error.message;
+          }
+        });
+        errors.value = errorObj;
+      } else {
+        errors.value = result;
+      }
     }
   }
 

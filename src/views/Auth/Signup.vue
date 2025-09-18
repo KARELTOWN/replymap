@@ -299,7 +299,15 @@ const togglePasswordVisibility = () => {
   showPassword.value = !showPassword.value
 }
 
-const errors = ref({})
+interface Errors {
+  firstname?: string
+  lastname?: string
+  email?: string
+  password?: string
+  confirm_password?: string
+}
+
+const errors = ref<Errors>({})
 
 const toggleConfirmPasswordVisibility = () => {
   showConfirmPassword.value = !showConfirmPassword.value
@@ -318,23 +326,35 @@ const handleSubmit = async () => {
 
     const result = await fetchPost("auth/register", data)
     const response = await handleAppError(result)
-    if (response.status === true) {
-      if (response.errors) {
-        errors.value = response.errors
+    // Type guard to check if response has 'status'
+    if (response && typeof response === 'object' && 'status' in response && (response as any).status === true) {
+      if ((response as any).errors) {
+        errors.value = (response as any).errors
       }
       return
     }
     else {
-      if (response?.data) {
+      if (response && typeof response === 'object' && 'data' in response) {
         successNotify('Utilisez le code envoyé sur votre adresse Email pour valider votre compte')
-        sessionStorage.setItem('replay_map_user', response.data)
+        sessionStorage.setItem('replay_map_user', (response as any).data)
         router.push({ path: "/confirmation", query: { type: "register" } })
       }
     }
   } catch (err) {
     const result = handleCatchError(err)
     if (result) {
-      errors.value = result
+      // If result is an array, map it to the Errors object
+      if (Array.isArray(result)) {
+        const errorObj: Errors = {}
+        result.forEach((err: any) => {
+          if (err.path && err.message) {
+            errorObj[err.path as keyof Errors] = err.message
+          }
+        })
+        errors.value = errorObj
+      } else {
+        errors.value = result
+      }
     }
   }
 

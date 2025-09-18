@@ -3,7 +3,7 @@ import { saveAs } from 'file-saver'
 import { errorNotify, infoNotify } from '@/utils/notification'
 
 export const fileStore = defineStore('file-store', () => {
-  const downloadFile = async (fileUrl, name) => {
+  const downloadFile = async (fileUrl:any, name:any) => {
     try {
       infoNotify('Téléchargement en cours')
       const response = await fetch(encodeURI(fileUrl))

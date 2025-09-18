@@ -60,7 +60,7 @@ export default {
         const deleteFeedback = () => {
         }
 
-        const openFeedback = (feedback_id) => {
+        const openFeedback = (feedback_id:any) => {
             feedbackSelect.value = feedback_id
             showModal.value = true
         }
@@ -70,16 +70,19 @@ export default {
             showModal.value = false
         }
 
-        async function onDragChange(event) {
+        async function onDragChange(event: any) {
             if (event.added) {
                 let movedFeedback = event.added.element
-                const columnIndex = _.findIndex(feedbacks.value, (col) =>
+                const columnIndex = _.findIndex(feedbacks.value, (col:any) =>
                     _.some(col.feedbacks, { _id: movedFeedback._id })
                 )
 
-                const targetColumn = feedbacks.value[columnIndex]
-                let newStatus = targetColumn.status._id
-                await updateFeedback(movedFeedback._id, { status: newStatus }, false)
+                const targetColumn:any = feedbacks.value[columnIndex]
+                if (targetColumn && targetColumn.status) {
+                    let newStatus = targetColumn.status._id
+                    await updateFeedback(movedFeedback._id, { status: newStatus }, false)
+                }
+
             }
         }
 

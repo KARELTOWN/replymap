@@ -9,7 +9,7 @@ export const authStore = defineStore('auth', () => {
 
   const deconnect = async () => {
     const result = await fetchGet('auth/deconnect')
-    const response = await handleAppError(result)
+    const response = await handleAppError(result) as { status: boolean }
     if (response.status === false) {
       localStorage.removeItem('bugreveal_app_token')
       successNotify('Vous êtes déconnecté"')

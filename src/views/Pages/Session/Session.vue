@@ -21,7 +21,7 @@
   </AdminLayout>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from "vue";
 import PageBreadcrumb from "@/components/common/PageBreadcrumb.vue";
 import AdminLayout from "@/components/layout/AdminLayout.vue";
@@ -42,7 +42,7 @@ const {
   totalPages } = storeToRefs(store)
 const { getSessions } = store
 
-const fetchNext = async (nextpage) => {
+const fetchNext = async (nextpage: any) => {
   page.value = nextpage
   await getSessions()
 }

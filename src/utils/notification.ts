@@ -1,8 +1,8 @@
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 
-function notify(type, message) {
-  const alert = document.createElement('div')
+function notify(type:any, message:any) {
+  const alert:any = document.createElement('div')
   alert.style.position = 'fixed'
   alert.className = 'custom-notification-' + type
   alert.style.top = '20px'
@@ -34,7 +34,7 @@ function notify(type, message) {
   }, 3000)
 }
 
-export const successNotify = (msg) => {
+export const successNotify = (msg:any) => {
   toast.success(msg, {
     autoClose: 2000,
     position: 'top-right',
@@ -45,7 +45,7 @@ export const successNotify = (msg) => {
   // notify('success', msg)
 }
 
-export const errorNotify = (msg) => {
+export const errorNotify = (msg:any) => {
   toast.error(msg, {
     autoClose: 2000,
     position: 'top-right',
@@ -55,7 +55,7 @@ export const errorNotify = (msg) => {
   // notify('error', msg)
 }
 
-export const infoNotify = (msg) => {
+export const infoNotify = (msg:any) => {
   toast.info(msg, {
     autoClose: 2000,
     position: 'top-right',
@@ -65,7 +65,7 @@ export const infoNotify = (msg) => {
   // notify('info', msg)
 }
 
-export const warningNotify = (msg) => {
+export const warningNotify = (msg:any) => {
   toast.warning(msg, {
     autoClose: 2000,
     position: 'top-right',

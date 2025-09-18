@@ -43,7 +43,7 @@ const { errors,
     totalPages } = storeToRefs(store)
 const { getEvents } = store
 
-const fetchNext = async (nextpage) => {
+const fetchNext = async (nextpage: any) => {
     page.value = nextpage
     await getEvents()
 }

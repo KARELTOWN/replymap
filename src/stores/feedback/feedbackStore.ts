@@ -7,36 +7,39 @@ import { feedbackHistoryStore } from './feedbackHistory'
 const historyStore = feedbackHistoryStore()
 
 export const feedbackStore = defineStore('feedback-store', () => {
-  const project_id = ref('')
-  const errors = ref({})
-  const search_errors = ref({})
-  const search_form = ref({
+  const project_id:any = ref('')
+  const errors:any = ref({})
+  const search_errors:any = ref({})
+  const search_form:any = ref({
     type: '',
     priority: '',
     assignTo: '',
     status: '',
   })
-  const feedbackDetailForm = ref({
+  const feedbackDetailForm:any = ref({
     type: '',
     priority: '',
     assignTo: '',
     status: '',
   })
-  const feedbacks = ref([])
-  const feedbackStatus = ref([])
-  const feedbackTypes = ref([])
-  const feedbackPriority = ref([])
+  const feedbacks:any = ref([])
+  const feedbackStatus:any = ref([])
+  const feedbackTypes:any = ref([])
+  const feedbackPriority:any = ref([])
 
   const initialSkip = ref(0)
 
-  const feedbackSelect = ref(null)
-  const feedbackSelect_data = ref(null)
-  const feedbackSelect_files = ref(null)
+  const feedbackSelect:any = ref(null)
+  const feedbackSelect_data:any = ref(null)
+  const feedbackSelect_files:any = ref(null)
 
   const setFeedbackParams = () => {
-    feedbackStatus.value = JSON.parse(localStorage.getItem('replaymap_feedbackStatus')) || []
-    feedbackTypes.value = JSON.parse(localStorage.getItem('replaymap_feedbackTypes')) || []
-    feedbackPriority.value = JSON.parse(localStorage.getItem('replaymap_feedbackPriority')) || []
+    const statusStr = localStorage.getItem('replaymap_feedbackStatus')
+    const typesStr = localStorage.getItem('replaymap_feedbackTypes')
+    const priorityStr = localStorage.getItem('replaymap_feedbackPriority')
+    feedbackStatus.value = statusStr !== null ? JSON.parse(statusStr) : []
+    feedbackTypes.value = typesStr !== null ? JSON.parse(typesStr) : []
+    feedbackPriority.value = priorityStr !== null ? JSON.parse(priorityStr) : []
     if (
       feedbackStatus.value.length === 0 ||
       feedbackTypes.value.length === 0 ||
@@ -53,7 +56,7 @@ export const feedbackStore = defineStore('feedback-store', () => {
       const isSet = setFeedbackParams()
       if (isSet === false) {
         const result = await fetchGet(`feedback/params`)
-        const response = await handleAppError(result)
+        const response = await handleAppError(result) as { status: boolean; data?: any }
         if (response.status === false) {
           if (response?.data) {
             feedbackStatus.value = response.data.status
@@ -70,7 +73,7 @@ export const feedbackStore = defineStore('feedback-store', () => {
   const showFeedback = async () => {
     try {
       const result = await fetchGet(`feedback/get/${feedbackSelect.value}`)
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: any }
       if (response.status === false) {
         if (response?.data) {
           feedbackSelect_data.value = response.data.feedback
@@ -89,7 +92,7 @@ export const feedbackStore = defineStore('feedback-store', () => {
       let data = { project_id: project_id.value }
       search_errors.value = {}
       const result = await fetchPost(`feedback/project`, data)
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: any; errors: any }
       if (response.status === false) {
         if (response?.data) {
           feedbacks.value = response.data
@@ -104,12 +107,12 @@ export const feedbackStore = defineStore('feedback-store', () => {
     }
   }
 
-  const updateFeedback = async (feedback, data, notify = true) => {
+  const updateFeedback = async (feedback:any, data:any, notify = true) => {
     try {
       //notify est false dans le cas ou on déplace un feedback dans un autre status par le glisser déposer
       search_errors.value = {}
       const result = await fetchPut(`feedback/update/${feedback}`, data)
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: any; errors: any }
       if (response.status === false) {
         if (notify === true) {
           successNotify('Feedback mise à jour')

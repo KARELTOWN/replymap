@@ -5,7 +5,7 @@ import { defineStore } from 'pinia'
 import { reactive, ref, renderSlot } from 'vue'
 
 export const integrationStore = defineStore('integration-store', () => {
-  const integrationLogins = reactive({
+  const integrationLogins:any = reactive({
     trello: '',
     slack: '',
     discord: '',
@@ -13,7 +13,7 @@ export const integrationStore = defineStore('integration-store', () => {
     clickup: '',
   })
 
-  const labels = ref([])
+  const labels:any = ref([])
   const boards = ref([])
 
   const integrationsList = reactive([
@@ -25,10 +25,10 @@ export const integrationStore = defineStore('integration-store', () => {
 
   const integrationSuccess = ref(false)
 
-  const getIntegrationUrls = async (integration, project_id) => {
+  const getIntegrationUrls = async (integration:any, project_id:any) => {
     try {
       const result = await fetchGet(`integration/login?name=${integration}&project=${project_id}`)
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: any }
       if (response.status === false) {
         if (response?.data) {
           integrationLogins[integration] = response.data[integration]
@@ -39,11 +39,11 @@ export const integrationStore = defineStore('integration-store', () => {
     }
   }
 
-  const storeToken = async (data) => {
+  const storeToken = async (data:any) => {
     try {
       integrationSuccess.value = false
       const result = await fetchPost(`integration/store_token`, data)
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: any }
       if (response.status === false) {
         if (response?.data) {
           integrationSuccess.value = true
@@ -55,11 +55,11 @@ export const integrationStore = defineStore('integration-store', () => {
     }
   }
 
-  const updateIntegration = async (data) => {
+  const updateIntegration = async (data:any) => {
     try {
       integrationSuccess.value = false
       const result = await fetchPost(`integration/update`, data)
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: any; errors: any }
       if (response.status === false) {
         if (response?.data) {
           integrationSuccess.value = true
@@ -74,11 +74,11 @@ export const integrationStore = defineStore('integration-store', () => {
   }
 
 
-  const getBoardLabels  = async (data) => {
+  const getBoardLabels  = async (data:any) => {
     try {
       integrationSuccess.value = false
       const result = await fetchPost(`integration/get_board_labels`, data)
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: any; errors: any }
       if (response.status === false) {
         if (response?.data) {
           labels.value = response.data
@@ -91,12 +91,12 @@ export const integrationStore = defineStore('integration-store', () => {
     }
   }
 
-  const createBoardLabel = async (data) => {
+  const createBoardLabel = async (data:any) => {
     try {
       integrationSuccess.value = false
       errors.value = {}
       const result = await fetchPost(`integration/create_board_labels`, data)
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: any; errors: any }
       if (response.status === false) {
         if (response?.data) {
                 integrationSuccess.value = true
@@ -112,10 +112,10 @@ export const integrationStore = defineStore('integration-store', () => {
 
 
   const reconnexion = ref(false)
-  const errors = ref({})
+  const errors:any = ref({})
   const defaultBoard = ref(null)
 
-  const getBoards = async (data) => {
+  const getBoards = async (data:any) => {
     try {
       errors.value = {}
       reconnexion.value = false
@@ -164,7 +164,7 @@ export const integrationStore = defineStore('integration-store', () => {
           errorNotify("Une erreur s'est produite")
         }
       }
-    } catch (err) {
+    } catch (err:any) {
       console.log('err', err)
       throw new Error(err)
     }

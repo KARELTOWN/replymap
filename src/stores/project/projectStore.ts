@@ -7,8 +7,8 @@ import { successNotify } from '@/utils/notification'
 const { validateCreate, validateUpdate } = projectValidator()
 export const projectStore = defineStore('project-store', () => {
   const errors = ref({})
-  const search_errors = ref({})
-  const projects = ref([])
+  const search_errors:any = ref({})
+  const projects:any = ref([])
   const tracking_code = ref('')
   const total = ref(0)
   const page = ref(1)
@@ -33,7 +33,7 @@ export const projectStore = defineStore('project-store', () => {
   const getProjects = async () => {
     try {
       const result = await fetchGet(`project/get?limit=${limit.value}&page=${page.value}`)
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: any; errors: any }
       if (response.status === false) {
         if (response?.data) {
           projects.value = response.data.projects
@@ -48,11 +48,11 @@ export const projectStore = defineStore('project-store', () => {
     }
   }
 
-  const filterProjects = async (data) => {
+  const filterProjects = async (data:any) => {
     try {
       search_errors.value = {}
       const result = await fetchPost(`project/filter?limit=${limit.value}&page=${page.value}`, data)
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: any; errors: any }
       if (response.status === false) {
         if (response?.data) {
           projects.value = response.data.projects
@@ -71,7 +71,7 @@ export const projectStore = defineStore('project-store', () => {
     }
   }
 
-  const createProject = async (data) => {
+  const createProject = async (data:any) => {
     try {
       projectSuccess.value = false
       tracking_code.value = ''
@@ -79,7 +79,7 @@ export const projectStore = defineStore('project-store', () => {
       const schemaProject = validateCreate()
       const data_result = await schemaProject.validate(data, { abortEarly: false })
       const result = await fetchPost(`project/create`, data_result)
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: any; errors: any }
       if (response.status === true) {
         if (response.errors) {
           errors.value = response.errors
@@ -101,14 +101,14 @@ export const projectStore = defineStore('project-store', () => {
     }
   }
 
-  const updateProject = async (data) => {
+  const updateProject = async (data:any) => {
     try {
       projectSuccess.value = false
       errors.value = {}
       const schemaProject = validateUpdate()
       const data_result = await schemaProject.validate(data, { abortEarly: false })
       const result = await fetchPut(`project/update/${data_result.project_id}`, data_result)
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: any; errors: any }
       if (response.status === true) {
         if (response.errors) {
           errors.value = response.errors
@@ -117,7 +117,7 @@ export const projectStore = defineStore('project-store', () => {
         if (response?.data) {
           projectSuccess.value = true
           let project_index = projects.value.findIndex(
-            (item) => item._id === data_result.project_id,
+            (item:any) => item._id === data_result.project_id,
           )
           console.log('find index', project_index)
           projects.value[project_index] = response.data.project
@@ -132,12 +132,12 @@ export const projectStore = defineStore('project-store', () => {
     }
   }
 
-  const inviteUser = async (data) => {
+  const inviteUser = async (data:any) => {
     try {
       projectSuccess.value = false
       errors.value = {}
       const result = await fetchPost(`project/invite_user`, data)
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: any; errors: any }
       if (response.status === false) {
         projectSuccess.value = true
         successNotify('Utilisateur ajouté')
@@ -151,11 +151,11 @@ export const projectStore = defineStore('project-store', () => {
     }
   }
 
-  const getProjectMember = async (project_id) => {
+  const getProjectMember = async (project_id:any) => {
     try {
       search_errors.value = {}
       const result = await fetchGet(`project/member/${project_id}`)
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: any; errors: any }
       if (response.status === false) {
         if (response?.data) {
           projectMembers.value = response.data
@@ -166,13 +166,13 @@ export const projectStore = defineStore('project-store', () => {
     }
   }
 
-  const quitProject = async (data) => {
+  const quitProject = async (data:any) => {
     try {
       projectSuccess.value = false
       search_errors.value = {}
       errors.value = {}
       const result = await fetchPost(`project/quit`, data)
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: any; errors: any }
       if (response.status === false) {
         projectSuccess.value = true
         successNotify('Modification réussie')

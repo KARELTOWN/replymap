@@ -54,11 +54,11 @@ const { stat, mapsCountry } = storeToRefs(useStatStore())
 const mapOneRef = ref<HTMLElement | null>(null)
 const mapInstance = ref<any>(null)
 
-const pourcentage = (index) => {
+const pourcentage = (index:any) => {
   return (stat.value.user_country[index].visit * 100) / stat.value.total_visit
 }
 
-const initMap = (markers) => {
+const initMap = (markers:any) => {
   if (mapOneRef.value) {
     mapInstance.value = new jsVectorMap({
       selector: mapOneRef.value,

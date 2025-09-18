@@ -105,13 +105,13 @@ const handleEvents = async () => {
     }
 }
 
-const openSessionDetail = (session, project) => {
+const openSessionDetail = (session:any, project:any) => {
     router.push({ path: '/session/detail', query: { project: project, session: session } })
 }
 
 const selectedRequest = ref(null)
 
-const openModal = (index) => {
+const openModal = (index:any) => {
     selectedRequest.value = index
 }
 

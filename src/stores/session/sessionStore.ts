@@ -4,29 +4,29 @@ import { errorNotify } from '@/utils/notification'
 import { defineStore } from 'pinia'
 import { reactive, ref } from 'vue'
 export const sessionStore = defineStore('session-store', () => {
-  const errors = ref({})
-  const sessions = ref([])
-  const total = ref(0)
-  const page = ref(1)
-  const limit = ref(15)
-  const session_errors_limit = ref(15)
-  const totalPages = ref(0)
-  const events = ref([])
-  const session = ref({})
-  const session_errors = ref([])
-  const chunk_skip = ref(0)
-  const chunk_limit = ref(10)
-  const canGetChunk = ref(true)
-  const search_errors = ref({})
-  const errorMessage = ref('')
-  const search_form = reactive({
+  const errors:any = ref({})
+  const sessions:any = ref([])
+  const total:any = ref(0)
+  const page:any = ref(1)
+  const limit:any = ref(15)
+  const session_errors_limit:any = ref(15)
+  const totalPages:any = ref(0)
+  const events:any = ref([])
+  const session:any = ref({})
+  const session_errors:any = ref([])
+  const chunk_skip:any = ref(0)
+  const chunk_limit:any = ref(10)
+  const canGetChunk:any = ref(true)
+  const search_errors:any = ref({})
+  const errorMessage:any = ref('')
+  const search_form:any = reactive({
     project_id: '',
     start_date: '',
     end_date: '',
   })
 
-  const loggers = ref([])
-  const player = ref(null)
+  const loggers:any = ref([])
+  const player:any = ref(null)
 
   const updatePagination = () => {
     total.value += 1
@@ -36,7 +36,7 @@ export const sessionStore = defineStore('session-store', () => {
   const getSessions = async () => {
     try {
       const result = await fetchGet(`session/get?limit=${limit.value}&page=${page.value}`)
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: any; errors: any }
       if (response.status === false) {
         if (response?.data) {
           sessions.value = response.data.sessions
@@ -51,11 +51,11 @@ export const sessionStore = defineStore('session-store', () => {
     }
   }
 
-  const filterSessions = async (data) => {
+  const filterSessions = async (data:any) => {
     try {
       search_errors.value = {}
       const result = await fetchPost(`session/filter?limit=${limit.value}&page=${page.value}`, data)
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: any; errors: any }
       if (response.status === false) {
         if (response?.data) {
           sessions.value = response.data.sessions
@@ -74,7 +74,7 @@ export const sessionStore = defineStore('session-store', () => {
     }
   }
 
-  const showSession = async (data) => {
+  const showSession = async (data:any) => {
     try {
       errorMessage.value = ''
       events.value = []
@@ -82,7 +82,7 @@ export const sessionStore = defineStore('session-store', () => {
         `session/show_with_chunks?skip=${chunk_skip.value}&limit=${chunk_limit.value}`,
         data,
       )
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: any; errors: any }
       if (response.status === false) {
         if (response?.data) {
           if (Array.isArray(response.data.events) && response.data.events.length == 0) {
@@ -110,14 +110,14 @@ export const sessionStore = defineStore('session-store', () => {
     }
   }
 
-  const showErrors = async (data) => {
+  const showErrors = async (data:any) => {
     try {
       data.is_error = false
       const result = await fetchPut(
         `event/filter?limit=${session_errors_limit.value}&page=${page.value}`,
         data,
       )
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: any; errors: any }
       if (response.status === false) {
         if (response?.data) {
           session_errors.value = response.data.events

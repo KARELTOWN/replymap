@@ -72,7 +72,7 @@ function deleteCard() {
     menuOpen.value = false
 }
 
-function openFeedback(feedback_id) {
+function openFeedback(feedback_id:any) {
     emit('openFeedback', feedback_id)
     menuOpen.value = false
 }

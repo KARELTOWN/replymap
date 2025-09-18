@@ -24,7 +24,7 @@
                                             <input v-for="(digit, index) in otp" ref="inputs" :key="index" type="text"
                                                 maxlength="1"
                                                 class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-                                                :value="digit" @input="handleInput(index, $event.target.value)"
+                                                :value="digit" @input="handleInput(index, $event.target ? ( $event.target as HTMLInputElement ).value : '')"
                                                 @keydown="handleKeyDown($event)" @focus="handleFocus($event.target)"
                                                 @paste="handlePaste($event)" />
                                         </div>
@@ -71,6 +71,7 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref, useTemplateRef } from 'vue'
+import type { Ref } from 'vue'
 import CommonGridShape from '@/components/common/CommonGridShape.vue'
 import FullScreenLayout from '@/components/layout/FullScreenLayout.vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -83,7 +84,7 @@ const shemaOTP = validateOTP()
 const email = ref('')
 
 const otp = ref(Array(5).fill(''))
-const codeInputs = useTemplateRef('inputs')
+const codeInputs = useTemplateRef('inputs') as Ref<HTMLInputElement[]>
 
 const route = useRoute()
 
@@ -104,7 +105,7 @@ onMounted(() => {
 })
 
 
-const handleKeyDown = (e) => {
+const handleKeyDown = (e: any) => {
     if (
         !/^[0-9]{1}$/.test(e.key) &&
         e.key !== 'Backspace' &&
@@ -119,32 +120,38 @@ const handleKeyDown = (e) => {
         const index = otp.value.indexOf('')
         if (index > 0) {
             otp.value.splice(index - 1, 1, '')
-            codeInputs.value[`${index - 1}`].focus()
+            if (codeInputs.value && codeInputs.value[`${index - 1}`]) {
+                codeInputs.value[`${index - 1}`].focus()
+            }
         }
     }
 }
 
-const handleInput = (index, value) => {
+const handleInput = (index: any, value: any) => {
     otp.value.splice(index, 1, value)
     if (value && index < otp.value.length - 1) {
-        codeInputs.value[`${index + 1}`].focus()
+        if (codeInputs.value && codeInputs.value[index + 1]) {
+            codeInputs.value[index + 1].focus()
+        }
     }
 }
 
-const handleFocus = (target) => {
-    target.select()
+const handleFocus = (target: EventTarget | null) => {
+    if (target instanceof HTMLInputElement) {
+        target.select()
+    }
 }
 
-const handlePaste = (e) => {
+const handlePaste = (e: ClipboardEvent) => {
     e.preventDefault()
-    const text = e.clipboardData.getData('text')
+    const text = e.clipboardData ? e.clipboardData.getData('text') : ''
     if (!new RegExp(`^[0-9]{${otp.value.length}}$`).test(text)) {
         return
     }
     otp.value = text.split('')
 }
 
-const errors = ref({})
+const errors = ref<{ code?: string }>({})
 
 
 const handleSubmit = async () => {
@@ -155,9 +162,10 @@ const handleSubmit = async () => {
         form.code = data.code.join('')
         const result = await fetchPost('auth/confirm-register', form)
         const response = await handleAppError(result)
-        if (response.status === true) {
-            if (response.errors) {
-                errors.value = response.errors
+        // Ensure response has the expected shape
+        if ((response as any).status === true) {
+            if ((response as any).errors) {
+                errors.value = (response as any).errors
             }
             return
         }
@@ -170,7 +178,10 @@ const handleSubmit = async () => {
     catch (err) {
         const result = handleCatchError(err)
         if (result) {
-            errors.value = result
+            // If result is an array, join its messages; otherwise, assign as is
+            errors.value = Array.isArray(result)
+                ? { code: result.join(', ') }
+                : result
         }
     }
 

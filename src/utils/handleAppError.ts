@@ -49,11 +49,11 @@ export const handleAppError = async (response: Response): Promise<object> => {
   }
 }
 
-export const handleCatchError = (err) => {
+export const handleCatchError = (err:any) => {
   if (err) {
     if (err instanceof ValidationError) {
-      const errors = []
-      err.inner.forEach((e) => {
+      const errors:any = []
+      err.inner.forEach((e: any) => {
         errors[e.path] = e.message
       })
       return errors

@@ -1,13 +1,17 @@
 {
-  "name": "tailadmin-vue-pro-2.0.1",
+  "name": "BUG-REVEAL",
   "version": "2.0.1",
   "private": true,
   "type": "module",
+  "main": "desktop.js",
   "scripts": {
     "dev": "vite --host",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
+    "build-preprod": "vite build --mode preprod",
+    "electron-builder": "electron-builder",
+    "electron:start": "electron .",
     "type-check": "vue-tsc --build",
     "lint": "eslint . --fix",
     "format": "prettier --write src/"
@@ -52,12 +56,17 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
     "@tsconfig/node22": "^22.0.0",
+    "@types/file-saver": "^2.0.7",
+    "@types/lodash": "^4.17.20",
     "@types/node": "^22.10.7",
     "@vitejs/plugin-vue": "^5.2.1",
     "@vitejs/plugin-vue-jsx": "^4.1.1",
     "@vue/eslint-config-prettier": "^10.1.0",
     "@vue/eslint-config-typescript": "^14.3.0",
     "@vue/tsconfig": "^0.7.0",
+    "concurrently": "^9.2.1",
+    "electron": "^38.1.2",
+    "electron-builder": "^26.0.12",
     "eslint": "^9.18.0",
     "eslint-plugin-vue": "^9.32.0",
     "jiti": "^2.4.2",
@@ -69,6 +78,7 @@
     "typescript": "~5.7.3",
     "vite": "^6.0.11",
     "vite-plugin-vue-devtools": "^7.7.0",
-    "vue-tsc": "^2.2.0"
+    "vue-tsc": "^2.2.0",
+    "wait-on": "^9.0.0"
   }
 }

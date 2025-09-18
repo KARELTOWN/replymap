@@ -48,16 +48,15 @@ import { useRoute } from 'vue-router';
 import rrwebPlayer from 'rrweb-player';
 import { nextTick, onMounted, onUnmounted, reactive } from 'vue';
 import { ref } from 'vue';
-const session_id = ref('')
-const project_id = ref('')
+const session_id: any = ref('')
+const project_id: any = ref('')
 const route = useRoute()
 const loading = ref(false)
 const errorMessage = ref('')
 import { sessionStore } from "@/stores/session/sessionStore";
 import { storeToRefs } from "pinia";
-import { errorNotify } from '@/utils/notification';
 import ReplayWorker from '@/composables/replay-worker?worker'
-import { api, getAp, getAppToken } from '@/composables/request';
+import { api, getAppToken } from '@/composables/request';
 const store = sessionStore()
 const { session, player, loggers } = storeToRefs(store)
 import { getReplayConsolePlugin } from '@rrweb/rrweb-plugin-console-replay';
@@ -83,32 +82,36 @@ onMounted(async () => {
 })
 
 
-const initializePlayer = (events) => {
-    player.value = new rrwebPlayer({
-        target: document.getElementById("player"), // customizable root element
-        props: {
-            events: events,
-            autoPlay: false,
-            width: 850,
-            // plugins: [
-            //     getReplayConsolePlugin({
-            //         level: ['info', 'log', 'warn', 'error'],
-            //     }),
-            // ]
-        },
 
-    });
-    player.value.addEventListener('event-cast', (event) => {
-        console.log('event', event)
-        if (event.type === 6) { // console event
-            loggers.value.push({
-                level: event.data.payload.level,
-                payload: event.data.payload.payload,
-                trace: event.data.payload.trace,
-                timestamp: event.timestamp
-            });
-        }
-    });
+const initializePlayer = (events: any) => {
+    const playerElement = document.getElementById("player");
+    if (playerElement) {
+        player.value = new rrwebPlayer({
+            target: playerElement, // customizable root element
+            props: {
+                events: events,
+                autoPlay: false,
+                width: 850,
+                // plugins: [
+                //     getReplayConsolePlugin({
+                //         level: ['info', 'log', 'warn', 'error'],
+                //     }),
+                // ]
+            },
+
+        });
+        player.value.addEventListener('event-cast', (event: any) => {
+            if (event.type === 6) { // console event
+                loggers.value.push({
+                    level: event.data.payload.level,
+                    payload: event.data.payload.payload,
+                    trace: event.data.payload.trace,
+                    timestamp: event.timestamp
+                });
+            }
+        });
+    }
+
 
 }
 

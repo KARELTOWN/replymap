@@ -35,14 +35,13 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { errorNotify } from '@/utils/notification';
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { integrationStore } from '@/stores/integration/integrationStore';
 import { storeToRefs } from 'pinia';
-import Alert from '@/components/ui/Alert.vue';
 const storeIntegration = integrationStore()
 const { storeToken } = storeIntegration
 const { integrationSuccess } = storeToRefs(storeIntegration)
@@ -58,9 +57,9 @@ const loading = ref(false)
 const store = async () => {
     try {
         if (route.params.project_id && route.params.integration) {
-            let href = window.location.href
-            let data = href.split('#token=')
-            let token = data[1]
+            const href = window.location.href
+            const data = href.split('#token=')
+            const token = data[1]
             loading.value = true
             await storeToken({ project_id: route.params.project_id, token: token, integration: route.params.integration })
             if (integrationSuccess.value === true) {
@@ -78,7 +77,7 @@ const store = async () => {
         }
     }
 
-    catch (err) {
+    catch (err: any) {
         loading.value = false
         throw new Error(err)
     }

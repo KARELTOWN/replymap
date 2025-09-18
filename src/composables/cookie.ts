@@ -1,4 +1,4 @@
-export default function setCookie(libelle, user_id) {
+export default function setCookie(libelle: any, user_id: any) {
   let cookie = document.cookie.split('; ').find((item) => item.startsWith(`${libelle}=`))
   if (!cookie) {
     let date = new Date()

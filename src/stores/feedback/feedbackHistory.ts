@@ -7,10 +7,10 @@ export const feedbackHistoryStore = defineStore('feedbackHistory-store', () => {
   let history = ref([])
   let reload = ref(false)
 
-  const feedbackHistory = async (feedback) => {
+  const feedbackHistory = async (feedback:any) => {
     try {
       const result = await fetchGet(`feedback/history/${feedback}`)
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: any }
 
       if (response.status === false) {
         if (response?.data) {
@@ -22,7 +22,7 @@ export const feedbackHistoryStore = defineStore('feedbackHistory-store', () => {
     }
   }
 
-  const reloadHistory = (feedback) => {
+  const reloadHistory = (feedback:any) => {
     reload.value = feedback
   }
 

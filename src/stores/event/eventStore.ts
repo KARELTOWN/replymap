@@ -4,26 +4,26 @@ import { defineStore } from 'pinia'
 import { reactive, ref } from 'vue'
 import { successNotify } from '@/utils/notification'
 export const eventStore = defineStore('event-store', () => {
-  const errors = ref({})
-  const search_errors = ref({})
-  const events = ref([])
-  const total = ref(0)
-  const page = ref(1)
-  const limit = ref(15)
-  const totalPages = ref(0)
-  const eventSuccess = ref(false)
-  const search_form = reactive({
+  const errors:any = ref({})
+  const search_errors:any = ref({})
+  const events:any = ref<any[]>([])
+  const total:any = ref(0)
+  const page:any = ref(1)
+  const limit:any = ref(15)
+  const totalPages:any = ref(0)
+  const eventSuccess:any = ref(false)
+  const search_form:any = reactive({
     search: '',
     start_date: '',
     end_date: '',
     eventtype: '',
   })
-  const eventtypes = ref([])
+  const eventtypes:any = ref([])
 
   const getEventTypes = async () => {
     try {
       const result = await fetchGet(`event/get-type`)
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: any }
       if (response.status === false) {
         if (response?.data) {
           eventtypes.value = response.data
@@ -37,7 +37,7 @@ export const eventStore = defineStore('event-store', () => {
   const getEvents = async () => {
     try {
       const result = await fetchGet(`event/get?limit=${limit.value}&page=${page.value}`)
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: { events: any[]; total: number; page: number; limit: number; totalPages: number } }
       if (response.status === false) {
         if (response?.data) {
           events.value = response.data.events
@@ -59,7 +59,7 @@ export const eventStore = defineStore('event-store', () => {
         `event/filter?limit=${limit.value}&page=${page.value}`,
         search_form,
       )
-      const response = await handleAppError(result)
+      const response = await handleAppError(result) as { status: boolean; data?: { events: any[]; total: number; page: number; limit: number; totalPages: number }, errors?: any }
       if (response.status === false) {
         if (response?.data) {
           events.value = response.data.events

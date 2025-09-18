@@ -46,7 +46,7 @@
                         </td>
                         <td class="px-4 py-2 text-center max-w-[250px] truncate" :title="req.page_url">{{ req.page_url
                             }}</td>
-                        <td class="px-4 py-2 text-center">{{ req.data?.response?.status }}</td>
+                        <td class="px-4 py-2 text-center">{{ req.data?.response?.status !== 0 ? req.data?.response?.status: '' }}</td>
                         <td class="px-4 py-2 text-center">
                             <button type="button" @click="openModal(index)"
                                 class="text-brand-500 hover:text-brand-600 dark:text-brand-400">
@@ -163,7 +163,7 @@ const formatSessionDate = computed(() => {
 const goToEvent = (timestamp) => {
     if (player.value) {
         if (formatSessionDate.value) {
-            const relativeTime = timestamp - formatSessionDate.value
+            let relativeTime = timestamp - formatSessionDate.value
             // 2. Vérifier bornes pour éviter d'aller hors replay
             if (relativeTime < 0) { relativeTime = 0 };
             player.value.goto(relativeTime)
