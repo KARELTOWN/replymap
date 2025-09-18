@@ -153,12 +153,8 @@ window.addEventListener("beforeunload", () => {
 
 const avoid_records_urls = (url) => {
   if (
-    url.includes("session/create") ||
-    url.includes("session/end") ||
-    url.includes("chunk/store") ||
-    url.includes("event/store") ||
-    url.includes("api.ipify.org") ||
-    url.includes("session/show")
+    url.includes("https://api.bugreveal.com") ||
+    url.includes("http://localhost")
   ) {
     return true;
   }
