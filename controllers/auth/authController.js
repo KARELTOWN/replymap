@@ -39,7 +39,7 @@ export default function authController() {
         process.env.REFRESH_KEY,
         (err, decoded) => {
           if (err) {
-            res.status(403).json({ message: "Token expiré" });
+            return res.status(403).json({ message: "Token expiré" });
           }
           const token = jwt.sign(
             { id: decoded.id, email: decoded.email },
@@ -62,7 +62,7 @@ export default function authController() {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        res.status(422).json({ errors: errors.array() });
+        return res.status(422).json({ errors: errors.array() });
       } else {
         const result = matchedData(req);
 
@@ -70,13 +70,13 @@ export default function authController() {
           "+password"
         );
         if (!user) {
-          res.status(403).json({ message: "Le compte n'existe pas" });
+          return res.status(403).json({ message: "Le compte n'existe pas" });
         } else {
           if (user.email_verified === false) {
-            res.status(403).json({ message: "Compte non vérifié" });
+            return res.status(403).json({ message: "Compte non vérifié" });
           }
           if (user.is_active === false) {
-            res.status(403).json({ message: "Compte désactivé" });
+            return res.status(403).json({ message: "Compte désactivé" });
           }
 
           const confirm = await bcrypt.compare(result.password, user.password);
@@ -92,7 +92,7 @@ export default function authController() {
               }
             );
             const refresh_token = generateRefreshToken(user);
-            res.status(200).json({
+            return res.status(200).json({
               message: "Connexion réussie",
               data: {
                 token: token,
@@ -101,7 +101,7 @@ export default function authController() {
               },
             });
           } else {
-            res.status(403).json({ message: "Identifiants invalides" });
+            return res.status(403).json({ message: "Identifiants invalides" });
           }
         }
       }
@@ -116,7 +116,7 @@ export default function authController() {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        res.status(422).json({ errors: errors.array() });
+        return res.status(422).json({ errors: errors.array() });
       } else {
         const result = matchedData(req);
         const hasckpassword = await bcrypt.hash(result.password, 10);
@@ -141,7 +141,7 @@ export default function authController() {
 
           await registerNotification(user, codeOTP);
 
-          res.status(200).json({
+          return res.status(200).json({
             message: "Account create",
             data: encrypt(user._id.toString()),
           });
@@ -160,7 +160,7 @@ export default function authController() {
         const user_id = decrypt(data.user_id);
         const user = await User.findById(user_id).exec();
         if (!user) {
-          res.status(404).json({ message: "Compte non trouvé" });
+          return res.status(404).json({ message: "Compte non trouvé" });
         }
         const result = await VerificationCode.findOne({
           user_id: user._id,
@@ -169,11 +169,11 @@ export default function authController() {
 
         if (result) {
           if (result.code !== data.code) {
-            res.status(403).json({
+            return res.status(403).json({
               message: "Le code est invalide",
             });
           } else if (result.isExpired()) {
-            res.status(403).json({
+            return res.status(403).json({
               message: "Le code a expiré",
             });
           } else {
@@ -187,16 +187,16 @@ export default function authController() {
             if (response) {
               await confirmRegisterNotification(user);
 
-              res.status(200).json({
+              return res.status(200).json({
                 message: "Account validate",
               });
             }
           }
         } else {
-          res.status(500).json({ message: "Action impossible" });
+          return res.status(500).json({ message: "Action impossible" });
         }
       } else {
-        res
+        return res
           .status(422)
           .json({ message: "Erreur de validation", errors: errors.array() });
       }
@@ -210,7 +210,7 @@ export default function authController() {
       const errors = validationResult(req);
 
       if (!errors.isEmpty()) {
-        res.status(422).json({ errors: errors.array() });
+        return res.status(422).json({ errors: errors.array() });
       } else {
         const data = matchedData(req);
         const { email } = data;
@@ -227,7 +227,7 @@ export default function authController() {
         if (resetToken) {
           const expired = await resetToken.isExpired();
           if (!expired) {
-            res.status(200).json({
+            return res.status(200).json({
               message: "Un lien de réinitialisation vous a déjà été envoyé",
             });
           }
@@ -250,7 +250,7 @@ export default function authController() {
 
         await forgotPasswordNotification(user, link, reject);
 
-        res.status(200).json({
+        return res.status(200).json({
           message: "Mail de réinitialisation envoyé",
           data: {},
         });
@@ -272,7 +272,7 @@ export default function authController() {
         if (result) {
           const expired = await result.isExpired();
           if (expired) {
-            res.status(403).json({
+            return res.status(403).json({
               message:
                 "Annulation échouée. Envoyez nous une requête si vous rencontrez un problème avec votre compte",
             });
@@ -280,13 +280,13 @@ export default function authController() {
             await result.updateOne({
               expires_at: moment().subtract(30, "minutes").toDate(),
             });
-            res.status(200).json({
+            return res.status(200).json({
               message: "Annulation effectuée",
               data: {},
             });
           }
         } else {
-          res.status(403).json({
+          return res.status(403).json({
             message: "Le lien de réinitialisation n'est pas valide",
             data: {},
           });
@@ -313,7 +313,7 @@ export default function authController() {
         if (resetToken) {
           const expired = await resetToken.isExpired();
           if (expired === true) {
-            res.status(403).json({
+            return res.status(403).json({
               message: "Le lien de réinitialisation a expiré",
               data: {},
             });
@@ -331,13 +331,13 @@ export default function authController() {
           if (user) {
             await resetPasswordNotification(user);
 
-            res.status(200).json({
+            return res.status(200).json({
               message: "Mot de passe réinitialisé",
               data: user,
             });
           }
         } else {
-          res.status(403).json({
+          return res.status(403).json({
             message: "Le lien de réinitialisation n'est pas valide",
             data: {},
           });
@@ -356,14 +356,14 @@ export default function authController() {
     const token = req.headers.authorization.split(" ")[1];
     jwt.verify(token, process.env.SECRET_KEY, async (err, decoded) => {
       if (err) {
-        res.status(403).json({ message: "Token invalide" });
+        return res.status(403).json({ message: "Token invalide" });
       } else {
         const expire = decoded.exp - Math.floor(Date.now() / 1000);
         await redisClient.set(token, "blacklist", {
           EX: expire, // Blacklist jusqu'à l'expiration réel
           NX: true,
         });
-        res.status(200).json({ message: "Success" });
+        return res.status(200).json({ message: "Success" });
       }
     });
   };
