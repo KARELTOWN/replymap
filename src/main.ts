@@ -26,4 +26,5 @@ app.component("apexchart", VueApexCharts);
 
 app.component('flat-pickr', flatPickr)
 
+
 app.mount('#app')
