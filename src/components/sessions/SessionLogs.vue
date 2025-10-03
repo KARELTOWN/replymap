@@ -43,7 +43,7 @@ const formatSessionDate = computed(() => {
 const goToEvent = (timestamp) => {
     if (player.value) {
         if (formatSessionDate.value) {
-            const relativeTime = timestamp - formatSessionDate.value
+            let relativeTime = timestamp - formatSessionDate.value
             // 2. Vérifier bornes pour éviter d'aller hors replay
             if (relativeTime < 0) { relativeTime = 0 };
             player.value.goto(relativeTime)
