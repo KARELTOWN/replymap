@@ -36,12 +36,12 @@ export default async function initializeRecord() {
   let sessionCreate = false;
   let events = [];
   let stopRecording = null;
-  const maxRetryCreateSession = 5;
+  const maxRetryCreateSession = 2;
   let retryCreateSession = 0;
-  const INACTIVITY_LIMIT = 30 * 60 * 1000;
+  const INACTIVITY_LIMIT = 3 * 60 * 1000;
   let inactivityTimeout = null;
   let retryFetchSessionInfo = 0;
-  let maxFetchSessionInfo = 1;
+  let maxFetchSessionInfo = 2;
 
   const setInactivityTimeout = () => {
     return setTimeout(async () => {
@@ -137,7 +137,7 @@ export default async function initializeRecord() {
           }
 
           if (events.length >= 100) {
-            console.log('events.length', events.length)
+            console.log("events.length", events.length);
             session_events.push({
               session_id: session_id,
               events: events,
@@ -216,7 +216,7 @@ export default async function initializeRecord() {
             "Echec tentative de récupération des informations de la session existant",
             error
           );
-          await new Promise((r) => setTimeout(r, 2000));
+          await new Promise((r) => setTimeout(r, 3000));
         }
       }
       if (session_info == null) {
@@ -268,7 +268,7 @@ export default async function initializeRecord() {
             "Echec tentative de démarrage de session : " + retryCreateSession
           );
           console.log("Echec tentative de démarrage de session", error);
-          await new Promise((r) => setTimeout(r, 2000));
+          await new Promise((r) => setTimeout(r, 3000));
         }
       }
       if (sessionCreate === false) {
