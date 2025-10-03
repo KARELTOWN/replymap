@@ -18,7 +18,7 @@ const __filename = fileURLToPath(import.meta.url);
 
 export const __dirname = path.dirname(__filename);
 
-let envfile = null;
+export let envfile = null;
 if (process.env.NODE_ENV) {
   // ENVIRONNEMENT DOCKER
   if (process.env.NODE_ENV === "development") {
@@ -60,6 +60,7 @@ const corsOption = (req, callback) => {
         "Access-Control-Allow-Origin",
         "common",
         "Authorization",
+        'x-csrf-token'
       ],
     });
   }
