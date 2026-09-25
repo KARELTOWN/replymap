@@ -1,0 +1,178 @@
+#!/bin/sh
+#
+# Pre-commit: formats what is about to be committed, then refuses the commit if
+# the project no longer type-checks.
+#
+# Kept as a plain shell hook rather than husky + lint-staged: the four
+# repositories of BugReveal do not share a package.json, and this file works the
+# same in all of them without adding a dependency to any.
+#
+# Installed once per clone:
+#     git config core.hooksPath .githooks
+#
+set -e
+
+cd "$(git rev-parse --show-toplevel)"
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+[ -z "$staged" ] && exit 0
+
+say() { printf '%s\n' "$1" >&2; }
+
+# --- Branch -----------------------------------------------------------------
+
+# The same convention as horizon: <type>/<short-description>. Checked here and
+# not at push time, because a branch misnamed for twenty commits is a branch
+# nobody renames any more.
+branch=$(git rev-parse --abbrev-ref HEAD)
+
+case "$branch" in
+  HEAD) ;;                                  # detached: a rebase, a bisect
+  main|develop|staging|prod) ;;             # deployment branches
+  release/*) ;;
+  feat/*|fix/*|chore/*|docs/*|refactor/*|test/*|ci/*|perf/*|hotfix/*) ;;
+  *)
+    say ""
+    say "✖ Commit annulé : le nom de branche ne suit pas la convention."
+    say ""
+    say "  Attendu :  <type>/<description-courte>"
+    say "  Types   :  feat fix chore docs refactor test ci perf hotfix"
+    say "  Exemple :  feat/parcours-de-session"
+    say ""
+    say "  Branche actuelle : $branch"
+    say "  Pour la renommer :  git branch -m <nouveau-nom>"
+    exit 1
+    ;;
+esac
+
+# --- Secrets ----------------------------------------------------------------
+
+# A `.gitignore` rule does nothing for a file already tracked, and every one of
+# these repositories has had its `.env` committed at least once. This refuses
+# the commit outright, whatever git thinks it should ignore.
+forbidden=$(printf '%s\n' "$staged" \
+  | grep -Ei '(^|/)\.env($|\.)|(^|/)\.secrets|(^|/)secrets?/|\.(pem|p12|pfx|key)$' \
+  | grep -vE '\.env\.example$|\.enc$' || true)
+
+if [ -n "$forbidden" ]; then
+  say ""
+  say "✖ Commit annulé : ces fichiers ne doivent jamais partir dans le dépôt."
+  printf '%s\n' "$forbidden" | sed 's/^/    /' >&2
+  say ""
+  say "  Retirez-les de l'index :  git restore --staged <fichier>"
+  say "  Seuls .env.example et les fichiers chiffrés (.enc) sont autorisés."
+  exit 1
+fi
+
+# --- Prettier ---------------------------------------------------------------
+
+# A file that also carries unstaged changes is left alone: formatting it would
+# stage work its author deliberately held back.
+partially_staged=$(git diff --name-only)
+
+formattable=""
+for file in $staged; do
+  case "$file" in
+    *.js|*.mjs|*.cjs|*.ts|*.mts|*.cts|*.vue|*.json|*.css|*.scss|*.html|*.md|*.yml|*.yaml)
+      if printf '%s\n' "$partially_staged" | grep -qx -- "$file"; then
+        say "· non formaté (modifications non indexées) : $file"
+      elif [ -f "$file" ]; then
+        formattable="$formattable $file"
+      fi
+      ;;
+  esac
+done
+
+prettier=""
+if [ -x node_modules/.bin/prettier ]; then
+  prettier="node_modules/.bin/prettier"
+elif npx --no-install prettier --version >/dev/null 2>&1; then
+  prettier="npx --no-install prettier"
+fi
+
+if [ -n "$formattable" ]; then
+  if [ -z "$prettier" ]; then
+    # Never block a commit over a missing development dependency: say it and
+    # carry on.
+    say "⚠ prettier n'est pas installé ici : les fichiers ne sont pas formatés."
+    say "  Pour l'activer :  npm install --save-dev prettier"
+  else
+    say "· formatage prettier…"
+    # shellcheck disable=SC2086
+    $prettier --write --ignore-unknown $formattable >/dev/null
+    # shellcheck disable=SC2086
+    git add -- $formattable
+  fi
+fi
+
+# --- Conventions ------------------------------------------------------------
+
+# The rules of the handbook that a script can hold: no file over 450 lines, no
+# comment written in French, and — in the layered projects — no controller
+# reaching for a repository or a model, no service reaching for a model.
+#
+# The whole repository is checked, not only what is staged: a rule that only
+# applies to the lines one happens to touch is not a rule.
+checker=""
+if [ -f scripts/check-conventions.js ]; then
+  checker="scripts/check-conventions.js"
+elif [ -f ../back/scripts/check-conventions.js ]; then
+  checker="../back/scripts/check-conventions.js"
+fi
+
+if [ -n "$checker" ]; then
+  say "· conventions…"
+  if ! node "$checker" .; then
+    say ""
+    say "✖ Commit annulé : les règles d'architecture ne sont pas respectées."
+    say "  Le détail est ci-dessus. Pour passer outre : git commit --no-verify"
+    exit 1
+  fi
+fi
+
+# --- Types ------------------------------------------------------------------
+
+# Only when the commit touches something typed: committing a README must not
+# wait thirty seconds for a full type-check.
+touches_types=$(printf '%s\n' "$staged" | grep -E '\.(ts|mts|cts|vue|d\.ts)$|tsconfig.*\.json$' || true)
+
+if [ -n "$touches_types" ] && [ -f tsconfig.json ]; then
+  checker=""
+  if [ -x node_modules/.bin/vue-tsc ]; then
+    checker="node_modules/.bin/vue-tsc --build"
+  elif [ -x node_modules/.bin/tsc ]; then
+    checker="node_modules/.bin/tsc --noEmit"
+  fi
+
+  if [ -z "$checker" ]; then
+    say "⚠ aucun vérificateur de types installé (vue-tsc / tsc) : vérification sautée."
+  else
+    say "· vérification des types…"
+    if ! $checker; then
+      say ""
+      say "✖ Commit annulé : le projet ne compile pas."
+      say "  Corrigez les erreurs ci-dessus, ou committez avec --no-verify si vous savez ce que vous faites."
+      exit 1
+    fi
+  fi
+fi
+
+# A repository without TypeScript is not left unchecked: a JavaScript file that
+# does not even parse must not reach a commit.
+if [ ! -f tsconfig.json ]; then
+  for file in $staged; do
+    case "$file" in
+      *.js|*.mjs|*.cjs)
+        [ -f "$file" ] || continue
+        if ! node --check "$file" 2>/dev/null; then
+          say ""
+          say "✖ Commit annulé : erreur de syntaxe dans $file"
+          node --check "$file" || true
+          exit 1
+        fi
+        ;;
+    esac
+  done
+fi
+
+exit 0
