@@ -19,6 +19,32 @@ staged=$(git diff --cached --name-only --diff-filter=ACMR)
 
 say() { printf '%s\n' "$1" >&2; }
 
+# --- Branch -----------------------------------------------------------------
+
+# The same convention as horizon: <type>/<short-description>. Checked here and
+# not at push time, because a branch misnamed for twenty commits is a branch
+# nobody renames any more.
+branch=$(git rev-parse --abbrev-ref HEAD)
+
+case "$branch" in
+  HEAD) ;;                                  # detached: a rebase, a bisect
+  main|develop|staging|prod) ;;             # deployment branches
+  release/*) ;;
+  feat/*|fix/*|chore/*|docs/*|refactor/*|test/*|ci/*|perf/*|hotfix/*) ;;
+  *)
+    say ""
+    say "✖ Commit annulé : le nom de branche ne suit pas la convention."
+    say ""
+    say "  Attendu :  <type>/<description-courte>"
+    say "  Types   :  feat fix chore docs refactor test ci perf hotfix"
+    say "  Exemple :  feat/parcours-de-session"
+    say ""
+    say "  Branche actuelle : $branch"
+    say "  Pour la renommer :  git branch -m <nouveau-nom>"
+    exit 1
+    ;;
+esac
+
 # --- Secrets ----------------------------------------------------------------
 
 # A `.gitignore` rule does nothing for a file already tracked, and every one of

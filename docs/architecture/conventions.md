@@ -32,20 +32,20 @@ if (String(feedback.status) === String(mapping.status)) return;
 Do not restate the code. `// increment the counter` above `counter += 1` is
 noise, and noise is what makes people stop reading comments.
 
-Prefer a comment that says *why* over one that says *what*. The what is one
+Prefer a comment that says _why_ over one that says _what_. The what is one
 line below.
 
 ## Naming
 
-| Kind                | Rule                       | Example                    |
-| ------------------- | -------------------------- | -------------------------- |
-| file, back          | camelCase                  | `feedbackRepository.js`    |
-| file, Vue component | PascalCase                 | `FeedbackCard.vue`         |
-| directory           | lowercase, singular domain | `feedback/`, `project/`    |
-| function            | verb first                 | `findByProject`, `submit`  |
+| Kind                | Rule                       | Example                           |
+| ------------------- | -------------------------- | --------------------------------- |
+| file, back          | camelCase                  | `feedbackRepository.js`           |
+| file, Vue component | PascalCase                 | `FeedbackCard.vue`                |
+| directory           | lowercase, singular domain | `feedback/`, `project/`           |
+| function            | verb first                 | `findByProject`, `submit`         |
 | boolean             | reads as a question        | `isProjectMember`, `hasRecording` |
-| error code          | SCREAMING_SNAKE            | `PROJECT_NOT_MEMBER`       |
-| message key         | dot path                   | `feedback.statusChanged`   |
+| error code          | SCREAMING_SNAKE            | `PROJECT_NOT_MEMBER`              |
+| message key         | dot path                   | `feedback.statusChanged`          |
 
 A repository function is named after the intention, not the query:
 `findActiveByProject`, not `findOneWithFilter`.
@@ -62,7 +62,7 @@ validated. See [validation.md](./validation.md).
 A test states a behaviour, in a sentence a non-developer could read:
 
 ```js
-test("a platform administrator cannot leave feedback without an invitation")
+test("a platform administrator cannot leave feedback without an invitation");
 ```
 
 Test the decision, not the plumbing. A test that asserts a repository called
@@ -111,13 +111,50 @@ tests is reported, never counted as a failure.
 
 ### Branches
 
-| Branch | What it deploys |
-| ------ | --------------- |
-| `develop` | the dev environment |
+| Branch    | What it deploys         |
+| --------- | ----------------------- |
+| `develop` | the dev environment     |
 | `staging` | the staging environment |
-| `prod` | production |
+| `prod`    | production              |
 
 They are deployment branches: one merges into them, one does not work in them.
+
+Work happens on a branch named `<type>/<short-description>`, the same
+convention as horizon:
+
+`feat/` a new feature · `fix/` a bug · `chore/` maintenance, dependencies,
+tooling · `docs/` documentation only · `refactor/` no behaviour change ·
+`test/` tests · `ci/` pipelines · `perf/` performance · `hotfix/` an urgent
+production fix.
+
+```
+feat/parcours-de-session
+fix/rotation-du-jeton-de-rafraichissement
+chore/mise-a-jour-des-dependances
+```
+
+The pre-commit hook refuses a commit on a branch named anything else: a branch
+misnamed for twenty commits is a branch nobody renames any more.
+
+### Commit messages
+
+**Conventional commits**, as in horizon:
+
+```
+feat(session): affiche le parcours du visiteur
+
+- un noeud par page, une arete par deplacement
+- les formulaires envoyes sont une etape du chemin
+```
+
+- `<type>(<scope>): <subject>` — the scope is optional;
+- the subject is written in the imperative and says what changes and why, not
+  which files moved;
+- **72 characters** for the first line; everything else goes in the body, after
+  a blank line;
+- one intent per commit.
+
+The `commit-msg` hook refuses anything else.
 
 ### Never committed
 
