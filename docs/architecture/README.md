@@ -22,10 +22,12 @@ catalogue, the email catalogue, and the validation contract.
 ## Enforcement
 
 ```bash
-git config core.hooksPath .githooks   # once per clone
+git config core.hooksPath .githooks        # once per clone
 node ../back/scripts/check-conventions.js .
-node ../back/scripts/test-all.js
+npm test                                   # this repository
+node ../back/scripts/test-all.js           # the four repositories at once
 ```
 
-The hooks run the first two on every commit and the third on every push. A
+The hooks run the checker on every commit and this repository's tests on every
+push. The four-folder run is the one to call before opening a merge request. A
 change must never increase the checker's violation count.
