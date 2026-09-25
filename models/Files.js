@@ -22,15 +22,14 @@ const FilesSchema = new mongoose.Schema(
       type: SchemaTypes.ObjectId,
       ref: "Feedback",
     },
-    comment_id: {
-      type: SchemaTypes.ObjectId,
-      ref: "Comment",
-    },
   },
   {
     timestamps: true,
   }
 );
+
+// Attachments are always read by feedback.
+FilesSchema.index({ feedback_id: 1 });
 
 const Files = mongoose.model("Files", FilesSchema);
 export default Files;

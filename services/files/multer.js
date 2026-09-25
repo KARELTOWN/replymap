@@ -1,12 +1,12 @@
 import multer from "multer";
 import path from 'path'
-import { __dirname } from "../../index.js";
+import { storagePath } from "../../shared/paths.js";
 import fileService from "../files/fileService.js";
 const { checkFolder } = fileService();
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-     let folder = path.join(__dirname, "storage/tmp/my-uploads")
+     let folder = storagePath("tmp", "my-uploads")
     checkFolder(folder)
     cb(null, folder);
   },

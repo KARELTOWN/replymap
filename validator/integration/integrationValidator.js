@@ -1,222 +1,91 @@
-import { body, validationResult } from "express-validator";
-import { checkProjectExist } from "../../services/project/projectService.js";
+import { body, query } from "express-validator";
+import { integrationList, colorList } from "../../services/integration/integrationService.js";
 
-import integrationService from "../../services/integration/integrationService.js";
-const { integrationList, colorList } = integrationService();
-import IntegrationToken from "../../models/IntegrationToken.js";
+// Shape of the integration inputs. Whether the project is connected, and
+// whether that connection is still valid, are rules of integrationSetupService.
+
+const knownIntegration = (field) =>
+  field
+    .notEmpty()
+    .withMessage("validation.integrationRequired")
+    .bail()
+    .isIn(integrationList)
+    .withMessage("validation.unknownIntegration");
+
+const projectId = () =>
+  body("project_id")
+    .notEmpty()
+    .withMessage("validation.projectRequired")
+    .bail()
+    .isMongoId()
+    .withMessage("validation.invalidProjectId");
+
+const boardId = () =>
+  body("board")
+    .notEmpty()
+    .withMessage("validation.boardRequired")
+    .bail()
+    .isString()
+    .withMessage("validation.stringExpected");
+
+// OAuth entry point: both values travel in the query string.
+export const validateIntegrationLogin = [
+  knownIntegration(query("name")),
+  query("project")
+    .notEmpty()
+    .withMessage("validation.projectRequired")
+    .bail()
+    .isMongoId()
+    .withMessage("validation.invalidProjectId"),
+];
+
+// The webhook payload comes from outside and is only signature-checked. The
+// values actually consumed are validated like any other input.
+export const validateTrelloWebhook = [
+  body("action.type").optional().isString(),
+  body("action.data.board.id").optional().isString(),
+  body("action.data.card.id").optional().isString(),
+  body("action.data.listAfter.id").optional().isString(),
+];
 
 export const validateStoreToken = [
-  body("project_id")
-    .notEmpty()
-    .withMessage("Le projet est requis")
-    .custom(async (value, { req }) => {
-      if (value) {
-        let project_exist = await checkProjectExist(value);
-        if (!project_exist) {
-          throw new Error("Le projet n'existe pas ");
-        }
-        let integrationExist = await IntegrationToken.findOne({
-          project_id: value,
-          integration: req.body.integration,
-        });
-        if (integrationExist) {
-          if (!integrationExist.isExpired()) {
-            throw new Error("L'intégration existe déjà");
-          } else {
-            if (integrationExist.token === req.body.token) {
-              throw new Error("Token déjà utilisé");
-            }
-          }
-        }
-        return true;
-      }
-    }),
-  body("integration")
-    .notEmpty()
-    .withMessage("integration_is_required")
-    .custom((value) => {
-      if (!integrationList.includes(value)) {
-        throw new Error("Intégration inconnue");
-      }
-
-      return true;
-    }),
+  projectId(),
+  knownIntegration(body("integration")),
   body("token")
     .notEmpty()
-    .withMessage("Le token est obligatoire")
+    .withMessage("validation.tokenRequired")
+    .bail()
     .isString()
-    .withMessage("Le token doit être une chaine de caractère"),
-
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(422).json({ errors: errors.array() });
-    }
-    next();
-  },
+    .withMessage("validation.stringExpected"),
 ];
 
-export const validateGetIntegrationData = [
-  body("project_id")
-    .notEmpty()
-    .withMessage("Le projet est requis")
-    .custom(async (value, { req }) => {
-      if (value) {
-        let project_exist = await checkProjectExist(value);
-        if (!project_exist) {
-          throw new Error("Le projet n'existe pas");
-        }
-        let integrationExist = await IntegrationToken.findOne({
-          project_id: value,
-          integration: req.body.integration,
-        });
-        if (integrationExist) {
-          if (integrationExist.isExpired()) {
-            throw new Error("expired");
-          }
-        } else {
-          throw new Error("not_found");
-        }
-        return true;
-      }
-    }),
+export const validateGetIntegrationData = [projectId(), knownIntegration(body("integration"))];
 
-  body("integration")
-    .notEmpty()
-    .withMessage("integration_is_required")
-    .custom((value) => {
-      if (!integrationList.includes(value)) {
-        throw new Error("Intégration inconnue");
-      }
-      return true;
-    }),
+export const validateBoardID = [boardId()];
 
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(422).json({ errors: errors.array() });
-    }
-    next();
-  },
-];
-
-export const validateBoardID = [
-  body("board")
-    .notEmpty()
-    .withMessage("Obligatoire")
-    .isString()
-    .withMessage("L'identifiant du tableau doit être une chaine de caractère"),
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(422).json({ errors: errors.array() });
-    }
-    next();
-  },
-];
+export const validateGetBoardLabel = [projectId(), knownIntegration(body("integration"))];
 
 export const validateCreateBoardLabel = [
-  body("integration")
-    .notEmpty()
-    .withMessage("integration_is_required")
-    .custom((value) => {
-      if (!integrationList.includes(value)) {
-        throw new Error("Intégration inconnue");
-      }
-      return true;
-    }),
-  body("board")
-    .notEmpty()
-    .withMessage("Obligatoire")
-    .isString()
-    .withMessage("L'identifiant du tableau doit être une chaine de caractère"),
-  body("libelle")
-    .notEmpty()
-    .withMessage("Le nom de l'étiquette est obligatoire"),
+  projectId(),
+  knownIntegration(body("integration")),
+  body("libelle").trim().notEmpty().withMessage("validation.labelNameRequired"),
   body("color")
     .notEmpty()
-    .withMessage("Le nom de l'étiquette est obligatoire")
-    .custom((value) => {
-      if (!colorList.includes(value)) {
-        throw new Error("Couleur inconnue");
-      }
-      return true;
-    }),
-  body("project_id")
-    .notEmpty()
-    .withMessage("Le projet est requis")
-    .custom(async (value, { req }) => {
-      if (value) {
-        let project_exist = await checkProjectExist(value);
-        if (!project_exist) {
-          throw new Error("Le projet n'existe pas ");
-        }
-        let integrationExist = await IntegrationToken.findOne({
-          project_id: value,
-          integration: req.body.integration,
-        });
-        if (integrationExist) {
-          if (integrationExist.isExpired()) {
-            throw new Error("L'intégration a expirée");
-          }
-        } else {
-          throw new Error("L'intégration n'existe pas");
-        }
-        return true;
-      }
-    }),
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(422).json({ errors: errors.array() });
-    }
-    next();
-  },
+    .withMessage("validation.unknownColor")
+    .bail()
+    .isIn(colorList)
+    .withMessage("validation.unknownColor"),
 ];
 
-export const validateGetBoardLabel = [
-  body("integration")
+export const validateStatusMapping = [
+  projectId(),
+  knownIntegration(body("integration")),
+  body("mapping").isArray().withMessage("validation.mappingListExpected"),
+  body("mapping.*.list_id")
     .notEmpty()
-    .withMessage("integration_is_required")
-    .custom((value) => {
-      if (!integrationList.includes(value)) {
-        throw new Error("Intégration inconnue");
-      }
-      return true;
-    }),
-  body("board")
-    .notEmpty()
-    .withMessage("Obligatoire")
+    .withMessage("validation.listRequired")
+    .bail()
     .isString()
-    .withMessage("L'identifiant du tableau doit être une chaine de caractère"),
-  body("project_id")
-    .notEmpty()
-    .withMessage("Le projet est requis")
-    .custom(async (value, { req }) => {
-      if (value) {
-        let project_exist = await checkProjectExist(value);
-        if (!project_exist) {
-          throw new Error("Le projet n'existe pas ");
-        }
-        let integrationExist = await IntegrationToken.findOne({
-          project_id: value,
-          integration: req.body.integration,
-        });
-        if (integrationExist) {
-          if (integrationExist.isExpired()) {
-            throw new Error("L'intégration a expirée");
-          }
-        } else {
-          throw new Error("L'intégration n'existe pas");
-        }
-        return true;
-      }
-    }),
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(422).json({ errors: errors.array() });
-    }
-    next();
-  },
+    .withMessage("validation.stringExpected"),
+  body("mapping.*.status").isMongoId().withMessage("validation.invalidStatusId"),
 ];

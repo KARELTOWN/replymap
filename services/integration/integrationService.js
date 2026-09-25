@@ -1,326 +1,201 @@
-import moment from "moment";
-import IntegrationToken from "../../models/IntegrationToken.js";
+import * as integrationRepository from "../../repositories/integrationRepository.js";
+import * as feedbackRepository from "../../repositories/feedbackRepository.js";
+import fileService from "../files/fileService.js";
 import { getKeysIntegration } from "../../utils/keys.js";
-import FormData from "form-data";
-import fs from "fs";
-import axios from "axios";
-import FeedbackPriority from "../../models/FeedbackPriority.js";
+import * as trello from "./trelloApi.js";
+
+// Outbound integration logic for feedback: which list, which label, and when.
+//
+// The raw HTTP calls live in trelloApi.js. Connecting a tool, choosing its board
+// and mapping statuses are dashboard use cases, in integrationSetupService.js.
+//
+// Trello is the only integration of the MVP.
+
+export const integrationList = ["trello"];
+
+export const colorList = [
+  "green",
+  "yellow",
+  "orange",
+  "red",
+  "purple",
+  "blue",
+  "sky",
+  "lime",
+  "pink",
+  "black",
+];
+
+const { getFileFromS3 } = fileService();
+
+export const credentialsFor = (connection) => ({
+  apiKey: getKeysIntegration("trello").apiTrello,
+  token: connection.token,
+});
 
 export default function integrationService() {
-  const integrationLoginUrl = (project_id, integration) => {
-    const result = getKeysIntegration(integration);
-    let url = "";
-    if (integration == "trello") {
-      url =
-        `https://trello.com/1/authorize?expiration=${result.expirationTokenTrello}&scope=${result.scopeTrello}&response_type=${result.trelloReturnType}&key=${result.apiTrello}&return_url=${result.returnURLTrello}` +
-        "/" +
-        project_id +
-        `/${integration}`;
-    }
-    return url;
+  const getTrelloWebhookCallbackURL = () =>
+    `${process.env.BACKEND_URL}/api/integration/trello/webhook`;
+
+  const integrationLoginUrl = (projectId, integration) => {
+    if (integration !== "trello") return "";
+    const keys = getKeysIntegration(integration);
+    return trello.buildAuthorizeUrl({
+      apiKey: keys.apiTrello,
+      expiration: keys.expirationTokenTrello,
+      scope: keys.scopeTrello,
+      returnType: keys.trelloReturnType,
+      returnUrl: `${keys.returnURLTrello}/${projectId}/${integration}`,
+    });
   };
 
-  const integrationList = ["trello"];
-
-  const allIntegrationsApiUrl = (integration) => {
-    if (integration == "trello") {
-      return {
-        getBoardsURL: `https://api.trello.com/1/members/me/boards?fields=name,url&key={key}&token={token}`,
-        getListInBoardURL: `https://api.trello.com/1/boards/{board}/lists?key={key}&token={token}&filter=open`,
-        createCard: `https://api.trello.com/1/cards?key={key}&token={token}&name={name}&desc={desc}&idList={idList}`,
-        createAttachement: `https://api.trello.com/1/cards/{card_id}/attachments?key={key}&token={token}`,
-        getLabels: `https://api.trello.com/1/boards/{board}/labels?key={key}&token={token}`,
-        getLabel: `https://api.trello.com/1/labels/{id}??key={key}&token={token}`,
-        createLabel: `https://api.trello.com/1/boards/{board}/labels?name={name}&color={color}&key={key}&token={token}`,
-      };
-    }
-  };
-
-  const getIntegrationBoards = async (project, integration) => {
+  // Each feedback type maps to a label of the same name on the board, created
+  // on first use so the board stays readable without manual setup.
+  const resolveTypeLabel = async (card) => {
     try {
-      const data = getKeysIntegration(integration);
+      const type = await feedbackRepository.findTypeById(card.type);
+      if (!type) return null;
 
-      let storeToken = await IntegrationToken.findOne({
-        project_id: project,
-        integration: integration,
-        expiredAt: { $gt: moment().toDate() },
-      });
+      const connection = await integrationRepository.findActive(card.project_id, card.integration);
+      if (!connection?.board) return null;
 
-      let result = allIntegrationsApiUrl(integration);
-      let url = result.getBoardsURL;
-      if (integration == "trello") {
-        url = url.replace(`{key}`, data.apiTrello);
-        url = url.replace(`{token}`, storeToken.token);
-      }
+      const credentials = credentialsFor(connection);
+      const labels = await trello.listLabels(credentials, connection.board);
+      if (!labels) return null;
 
-      let response = await fetch(url, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-      });
-      const boards = await response.json();
-      return { boards, default: storeToken.board };
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const getIntegrationBoardLabels = async (info) => {
-    try {
-      const data = getKeysIntegration(info.integration);
-
-      let storeToken = await IntegrationToken.findOne({
-        project_id: info.project_id,
-        integration: info.integration,
-        expiredAt: { $gt: moment().toDate() },
-      });
-
-      let result = allIntegrationsApiUrl(info.integration);
-      let url = result.getLabels;
-      if (info.integration == "trello") {
-        url = url.replace(`{key}`, data.apiTrello);
-        url = url.replace(`{token}`, storeToken.token);
-        url = url.replace(`{board}`, storeToken.board);
-      }
-
-      let response = await fetch(url, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-      });
-      if (response.ok) {
-        let labels = await response.json();
-        labels = labels.filter((e) => e.name !== "");
-        return labels;
-      } else {
-        const result = await response.json();
-        console.log("Erreur récupération labels", result.message);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const createIntegrationBoardLabel = async (info) => {
-    try {
-      const data = getKeysIntegration(info.integration);
-
-      let storeToken = await IntegrationToken.findOne({
-        project_id: info.project_id,
-        integration: info.integration,
-        expiredAt: { $gt: moment().toDate() },
-      });
-
-      let result = allIntegrationsApiUrl(info.integration);
-      let url = result.createLabel;
-      if (info.integration == "trello") {
-        url = url.replace(`{key}`, data.apiTrello);
-        url = url.replace(`{token}`, storeToken.token);
-        url = url.replace(`{board}`, storeToken.board);
-        url = url.replace(`{name}`, info.libelle);
-        url = url.replace(`{color}`, info.color);
-      }
-
-      let response = await fetch(url, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-        },
-      });
-      if (response.ok) {
-        const labels = await response.json();
-        return labels;
-      } else {
-        const result = await response.json();
-        console.log("Erreur création label", result.message);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const getIntegrationBoardLists = async (project, integration) => {
-    try {
-      const data = getKeysIntegration(integration);
-
-      let find = await IntegrationToken.findOne({
-        project_id: project,
-        integration: integration,
-        expiredAt: { $gt: moment().toDate() },
-      });
-
-      let result = allIntegrationsApiUrl(integration);
-      let url = result.getListInBoardURL;
-      if (integration == "trello") {
-        url = url.replace(`{key}`, data.apiTrello);
-        url = url.replace(`{token}`, find.token);
-        url = url.replace(`{board}`, find.board);
-      }
-
-      let response = await fetch(url);
-      const lists = await response.json();
-      return lists;
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const getPriorityLabel = async (card) => {
-    try {
-      let data = await FeedbackPriority.findById(card.priority);
-      let labels = await getIntegrationBoardLabels(card);
-      if (!labels || labels == undefined) {
-        throw new Error("Erreur de récupération des labels");
-      }
-      let labelFind = labels.filter(
-        (e) => e.name.toUpperCase() === data.libelle.toUpperCase()
+      const existing = labels.find(
+        (label) => label.name.toUpperCase() === type.libelle.toUpperCase()
       );
-      if (labelFind.length > 0) {
-        return labelFind[0];
-      } else {
-        card.libelle = data.libelle;
-        card.color = colorList.includes(data.color) ? data.color : null;
-        let newLabel = await createIntegrationBoardLabel(card);
-        if (!newLabel || newLabel == undefined) {
-          throw new Error("Erreur de création du label");
-        } else {
-          return newLabel;
-        }
-      }
-    } catch (err) {
-      console.error(err);
+      if (existing) return existing;
+
+      return trello.createLabel(credentials, connection.board, {
+        name: type.libelle,
+        color: colorList.includes(type.color) ? type.color : null,
+      });
+    } catch (error) {
+      console.error("Integration type label", error);
+      return null;
     }
   };
 
   const createCardIntegration = async (card) => {
     try {
-      let result = allIntegrationsApiUrl(card.integration);
-      const data = getKeysIntegration(card.integration);
+      const connection = await integrationRepository.findActive(
+        card.project_id,
+        card.integration
+      );
+      if (!connection) return null;
 
-      let find = await IntegrationToken.findOne({
-        project_id: card.project_id,
-        integration: card.integration,
-        expiredAt: { $gt: moment().toDate() },
+      const label = await resolveTypeLabel(card);
+      if (!label) {
+        console.error("Integration card: no label could be resolved for the type");
+        return null;
+      }
+
+      const credentials = credentialsFor(connection);
+      const created = await trello.createCard(credentials, {
+        listId: card.list_id,
+        name: card.title,
+        description: card.description,
+        labelIds: [label.id],
       });
+      if (!created?.id) return null;
 
-      let url = result.createCard;
-
-      let cardLabel = await getPriorityLabel(card);
-
-      if (!cardLabel || cardLabel == undefined) {
-        throw new Error("Erreur de récupération du label de la tâche");
+      // Screenshot first, then the attachments. The screenshot used to be
+      // prepended twice, so every card carried it in double.
+      const files = [card.file, ...(Array.isArray(card.files) ? card.files : [])].filter(
+        (file) => file?.buffer
+      );
+      if (files.length > 0) {
+        await trello
+          .uploadAttachments(credentials, created.id, files)
+          .catch((error) => console.error("Integration attachments", error));
       }
 
-      if (card.integration == "trello") {
-        url = url.replace(`{key}`, data.apiTrello);
-        url = url.replace(`{token}`, find.token);
-        url = url.replace(`{name}`, card.title);
-        url = url.replace(`{desc}`, card.description);
-        url = url.replace(`{idList}`, card.list_id);
-      }
-
-      let response = await fetch(url, {
-        method: "POST",
-        body: JSON.stringify({ idLabels: [cardLabel.id] }),
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json", // obligatoire
-        },
-      });
-      if (response.ok) {
-        const cardCreate = await response.json();
-        if (Array.isArray(card.files) && cardCreate?.id) {
-          card.files.unshift(card.file);
-
-          let tokens = {
-            apiTrello: data.apiTrello,
-            token: find.token,
-          };
-          card.files.unshift(card.file);
-          const resultCreate = await createAttachmentsToCard(
-            card.integration,
-            tokens,
-            result.createAttachement,
-            cardCreate,
-            card.files
-          );
-          if (resultCreate === true) {
-            return true;
-          }
-        }
-      } else {
-        console.error(
-          `Echec création de la card dans ${card.integration}`,
-          response
-        );
-      }
-      return true;
-    } catch (err) {
-      console.error(err);
+      return created;
+    } catch (error) {
+      console.error("Integration card creation", error);
+      return null;
     }
   };
 
-  const createAttachmentsToCard = async (
+  // Attaches a file already in object storage: used when a feedback is sent to
+  // the tool after submission, once the raw buffer is gone.
+  //
+  // The bytes are sent, not a link: stored files are private, and a signed link
+  // would stop working on the card once it expired.
+  const attachStoredFileToCard = async ({
     integration,
-    tokens,
-    url,
-    cardCreate,
-    attachments
-  ) => {
+    project_id: projectId,
+    card_id: cardId,
+    key,
+    name,
+  }) => {
     try {
-      for (const attach of attachments) {
-        const formData = new FormData();
+      const connection = await integrationRepository.findActive(projectId, integration);
+      if (!connection) return false;
 
-        if (integration == "trello") {
-          url = url.replace(`{card_id}`, cardCreate.id);
-          url = url.replace(`{key}`, tokens.apiTrello);
-          url = url.replace(`{token}`, tokens.token);
-
-          formData.append("name", attach.fieldname);
-          formData.append("mimeType", attach.mimetype);
-          formData.append("file", attach.buffer, {
-            filename: attach.fieldname, // nom réel du fichier
-            contentType: attach.mimetype, // type MIME
-          });
-        }
-
-        const response = await axios.post(url, formData, {
-          headers: formData.getHeaders(),
-          maxContentLength: Infinity,
-          maxBodyLength: Infinity,
-        });
-        console.log("✅ Attachment créé ");
-      }
-      return true;
-    } catch (err) {
-      console.error("❌ Erreur Trello :", err.response?.data || err.message);
-      console.error(err);
+      const { buffer, mimetype } = await getFileFromS3(key);
+      return trello.uploadAttachments(credentialsFor(connection), cardId, [
+        { buffer, mimetype, originalname: name },
+      ]);
+    } catch (error) {
+      console.error("Integration file attachment", error);
+      return false;
     }
   };
 
-  const colorList = [
-    "green",
-    "yellow",
-    "orange",
-    "red",
-    "purple",
-    "blue",
-    "sky",
-    "lime",
-    "pink",
-    "black",
-  ];
+  // Moves the external card into the list mapped to the new status.
+  //
+  // Synchronisation used to run one way only: a card moved in Trello updated
+  // the feedback, but a status changed here moved nothing, and the two boards
+  // drifted apart as soon as someone worked from the dashboard.
+  const moveCardToStatusList = async ({ integration, project_id: projectId, card_id: cardId, status }) => {
+    try {
+      if (!integration || !cardId || !status) return { moved: false, reason: "incomplete" };
+
+      const connection = await integrationRepository.findActive(projectId, integration);
+      if (!connection) return { moved: false, reason: "integration_missing" };
+
+      const mapping = (connection.status_mapping || []).find(
+        (entry) => String(entry.status) === String(status)
+      );
+      // A status without a configured list is not an error: not every column
+      // of this board has a counterpart in the external tool.
+      if (!mapping) return { moved: false, reason: "status_not_mapped" };
+
+      const moved = await trello.moveCard(credentialsFor(connection), cardId, mapping.list_id);
+      return moved
+        ? { moved: true, list_id: mapping.list_id }
+        : { moved: false, reason: "remote_failure" };
+    } catch (error) {
+      console.error("Integration card move", error);
+      return { moved: false, reason: "exception" };
+    }
+  };
+
+  const verifyTrelloWebhookSignature = (rawBody, callbackURL, signature) => {
+    try {
+      return trello.verifySignature({
+        secret: getKeysIntegration("trello").secretTrello,
+        rawBody,
+        callbackURL,
+        signature,
+      });
+    } catch (error) {
+      console.error("Webhook signature", error);
+      return false;
+    }
+  };
 
   return {
     integrationList,
     integrationLoginUrl,
-    getIntegrationBoards,
-    getIntegrationBoardLists,
     createCardIntegration,
-    getIntegrationBoardLabels,
-    createIntegrationBoardLabel,
+    moveCardToStatusList,
+    attachStoredFileToCard,
     colorList,
+    verifyTrelloWebhookSignature,
+    getTrelloWebhookCallbackURL,
   };
 }

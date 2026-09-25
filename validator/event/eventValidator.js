@@ -1,131 +1,51 @@
 import { body } from "express-validator";
-import Project from "../../models/Project.js";
-import Session from "../../models/Session.js";
-import EventType from "../../models/EventType.js";
-import validator from "validator";
 import moment from "moment";
-import { checkProjectExist } from "../../services/project/projectService.js";
-import { checkSessionExist } from "../../services/session/sessionService.js";
 
-export const editEventType = async (req, res, next) => {
-  const { events } = req.body;
-  if (Array.isArray(events) && events.length > 0) {
-    let modifyEvents = [];
-    for (const event of events) {
-      if (event.type) {
-        let type = await EventType.findOne({ libelle: event.type });
-        if (!type) {
-          throw new Error(`Le type ${event.type} n'existe pas`);
-        } else {
-          event.type = type._id;
-          modifyEvents.push(event);
-        }
-      } else {
-        next(new Error("Un des types d'évenement est invalide"));
-      }
-    }
-    req.body.events = modifyEvents;
-    next();
-  } else {
-    next(new Error("Aucune donnée"));
-  }
-};
+// Shape of the event inputs.
+//
+// The previous version resolved event type names and checked each event's
+// project inside the validator, with one database query per event. Existence
+// is now the concern of the ingestion guard (project) and of the service (types,
+// sessions), each in a single query.
+
+const MAX_BATCH = 500;
+
+const optionalDate = (field) =>
+  body(field)
+    .optional({ nullable: true, checkFalsy: true })
+    .custom((value) => {
+      if (!moment(value, "YYYY-MM-DD", true).isValid()) throw new Error("validation.invalidDate");
+      return true;
+    });
+
+const optionalId = (field) =>
+  body(field)
+    .optional({ nullable: true, checkFalsy: true })
+    .isMongoId()
+    .withMessage("validation.invalidIdentifier");
+
 export const validateStoreEvent = [
   body("events")
-    .notEmpty()
-    .withMessage("Les évenements sont obligatoires")
-    .custom(async (value) => {
-      for (const item of value) {
-        if (
-          (Array.isArray(item.data) && item.data.length == 0) ||
-          !item.project ||
-          !item.page_url ||
-          !item.timestamp ||
-          !item.type ||
-          !item.uniqueId
-        ) {
-          throw new Error("Erreur tracké invalide");
-        }
-        if (!item.data) {
-          throw new Error("Data Obligatoire");
-        }
-        if (!item.uniqueId || !validator.isUUID(item.uniqueId)) {
-          throw new Error("Identifiant d'événement invalide.");
-        }
-        
-        if (item.project) {
-          let project_exist = await checkProjectExist(item.project);
-          if (!project_exist) {
-            throw new Error(`Le projet ${item.project} n'existe pas`);
-          }
-        }
-      }
-      return true;
-    }),
+    .isArray({ min: 1, max: MAX_BATCH })
+    .withMessage("validation.eventsRequired"),
+  body("events.*.uniqueId").isUUID().withMessage("validation.invalidEventId"),
+  body("events.*.project").isMongoId().withMessage("validation.invalidProjectId"),
+  body("events.*.page_url").isString().notEmpty().withMessage("validation.pageUrlRequired"),
+  body("events.*.timestamp").isNumeric().withMessage("validation.timestampRequired"),
+  body("events.*.type").isString().notEmpty().withMessage("validation.eventTypeRequired"),
+  body("events.*.data").exists({ values: "null" }).withMessage("validation.eventDataRequired"),
+  body("events.*.session")
+    .optional({ nullable: true, checkFalsy: true })
+    .isMongoId()
+    .withMessage("validation.invalidSessionId"),
 ];
 
 export const validateEventFilter = [
-  body("search")
-    .optional()
-    .isString()
-    .withMessage("Un chaine de caractère est attendu"),
-  body("start_date").custom((value) => {
-    if (value !== null && value !== "" && value) {
-      if (moment(value, "YYYY-MM-DD").isValid()) {
-        return true;
-      } else {
-        throw new Error("Date invalide");
-      }
-    } else {
-      return true;
-    }
-  }),
-  ,
-  body("end_date").custom((value) => {
-    if (value !== null && value !== "" && value) {
-      if (moment(value, "YYYY-MM-DD").isValid()) {
-        return true;
-      } else {
-        throw new Error("Date invalide");
-      }
-    } else {
-      return true;
-    }
-  }),
-
-  body("session").custom(async (value) => {
-    if (value) {
-      let session_exist = await checkSessionExist(value);
-      if (!session_exist) {
-        throw new Error("La session n'existe pas");
-      }
-      return true;
-    }
-  }),
-  body("project").custom(async (value) => {
-    if (value) {
-      let project_exist = await checkProjectExist(value);
-      if (!project_exist) {
-        throw new Error("Le projet n'existe pas");
-      }
-      return true;
-    }
-  }),
-  body("eventtype").custom(async (value) => {
-    if (value) {
-      let type_exist = await EventType.findById(value);
-      if (!type_exist) {
-        throw new Error("Le type d'événement n'existe pas");
-      }
-      return true;
-    }
-  }),
-  body("is_error").custom(async (value) => {
-    if (value) {
-      if (value === true || value === false) {
-        return true;
-      }
-      throw new Error("Booleen attendu");
-    }
-  }),
+  body("search").optional({ nullable: true }).isString().withMessage("validation.stringExpected"),
+  optionalDate("start_date"),
+  optionalDate("end_date"),
+  optionalId("session"),
+  optionalId("project"),
+  optionalId("eventtype"),
+  body("is_error").optional({ nullable: true }).isBoolean().withMessage("validation.booleanExpected"),
 ];

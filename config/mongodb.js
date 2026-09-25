@@ -7,12 +7,11 @@ const clientOptions = {
 };
 
 async function connectDB() {
-  const maxRetries = 5; // Nombre maximum de tentatives
-  let retryCount = 0; // Compteur de tentatives
+  const maxRetries = 5; // maximum number of attempts
+  let retryCount = 0; // attempts so far
   let retryDelayMs = 3000;
   while (retryCount < maxRetries) {
     try {
-      console.log('uri', uri)
       const connect = await mongoose.connect(uri, clientOptions);
       await mongoose.connection.db.admin().command({ ping: 1 });
       console.log("Connexion réussie à MongoDB!");
@@ -27,7 +26,7 @@ async function connectDB() {
         console.log(
           `Nouvelle tentative dans ${retryDelayMs / 1000} secondes...`
         );
-        await new Promise((resolve) => setTimeout(resolve, retryDelayMs)); // VRAI DÉLAI
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs)); // real delay between attempts
       }
     }
   }

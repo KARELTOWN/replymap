@@ -1,195 +1,93 @@
-import { body, param, query } from "express-validator";
-import User from "../../models/User.js";
-import Project from "../../models/Project.js";
+import { body, param } from "express-validator";
 import moment from "moment";
-import _ from "lodash";
-import Session from "../../models/Session.js";
-import Events from "../../models/Events.js";
-import { checkProjectExist, projectData } from "../../services/project/projectService.js";
+
+// Shape of the project inputs. Existence, ownership and uniqueness are rules of
+// projectService: a validator only says whether the request is well formed.
+
+const optionalDate = (field) =>
+  body(field)
+    .optional({ nullable: true, checkFalsy: true })
+    .custom((value) => {
+      if (!moment(value, "YYYY-MM-DD", true).isValid()) throw new Error("validation.invalidDate");
+      return true;
+    });
+
+const projectIdIn = (location) =>
+  location("project_id")
+    .notEmpty()
+    .withMessage("validation.projectRequired")
+    .bail()
+    .isMongoId()
+    .withMessage("validation.invalidProjectId");
 
 export const validateProject = [
-  body("libelle").notEmpty().withMessage("Le libelle est obligatoire"),
-  body("link").notEmpty().withMessage("Le lien est obligatoire"),
-  // .isURL()
-  // .withMessage("Lien du projet invalide"),
+  body("libelle").trim().notEmpty().withMessage("validation.nameRequired"),
+  body("link").trim().notEmpty().withMessage("validation.linkRequired"),
 ];
 
 export const validateShowProject = [
-  param("id").notEmpty().withMessage("Le projet est obligatoire"),
+  param("id").isMongoId().withMessage("validation.invalidProjectId"),
 ];
 
 export const validateUpdateProject = [
-  param("project_id")
-    .notEmpty()
-    .withMessage("Le projet est obligatoire")
-    .custom(async (value) => {
-      if (value) {
-        let project_exist = await checkProjectExist(value);
-        if (!project_exist) {
-          throw new Error("Le projet n'existe pas");
-        }
-        const session_exists = await Session.exists({ project_id: value });
-        if (session_exists === true) {
-          throw new Error("Impossible de modifier ce projet");
-        }
-        return true;
-      }
-    }),
-  body("link")
+  projectIdIn(param),
+  body("link").optional().trim().notEmpty().withMessage("validation.linkRequired"),
+  body("libelle").optional().trim().notEmpty().withMessage("validation.nameRequired"),
+  body("track").optional().isObject().withMessage("validation.objectExpected"),
+  body("allow_guest_feedback")
     .optional()
-    .trim()
-    .custom(async (value, { req }) => {
-      const { project_id } = req.params;
-      const projet = await Project.exists({
-        link: value,
-        _id: { $nin: [project_id] },
-      });
-      if (projet) {
-        throw new Error("Existe déjà");
-      }
-      let myproject = await projectData(project_id);
-      if (myproject.link !== value) {
-        let session_exist = await Session.exists({
-          project_id: project_id,
-        }).exec();
-        let event_exist = await Events.exists({ project: project_id });
-        if (session_exist || event_exist) {
-          throw new Error(
-            "Modification impossible. Le projet a déjà en cours d'utilisation"
-          );
-        }
-      }
-
-      return true;
-    }),
-  body("libelle")
-    .optional()
-    .trim()
-    .custom(async (value, { req }) => {
-      const { project_id } = req.params;
-      const projet = await Project.exists({
-        libelle: value,
-        _id: { $nin: [project_id] },
-      });
-      if (projet) {
-        throw new Error("Existe déjà");
-      }
-      return true;
-    }),
-  body("track").optional().isObject(),
+    .isBoolean()
+    .withMessage("validation.booleanExpected")
+    .toBoolean(),
 ];
 
 export const validateFilterProject = [
   body("search")
-    .optional()
+    .optional({ nullable: true })
     .isString()
-    .withMessage("Un chaine de caractère est attendu"),
-  body("start_date").custom((value) => {
-    if (value !== null && value !== "") {
-      if (moment(value, "YYYY-MM-DD").isValid()) {
-        return true;
-      } else {
-        throw new Error("Date invalide");
-      }
-    } else {
-      return true;
-    }
-  }),
-  ,
-  body("end_date").custom((value) => {
-    if (value !== null && value !== "") {
-      if (moment(value, "YYYY-MM-DD").isValid()) {
-        return true;
-      } else {
-        throw new Error("Date invalide");
-      }
-    } else {
-      return true;
-    }
-  }),
+    .withMessage("validation.stringExpected")
+    .trim(),
+  optionalDate("start_date"),
+  optionalDate("end_date"),
 ];
 
 export const validateInviteUser = [
   body("email")
+    .trim()
     .notEmpty()
-    .withMessage("Utilisateur obligatoire")
-    .custom(async (value) => {
-      let user = await User.findOne({ email: value });
-      if (!user) {
-        throw new Error("Aucun utilisateur correspondant à cet email");
-      }
-      console.log("user", user);
-      if (user.email_verified === true && user.is_active === true) {
-        return true;
-      } else {
-        throw new Error("L'utilisateur est inactif ou non vérifié");
-      }
-    }),
-
-  body("project_id")
-    .notEmpty()
-    .withMessage("Le projet est obligatoire")
-    .custom(async (value) => {
-      if (value) {
-        let project_exist = await checkProjectExist(value);
-        if (!project_exist) {
-          throw new Error("Le projet n'existe pas");
-        }
-        return true;
-      }
-    }),
+    .withMessage("validation.emailRequired")
+    .bail()
+    .isEmail()
+    .withMessage("validation.invalidEmail"),
+  projectIdIn(body),
 ];
 
-export const validateProjectIDBody = [
-  body("project_id")
+// Switching one detected website off, or back on.
+export const validateInstalledHost = [
+  projectIdIn(param),
+  body("host")
+    .trim()
     .notEmpty()
-    .withMessage("Le projet est obligatoire")
-    .custom(async (value) => {
-      if (value) {
-        let project_exist = await checkProjectExist(value);
-        if (!project_exist) {
-          throw new Error("Le projet n'existe pas");
-        }
-        return true;
-      }
-    }),
+    .withMessage("validation.hostRequired")
+    .isLength({ max: 255 })
+    .withMessage("validation.hostRequired"),
+  body("blocked")
+    .exists()
+    .withMessage("validation.booleanExpected")
+    .bail()
+    .isBoolean()
+    .withMessage("validation.booleanExpected")
+    .toBoolean(),
 ];
 
-export const validateProjectIDParam = [
-  param("project_id")
-    .notEmpty()
-    .withMessage("Le projet est obligatoire")
-    .custom(async (value) => {
-      if (value) {
-        let project_exist = await checkProjectExist(value);
-        if (!project_exist) {
-          throw new Error("Le projet n'existe pas");
-        }
-        return true;
-      }
-    }),
-];
+export const validateProjectIDBody = [projectIdIn(body)];
+
+export const validateProjectIDParam = [projectIdIn(param)];
 
 export const validateQuitProject = [
-  body("project_id")
-    .notEmpty()
-    .withMessage("Le projet est obligatoire")
-    .custom(async (value) => {
-      if (value) {
-        let project_exist = await checkProjectExist(value);
-        if (!project_exist) {
-          throw new Error("Le projet n'existe pas");
-        }
-        return true;
-      }
-    }),
-  body("user_id").custom(async (value) => {
-    if (value) {
-      let user = await User.findById(value);
-      if (!user) {
-        throw new Error("L'utilisateur n'existe pas");
-      }
-      return true;
-    }
-  }),
+  projectIdIn(body),
+  body("user_id")
+    .optional({ nullable: true, checkFalsy: true })
+    .isMongoId()
+    .withMessage("validation.invalidUserId"),
 ];

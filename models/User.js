@@ -79,6 +79,14 @@ const UserSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // Instant every access token issued before becomes invalid. An access
+    // token is a self-contained JWT: revoking the refresh tokens of an account
+    // left its other tabs working until the 15 minutes were up, which is
+    // exactly what "your other devices will be signed out" promises not to do.
+    sessions_valid_from: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

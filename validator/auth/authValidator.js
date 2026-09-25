@@ -1,206 +1,142 @@
-import { body, param } from "express-validator";
-import User from "../../models/User.js";
-import bcrypt from "bcrypt";
-import validator from "validator";
-const { isUUID } = validator;
-import { decrypt } from "../../helpers/encrypt.js";
+import { body, cookie, header, param } from "express-validator";
+import { refreshCookieName, csrfCookieName } from "../../shared/http/authCookies.js";
 
-export const validateLogin = [
-  body("email")
+// Shape of the authentication inputs. Whether an email is taken, a password
+// matches or a code is right are rules of accountService.
+//
+// Passwords are never transformed: they used to go through `.escape()`, which
+// hashed `a&amp;b` for a typed `a&b`. accountService still accepts those
+// legacy hashes.
+
+const PASSWORD_POLICY = {
+  minLength: 8,
+  minNumbers: 1,
+  minSymbols: 1,
+  minUppercase: 1,
+  minLowercase: 1,
+};
+
+const email = (location = body) =>
+  location("email")
+    .trim()
     .notEmpty()
-    .withMessage("Le champ EMAIL ne peut être vide")
+    .withMessage("validation.emailRequired")
+    .bail()
     .isEmail()
-    .withMessage("EMAIL invalide")
-    .escape()
-    .custom(async (value, { req }) => {
-      const user = await User.findOne({ email: value })
-        .select("+password")
-        .exec();
-      console.log("user", user);
-      if (user) {
-        const isPassword = await bcrypt.compare(
-          req.body.password,
-          user.password
-        );
-        if (isPassword === true) {
-          return true;
-        } else {
-          throw new Error("Identifiants incorrectes");
-        }
-      }
-    }),
+    .withMessage("validation.invalidEmail");
+
+const newPassword = () =>
   body("password")
     .notEmpty()
-    .withMessage("Le champ MOT DE PASSE ne peut être vide")
-    .isStrongPassword({
-      minLength: 8,
-      minNumbers: 1,
-      minSymbols: 1,
-      minUppercase: 1,
-      minLowercase: 1,
-    })
-    .withMessage(
-      "Le MOT DE PASSE n'est pas fort. Il doit contenir au moins : un caractère spécial, un chiffre, une lettre majuscule, une lettre miniscule"
-    )
-    .escape(),
+    .withMessage("validation.passwordRequired")
+    .bail()
+    .isStrongPassword(PASSWORD_POLICY)
+    .withMessage("validation.weakPassword");
+
+const confirmation = () =>
+  body("confirm_password")
+    .notEmpty()
+    .withMessage("validation.passwordRequired")
+    .bail()
+    .custom((value, { req }) => {
+      if (value !== req.body.password) throw new Error("validation.passwordMismatch");
+      return true;
+    });
+
+// The refresh token and its CSRF pair come from cookies and a header. Their
+// absence is not a validation error but an ended session: authSessionService
+// answers 401, which clients treat as "sign in again".
+const hexSecret = (field) =>
+  field.optional().isHexadecimal().withMessage("validation.invalidTokenFormat");
+
+export const validateRefreshToken = [
+  hexSecret(cookie(refreshCookieName())),
+  hexSecret(cookie(csrfCookieName())),
+  hexSecret(header("x-refresh-csrf")),
+];
+
+export const validateUpdateProfile = [
+  body("firstname").trim().notEmpty().withMessage("validation.firstnameRequired"),
+  body("lastname").trim().notEmpty().withMessage("validation.lastnameRequired"),
+];
+
+// The current password is asked for so a forgotten open tab cannot be used to
+// take the account over.
+export const validateChangePassword = [
+  body("current_password").notEmpty().withMessage("validation.passwordRequired"),
+  newPassword(),
+  confirmation(),
+];
+
+export const validateWidgetToken = [
+  body("project_id")
+    .notEmpty()
+    .withMessage("validation.projectRequired")
+    .bail()
+    .isMongoId()
+    .withMessage("validation.invalidProjectId"),
+];
+
+// Signing out needs the access token being ended.
+export const validateLogout = [
+  header("authorization")
+    .matches(/^Bearer \S+$/)
+    .withMessage("validation.invalidTokenFormat"),
+];
+
+// The strength policy applies to new passwords only: checking it at sign-in
+// described the policy to anyone guessing, and locked out older passwords.
+export const validateLogin = [
+  email(),
+  body("password")
+    .notEmpty()
+    .withMessage("validation.passwordRequired")
+    .bail()
+    .isString()
+    .withMessage("validation.stringExpected"),
 ];
 
 export const validateRegister = [
-  body("lastname")
-    .notEmpty()
-    .withMessage("Le nom est obligatoire")
-    .isLength({ min: 1 })
-    .withMessage("Renseignez au moins 2 caractères")
-    .escape(),
-  body("firstname")
-    .notEmpty()
-    .withMessage("Le prénom est obligatoire")
-    .isLength({ min: 1 })
-    .withMessage("Renseignez au moins 2 caractères")
-    .escape(),
-  body("email")
-    .notEmpty()
-    .withMessage("Le champ EMAIL est obligatoire")
-    .isEmail()
-    .withMessage("EMAIL invalide")
-    .escape()
-    .custom(async (value) => {
-      const user = await User.find({ email: value }).exec();
-      if (user.length > 0) {
-        throw new Error("Ce email est déjà utilisé");
-      }
-      return true;
-    }),
-  body("password")
-    .notEmpty()
-    .withMessage("Le champ MOT DE PASSE ne peut être vide")
-    .isStrongPassword({
-      minLength: 8,
-      minNumbers: 1,
-      minSymbols: 1,
-      minUppercase: 1,
-      minLowercase: 1,
-    })
-    .withMessage(
-      "Le MOT DE PASSE n'est pas fort. Il doit contenir au moins : un caractère spécial, un chiffre, une lettre majuscule, une lettre miniscule"
-    )
-    .escape(),
-  body("confirm_password")
-    .notEmpty()
-    .withMessage("Le champ MOT DE PASSE ne peut être vide")
-    .isStrongPassword({
-      minLength: 8,
-      minNumbers: 1,
-      minSymbols: 1,
-      minUppercase: 1,
-      minLowercase: 1,
-    })
-    .withMessage(
-      "Le MOT DE PASSE n'est pas fort. Il doit contenir au moins : un caractère spécial, un chiffre, une lettre majuscule, une lettre miniscule"
-    )
-    .escape()
-    .custom(async (value, { req }) => {
-      if (value !== req.body.password) {
-        throw new Error("La confirmation de mot de passe à échouer");
-      }
-      return true;
-    }),
+  body("lastname").trim().notEmpty().withMessage("validation.lastnameRequired"),
+  body("firstname").trim().notEmpty().withMessage("validation.firstnameRequired"),
+  email(),
+  newPassword(),
+  confirmation(),
 ];
 
 export const validateConfirmRegister = [
-  body("user_id").notEmpty().withMessage("Utilisateur non renseigné"),
-  body("code").notEmpty().withMessage("Le code OTP est obligatoire"),
+  body("user_id")
+    .notEmpty()
+    .withMessage("validation.accountRequired")
+    .bail()
+    .isHexadecimal()
+    .withMessage("validation.accountRequired"),
+  body("code")
+    .notEmpty()
+    .withMessage("validation.codeRequired")
+    .bail()
+    .matches(/^\d{5}$/)
+    .withMessage("validation.invalidCode"),
 ];
 
-export const validateForgotPassword = [
-  param("email")
-    .notEmpty()
-    .withMessage("EMAIL obligatoire")
-    .isEmail()
-    .withMessage("EMAIL invalide")
-    .escape(),
-];
+export const validateForgotPassword = [email(param)];
 
 export const validateDesaprove = [
   body("token")
     .notEmpty()
-    .withMessage("Réinitialisation impossible obligatoire"),
+    .withMessage("validation.resetTokenRequired")
+    .bail()
+    .isHexadecimal()
+    .withMessage("validation.resetTokenRequired"),
 ];
 
 export const validateResetPassword = [
-  body("token").notEmpty().withMessage("Réinitialisation impossible"),
-  body("password")
+  body("token")
     .notEmpty()
-    .withMessage("Le champ MOT DE PASSE ne peut être vide")
-    .isStrongPassword({
-      minLength: 8,
-      minNumbers: 1,
-      minSymbols: 1,
-      minUppercase: 1,
-      minLowercase: 1,
-    })
-    .withMessage(
-      "Le MOT DE PASSE n'est pas fort. Il doit contenir au moins : un caractère spécial, un chiffre, une lettre majuscule, une lettre miniscule"
-    )
-    .escape()
-    .custom(async (value, { req }) => {
-      const user = await User.findOne({ email: req.params.email })
-        .select("+password")
-        .exec();
-      if (!user) {
-        throw new Error("Compte non trouvé");
-      }
-      const result = await bcrypt.compare(value, user.password);
-      if (result === true) {
-        throw new Error(
-          "Vous ne pouvez pas utiliser votre ancien mot de passe"
-        );
-        return true;
-      }
-    }),
-  body("confirm_password")
-    .notEmpty()
-    .withMessage("Le champ MOT DE PASSE ne peut être vide")
-    .isStrongPassword({
-      minLength: 8,
-      minNumbers: 1,
-      minSymbols: 1,
-      minUppercase: 1,
-      minLowercase: 1,
-    })
-    .withMessage(
-      "Le MOT DE PASSE n'est pas fort. Il doit contenir au moins : un caractère spécial, un chiffre, une lettre majuscule, une lettre miniscule"
-    )
-    .escape()
-    .custom(async (value, { req }) => {
-      if (value !== req.body.password) {
-        throw new Error("La confirmation de mot de passe à échouer");
-      }
-      return true;
-    }),
-];
-
-export const validateUser = [
-  body("user_id").custom(async (value) => {
-    if (value && value !== null) {
-      let user = await User.findById(value);
-      if (!user) {
-        throw new Error("L'utilisateur n'existe pas");
-      }
-      return true;
-    }
-  }),
-];
-
-export const validateUserEncrypt = [
-  body("user_id").custom(async (value) => {
-    if (value && value !== null) {
-      let user_id = decrypt(value);
-      let user = await User.findById(user_id);
-      if (!user) {
-        throw new Error("L'utilisateur n'existe pas");
-      }
-      return true;
-    }
-  }),
+    .withMessage("validation.resetTokenRequired")
+    .bail()
+    .isHexadecimal()
+    .withMessage("validation.resetTokenRequired"),
+  newPassword(),
+  confirmation(),
 ];

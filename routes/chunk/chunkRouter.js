@@ -1,10 +1,14 @@
 import express from "express";
-const chunkRouter = express.Router();
 import chunkController from "../../controllers/chunk/chunkController.js";
 import { validateStoreChunk } from "../../validator/chunk/chunkValidator.js";
-import { decompressPako } from "../../utils/util.js";
+import { requireTrackedProject } from "../../middleware/trackedProject.js";
+import { handle } from "../../middleware/errorHandler.js";
 
+const chunkRouter = express.Router();
 const { storeChunk } = chunkController();
-chunkRouter.post("/store", validateStoreChunk, storeChunk);
+
+// Recording chunk upload: same guard as session creation, this is the endpoint
+// that consumes the most storage.
+chunkRouter.post("/store", requireTrackedProject, validateStoreChunk, handle(storeChunk));
 
 export default chunkRouter;

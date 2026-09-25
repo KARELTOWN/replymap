@@ -22,7 +22,7 @@ const VerificationCodeSchema = new mongoose.Schema(
           }
 
         },
-        message: (props) => `${props.value} n'a pas 5 caractères`,
+        message: (props) => `${props.value} must be 5 characters long`,
       },
     },
     expires_at: {
@@ -31,7 +31,10 @@ const VerificationCodeSchema = new mongoose.Schema(
     used_at: {
       type: Date,
     },
+    // Declared without `type: String`, the field was read by Mongoose as a
+    // nested object and the value was never stored.
     type: {
+      type: String,
       enum: [verificationType.register, verificationType.login],
     },
   },

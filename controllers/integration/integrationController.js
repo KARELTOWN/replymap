@@ -1,203 +1,102 @@
 import { matchedData } from "express-validator";
-import integrationService from "../../services/integration/integrationService.js";
-const {
-  integrationList,
-  integrationLoginUrl,
-  getIntegrationBoards,
-  getIntegrationBoardLists,
-  getIntegrationBoardLabels,
-  createIntegrationBoardLabel,
-} = integrationService();
-import IntegrationToken from "../../models/IntegrationToken.js";
-import Project from "../../models/Project.js";
-import moment from "moment";
+import ApiResponse from "../../shared/http/apiResponse.js";
+import { assertValid } from "../../middleware/errorHandler.js";
+import integrationSetupService from "../../services/integration/integrationSetupService.js";
+import {
+  applyTrelloAction,
+  isAuthenticTrelloDelivery,
+} from "../../services/integration/integrationSyncService.js";
+
+const service = integrationSetupService();
+
+// HTTP layer of integrations. Rules live in integrationSetupService (dashboard)
+// and integrationSyncService (webhook).
+
+const connectionOf = (req) => {
+  const { project_id: projectId, integration, ...rest } = matchedData(req);
+  return { projectId, integration, ...rest };
+};
 
 export default function integrationController() {
-  const getLoginURLs = async (req, res, next) => {
-    let data = {};
-    const { name, project } = req.query;
-    if (!name || !project) {
-      return res.status(404).json({
-        message: "Informations non valide",
-      });
-    }
+  const getLoginURLs = async (req, res) => {
+    assertValid(req);
+    const { name, project } = matchedData(req);
 
-    let exist = await Project.exists({ _id: project });
+    const data = await service.loginUrls({ user: req.user, projectId: project, integration: name });
+    return ApiResponse.ok(res, { messageKey: "integration.loginUrls", data });
+  };
 
-    if (!exist) {
-      return res.status(500).json({
-        message: "Projet invalide",
-      });
-    }
+  const storeToken = async (req, res) => {
+    assertValid(req);
+    const data = await service.connect(connectionOf(req));
+    return ApiResponse.created(res, { messageKey: "integration.connected", data });
+  };
 
-    const integrationExist = await IntegrationToken.findOne({
-      project_id: project,
-      integration: name,
+  const getBoards = async (req, res) => {
+    assertValid(req);
+    const data = await service.boards(connectionOf(req));
+    return ApiResponse.ok(res, { messageKey: "integration.boardsListed", data });
+  };
+
+  const updateIntegration = async (req, res) => {
+    assertValid(req);
+    const data = await service.selectBoard(connectionOf(req));
+    return ApiResponse.ok(res, { messageKey: "integration.updated", data });
+  };
+
+  const getBoardLists = async (req, res) => {
+    assertValid(req);
+    const data = await service.lists(connectionOf(req));
+    return ApiResponse.ok(res, { messageKey: "integration.listsListed", data });
+  };
+
+  const getBoardLabels = async (req, res) => {
+    assertValid(req);
+    const data = await service.labels(connectionOf(req));
+    return ApiResponse.ok(res, { messageKey: "integration.labelsListed", data });
+  };
+
+  const createBoardLabel = async (req, res) => {
+    assertValid(req);
+    const data = await service.createLabel(connectionOf(req));
+    return ApiResponse.created(res, { messageKey: "integration.labelCreated", data });
+  };
+
+  const saveStatusMapping = async (req, res) => {
+    assertValid(req);
+    const data = await service.saveStatusMapping(connectionOf(req));
+    return ApiResponse.ok(res, { messageKey: "integration.mappingUpdated", data });
+  };
+
+  // Trello sends a HEAD request to the callback URL when the webhook is
+  // created, to check it is reachable before sending any event.
+  const trelloWebhookVerify = (req, res) => res.status(200).send();
+
+  // Trello expects a bare status, not the JSON envelope, and disables a webhook
+  // that is slow or keeps failing: the answer is sent before the work is done.
+  const trelloWebhookHandler = async (req, res) => {
+    const authentic = isAuthenticTrelloDelivery({
+      rawBody: req.rawBody ? req.rawBody.toString("utf8") : "",
+      signature: req.get("x-trello-webhook"),
     });
+    if (!authentic) return res.status(401).send();
 
-    if (integrationExist) {
-      if (!integrationExist.isExpired()) {
-        return res.status(500).json({
-          message: `${name} est déjà connecté au projet`,
-        });
-      }
-    }
+    res.status(200).send();
 
-    if (!integrationList.includes(name)) {
-      return res.status(404).json({
-        message: `${name} est une intégration inconnue`,
-      });
-    }
-
-    const url = integrationLoginUrl(project, name);
-    data[name] = url;
-
-    return res.status(200).json({
-      message: "Links",
-      data: { ...data },
-    });
-  };
-
-  const storeToken = async (req, res, next) => {
-    try {
-      const data = matchedData(req);
-
-      const result = await IntegrationToken.create({
-        integration: data.integration,
-        project_id: data.project_id,
-        token: data.token,
-        expiredAt: moment().add("30", "days").toDate(),
-        default: true,
-      });
-
-      delete result.token;
-
-      return res.status(200).json({
-        message: "Token store",
-        data: { ...result },
-      });
-    } catch (err) {
-      next(err);
-    }
-  };
-
-  const updateIntegration = async (req, res, next) => {
-    try {
-      const data = matchedData(req);
-
-      const result = await IntegrationToken.findOne({
-        integration: data.integration,
-        project_id: data.project_id,
-        expiredAt: { $gt: moment().toDate() },
-      });
-      result.board = data.board;
-      await result.save();
-
-      delete result.token;
-
-      return res.status(200).json({
-        message: "Intégration modifiée",
-        data: { ...result },
-      });
-    } catch (err) {
-      next(err);
-    }
-  };
-
-  const getToken = async (req, res, next) => {
-    try {
-      const data = matchedData(req);
-      const token = await IntegrationToken.findOne({
-        integration: data.integration,
-        project_id: data.project_id,
-        expiredAt: { $gt: moment().toDate() },
-      })
-        .select("token")
-        .exec();
-
-      return res.status(200).json({
-        message: "Token store",
-        data: token,
-      });
-    } catch (err) {
-      next(err);
-    }
-  };
-
-  const getBoards = async (req, res, next) => {
-    try {
-      const data = matchedData(req);
-      const result = await getIntegrationBoards(
-        data.project_id,
-        data.integration
-      );
-      return res.status(200).json({
-        message: "BOARDS GET",
-        data: { boards: result.boards, default: result.default },
-      });
-    } catch (err) {
-      next(err);
-    }
-  };
-
-  const getBoardLists = async (req, res, next) => {
-    try {
-      const data = matchedData(req);
-
-      const lists = await getIntegrationBoardLists(
-        data.project_id,
-        data.integration
-      );
-      return res.status(200).json({
-        message: "LISTS GET",
-        data: lists,
-      });
-    } catch (err) {
-      next(err);
-    }
-  };
-
-  const getBoardLabels = async (req, res, next) => {
-    try {
-      const data = matchedData(req);
-      console.log("data", data);
-      const labels = await getIntegrationBoardLabels(data);
-      return res.status(200).json({
-        message: "LABELS GET",
-        data: labels,
-      });
-    } catch (err) {
-      next(err);
-    }
-  };
-
-  const createBoardLabel = async (req, res, next) => {
-    try {
-      const data = matchedData(req);
-
-      const label = await createIntegrationBoardLabel(data);
-      if (label) {
-        return res.status(200).json({
-          message: "LABELS CREATE",
-          data: label,
-        });
-      }
-      return res.status(500).json({
-        message: "Une erreur s'est produite",
-      });
-    } catch (err) {
-      next(err);
-    }
+    const { action } = matchedData(req);
+    applyTrelloAction(action).catch((error) => console.error("Trello webhook", error));
   };
 
   return {
     getLoginURLs,
     storeToken,
-    getToken,
     getBoards,
     getBoardLists,
     updateIntegration,
     getBoardLabels,
     createBoardLabel,
+    saveStatusMapping,
+    trelloWebhookVerify,
+    trelloWebhookHandler,
   };
 }

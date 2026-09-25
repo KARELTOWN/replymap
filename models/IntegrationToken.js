@@ -1,7 +1,6 @@
 import { SchemaTypes } from "mongoose";
 import mongoose from "../config/mongodb.js";
 import moment from "moment";
-import { token } from "morgan";
 
 const IntegrationTokenSchema = new mongoose.Schema(
   {
@@ -25,6 +24,23 @@ const IntegrationTokenSchema = new mongoose.Schema(
     board: {
       type: String,
       required: false,
+    },
+    webhook_id: {
+      type: String,
+      default: null,
+    },
+    status_mapping: {
+      type: [
+        {
+          list_id: { type: String, required: true },
+          status: {
+            type: SchemaTypes.ObjectId,
+            ref: "FeedbackStatus",
+            required: true,
+          },
+        },
+      ],
+      default: [],
     },
   },
   {

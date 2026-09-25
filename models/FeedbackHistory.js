@@ -15,7 +15,14 @@ const FeedbackHistorySchema = new mongoose.Schema(
     createdBy : {
       type: SchemaTypes.ObjectId,
       ref: "User",
-      required: true
+      // Optional: a status change coming from the Trello webhook has no
+      // BugReveal user behind it.
+      default: null,
+    },
+    source: {
+      type: String,
+      enum: ["app", "trello"],
+      default: "app",
     }
   },
   {
@@ -27,7 +34,7 @@ FeedbackHistorySchema.statics.count = async function () {
   return await this.countDocuments();
 };
 
-// Enregistrer un message avec l'utilisateur
+// Records a message together with the user
 // Exemple : const feedback = new FeedbackHistory(req.body); await feedback.saveWithUser(req.user._id);
 
 FeedbackHistorySchema.methods.saveWithUser = function (userId) {
@@ -36,6 +43,8 @@ FeedbackHistorySchema.methods.saveWithUser = function (userId) {
   }
   return this.save();
 };
+
+FeedbackHistorySchema.index({ feedback_id: 1, createdAt: -1 });
 
 const FeedbackHistory = mongoose.model("FeedbackHistory", FeedbackHistorySchema);
 export default FeedbackHistory;

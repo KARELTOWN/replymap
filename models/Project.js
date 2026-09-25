@@ -1,8 +1,7 @@
 import { SchemaTypes } from "mongoose";
 import mongoose from "../config/mongodb.js";
 import User from "./User.js";
-import projectService from "../services/project/projectService.js";
-const { getProjectScript } = projectService();
+import { buildTrackingSnippet } from "../shared/tracking/trackingSnippet.js";
 
 const ProjectSchema = new mongoose.Schema(
   {
@@ -31,23 +30,44 @@ const ProjectSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    // The websites this project actually receives data from, recorded as the
+    // widget calls in. A project declares one domain, but the snippet is copied
+    // by hand: it ends up on a staging site, a second domain, sometimes a site
+    // it was never meant for. Only the host is kept, never a full address.
+    installed_hosts: [
+      {
+        _id: false,
+        host: { type: String, required: true },
+        first_seen_at: { type: Date, default: Date.now },
+        last_seen_at: { type: Date, default: Date.now },
+        // False when the ingestion guard turned this host away: the data it
+        // sent was refused, which is precisely what one wants to see here.
+        accepted: { type: Boolean, default: true },
+        // Switched off by hand from the project sheet. The script stays on the
+        // website — one does not always have access to it — but it is told to
+        // stop, and anything it still sends is refused.
+        blocked: { type: Boolean, default: false },
+      },
+    ],
+    // Whether someone without a BugReveal account may leave feedback on this
+    // project. Off by default: opening it is a decision of the project owner,
+    // who then accepts feedback identified only by an email.
+    allow_guest_feedback: {
+      type: Boolean,
+      default: false,
+    },
     track: {
-      // Activé l'enregistrement de session
+      // Enables session recording
       active_recording: {
         type: Boolean,
         default: true,
       },
-      // Activé le suivi des erreurs : Erreurs de requêtes, erreurs javascript, erreurs de la console ...
+      // Enables error tracking: failed requests, JavaScript errors, console errors
       active_track_errors: {
         type: Boolean,
         default: true,
       },
-      // Activé le suivi des événements: Rageclick, Rebond, Pages visités par sessions, etc ...
-      active_event_issues: {
-        type: Boolean,
-        default: true,
-      },
-      // Activé le suivi des performances, pour détecter les requêtes qui prennent du temps (>= 1 seconde)
+      // Enables behaviour tracking: rage clicks, bounces, pages visited per session
       active_performance_issues: {
         type: Boolean,
         default: true,
@@ -64,9 +84,9 @@ ProjectSchema.statics.count = async function () {
 };
 
 ProjectSchema.pre("save", async function (next) {
-  // Vérifie si tracking_code est vide (évite les doublons en update)
+  // Only when tracking_code is empty, to avoid regenerating it on update
   if (!this.tracking_code) {
-    this.tracking_code = await getProjectScript(this.tracking_id, this._id);
+    this.tracking_code = buildTrackingSnippet(this._id);
   }
   next();
 });

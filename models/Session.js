@@ -1,7 +1,6 @@
 import { SchemaTypes } from "mongoose";
 import mongoose from "../config/mongodb.js";
 import Project from "./Project.js";
-import { sessionRequestErrors } from "../services/interceptRequest/interceptRequestService.js";
 import _ from "lodash";
 
 const SessionSchema = new mongoose.Schema(
@@ -35,6 +34,24 @@ const SessionSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    // The visitor is anonymous while recording: `user_id` is a random
+    // identifier kept in their browser. The account is known only once they
+    // leave feedback, which requires being a member of the project; the
+    // session is then attributed, so a replay can be found by person.
+    // Set when the first recording chunk arrives. Maintenance can then find
+    // the sessions that recorded nothing with one indexed query, closed ones
+    // included: they used to be looked for among open sessions only, so a
+    // session closed by the widget without a single chunk stayed forever.
+    has_recording: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    account: {
+      type: SchemaTypes.ObjectId,
+      ref: "User",
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -44,14 +61,10 @@ SessionSchema.statics.count = async function () {
   return await this.countDocuments();
 };
 
-// SessionSchema.post("find", async (sessions) => {
-//   if (Array.isArray(sessions)) {
-//     for (const session of sessions) {
-//       session.requestError = await sessionRequestErrors(session._id);
-//     }
-//   }
-// });
 
+
+// Periodic maintenance: sessions still open, oldest first.
+SessionSchema.index({ endedAt: 1, startedAt: 1 });
 
 const Session = mongoose.model("Session", SessionSchema);
 export default Session;

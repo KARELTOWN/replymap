@@ -1,43 +1,30 @@
 import { query } from "express-validator";
 
+// Pagination parameters shared by every listing.
+
+const positiveInt = (field, requiredKey) =>
+  query(field)
+    .notEmpty()
+    .withMessage(requiredKey)
+    .bail()
+    .isInt({ gt: 0 })
+    .withMessage("validation.positiveIntegerExpected");
+
+const offset = () =>
+  query("skip")
+    .notEmpty()
+    .withMessage("validation.skipRequired")
+    .bail()
+    .isInt({ min: 0 })
+    .withMessage("validation.positiveIntegerExpected");
+
 export const validatePaginationQuery = [
-  query("page")
-    .notEmpty()
-    .withMessage("La page est obligatoire")
-    .isInt({ gt: 0 })
-    .withMessage("La page doit être un entier"),
-  query("limit")
-    .notEmpty()
-    .withMessage("La limite est obligatoire")
-    .isInt({ gt: 0 })
-    .withMessage("La limite doit être un entier"),
+  positiveInt("page", "validation.pageRequired"),
+  positiveInt("limit", "validation.limitRequired"),
 ];
 
+export const validateLimitQuery = [positiveInt("limit", "validation.limitRequired")];
 
-export const validateLimitQuery = [
-  query("limit")
-    .notEmpty()
-    .withMessage("La limite est obligatoire")
-    .isInt({ gt: 0 })
-    .withMessage("La limite doit être un entier"),
-];
+export const validateLimitSkipQuery = [positiveInt("limit", "validation.limitRequired"), offset()];
 
-export const validateLimitSkipQuery = [
-  query("limit")
-    .notEmpty()
-    .withMessage("La limite est obligatoire")
-    .isInt({ gt: 0 })
-    .withMessage("La limite doit être un entier"),
-  query("skip")
-    .notEmpty()
-    .withMessage("SKIP est obligatoire")
-    .withMessage("SKIP doit être un entier"),
-];
-
-
-export const validateSkipQuery = [
-  query("skip")
-    .notEmpty()
-    .withMessage("SKIP est obligatoire")
-    .withMessage("SKIP doit être un entier"),
-];
+export const validateSkipQuery = [offset()];

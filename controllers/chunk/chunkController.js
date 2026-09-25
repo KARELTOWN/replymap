@@ -1,22 +1,20 @@
-import { matchedData, validationResult } from "express-validator";
-import { storeChunkJob } from "../../jobs/queue.js";
+import { matchedData } from "express-validator";
+import ApiResponse from "../../shared/http/apiResponse.js";
+import { assertValid } from "../../middleware/errorHandler.js";
+import { enqueue } from "../../services/chunk/chunkService.js";
+
+// HTTP layer of recording chunk upload. The service checks the sessions belong
+// to the project and hands the batch to the queue; files are written by the
+// worker.
+
 export default function chunkController() {
-  const storeChunk = async (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(422).json({ errors: errors.array() });
-    }
-    const data = matchedData(req);
-    try {
-      await storeChunkJob(data);
-      res.status(200).json({
-        message: "Events created in processing",
-      });
-    } catch (error) {
-      next(error);
-    }
+  const storeChunk = async (req, res) => {
+    assertValid(req);
+    const { events } = matchedData(req);
+
+    const data = await enqueue({ projectId: req.trackedProject._id, events });
+    return ApiResponse.accepted(res, { messageKey: "session.chunksQueued", data });
   };
-  return {
-    storeChunk,
-  };
+
+  return { storeChunk };
 }

@@ -1,7 +1,5 @@
 import { SchemaTypes } from "mongoose";
 import mongoose from "../config/mongodb.js";
-import { isAdmin } from "../utils/util.js";
-import Project from "./Project.js";
 
 const UserProjectSchema = new mongoose.Schema(
   {

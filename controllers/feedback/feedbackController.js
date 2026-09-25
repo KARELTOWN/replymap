@@ -1,237 +1,132 @@
-import { matchedData, validationResult } from "express-validator";
-import FeedbackPriority from "../../models/FeedbackPriority.js";
-import FeedbackType from "../../models/FeedbackType.js";
-import Files from "../../models/Files.js";
-import Feedback from "../../models/Feedback.js";
-import FeedbackStatus from "../../models/FeedbackStatus.js";
-import fileService from "../../services/files/fileService.js";
-const { getURLFileFromS3 } = fileService();
-import feedbackHistoryController from "./feedbackHistoryController.js";
-import {
-  storeFeedbackInIntegrationJob,
-  storeFeedbackJob,
-} from "../../jobs/queue.js";
-import { checkSessionExist } from "../../services/session/sessionService.js";
-const { storeFeedbackHistory } = feedbackHistoryController();
+import { matchedData } from "express-validator";
+import ApiResponse from "../../shared/http/apiResponse.js";
+import { assertValid } from "../../middleware/errorHandler.js";
+import { removeTempUploads } from "../../utils/util.js";
 import feedbackService from "../../services/feedback/feedbackService.js";
-const { feedbackData } = feedbackService();
+
+const service = feedbackService();
+
+// HTTP layer of the feedback module.
+//
+// A controller does four things and nothing else: check the request, read it,
+// call one service method, return a response object. No branching on business
+// rules, no database access, no message wording. As soon as a handler starts
+// reasoning about the product, that reasoning belongs to the service.
+//
+// Access control runs before this file, in middleware/projectAccess.js, which
+// also loads `req.project` and `req.feedback`.
 
 export default function feedbackController() {
   const getFeedbackParams = async (req, res) => {
-    try {
-      res.status(200).json({
-        message: "Paramètres de feedback récupérés",
-        data: {
-          type: await FeedbackType.find().select("libelle"),
-          priority: await FeedbackPriority.find().select("libelle"),
-          status: await FeedbackStatus.find().select("libelle"),
-        },
-      });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
+    const data = await service.getParameters();
+    return ApiResponse.ok(res, { messageKey: "feedback.parametersFetched", data });
   };
 
   const storeFeedback = async (req, res) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(422).json({ errors: errors.array() });
-      }
-      const data = matchedData(req);
+      assertValid(req);
+      const payload = matchedData(req);
 
-      // Vérif existence en base
-      const session_exist = await checkSessionExist(data.session_id);
-      if (!session_exist) {
-        data.session_id = null;
-      }
-
-      const file = req.files.file ? req.files.file[0] : null;
-      const attachments = req.files.attachments ? req.files.attachments : [];
-      if (!file) {
-        return res
-          .status(422)
-          .json({ message: "La capture d'écran est obligatoire" });
-      }
-
-      await storeFeedbackJob({
-        file,
-        feedback: data,
-        attachments,
+      await service.submit({
+        payload,
+        author: req.user,
+        file: req.files?.file ? req.files.file[0] : null,
+        attachments: req.files?.attachments ?? [],
       });
 
-      res.status(200).json({ message: "Feedback créé" });
+      return ApiResponse.accepted(res, { messageKey: "feedback.created" });
     } catch (error) {
-      res.status(500).json({ message: error.message });
+      // multer wrote the upload to disk before the request was rejected.
+      removeTempUploads(req);
+      throw error;
     }
   };
 
-  const storeFeedbackMember = async (req, res) => {
+  // Feedback from someone without a BugReveal account, on a project that
+  // accepts it. The project was already checked by the ingestion guard and by
+  // `requireGuestFeedback`; the identity here is only an email, which is why
+  // it is never trusted for anything but showing who wrote.
+  const storeGuestFeedback = async (req, res) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(422).json({ errors: errors.array() });
-      }
-      const data = matchedData(req);
+      assertValid(req);
+      const { guest_email: email, guest_name: name, ...payload } = matchedData(req);
 
-      // Vérif existence en base
-      const session_exist = await checkSessionExist(data.session_id);
-      if (!session_exist) {
-        data.session_id = null;
-      }
-
-      const file = req.files.file ? req.files.file[0] : null;
-      const attachments = req.files.attachments ? req.files.attachments : [];
-      if (!file) {
-        return res
-          .status(422)
-          .json({ message: "La capture d'écran est obligatoire" });
-      }
-
-      await storeFeedbackJob({
-        file,
-        feedback: data,
-        attachments,
+      await service.submit({
+        payload,
+        guest: { email, name },
+        file: req.files?.file ? req.files.file[0] : null,
+        attachments: req.files?.attachments ?? [],
       });
 
-      if (data.integration && data.list_id) {
-        await storeFeedbackInIntegrationJob({
-          file,
-          feedback: data,
-          attachments,
-        });
-      }
-
-      res.status(200).json({ message: "Feedback créé" });
+      return ApiResponse.accepted(res, { messageKey: "feedback.created" });
     } catch (error) {
-      res.status(500).json({ message: error.message });
+      removeTempUploads(req);
+      throw error;
     }
   };
 
-  const getFeedbackPerProject = async (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(422).json({ errors: errors.array() });
-    }
-    const data = matchedData(req);
+  const getFeedbackPerProject = async (req, res) => {
+    assertValid(req);
+    const { project_id: projectId, limit, author, start_date, end_date } = matchedData(req);
 
-    let status = await FeedbackStatus.find().exec();
-    let feedBackPerProjet = [];
-    let i = 0;
-    for (const state of status) {
-      feedBackPerProjet[i] = { status: null, feedbacks: [] };
-      feedBackPerProjet[i].status = state;
-      let feedbacks = await Feedback.find({
-        status: state._id,
-        project_id: data.project_id,
-      })
-        .populate([
-          {
-            path: "type",
-            model: "FeedbackType",
-            select: "libelle",
-          },
-          {
-            path: "priority",
-            model: "FeedbackPriority",
-            select: "libelle",
-          },
-          {
-            path: "assignTo",
-            model: "User",
-            select: "lastname firstname",
-          },
-        ])
-
-        .select([
-          "type",
-          "priority",
-          "title",
-          "description",
-          "assignTo",
-          "createdAt",
-          "updatedAt",
-        ])
-        .limit(50)
-        .sort({ createdAt: -1 })
-        .exec();
-      feedBackPerProjet[i].feedbacks = feedbacks;
-      i++;
-    }
-
-    res
-      .status(200)
-      .json({ message: "Feedbacks récupérés", data: feedBackPerProjet });
+    const data = await service.getBoard({ projectId, limit, author, start_date, end_date });
+    return ApiResponse.ok(res, { messageKey: "feedback.listed", data });
   };
 
-  const showFeedback = async (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(422).json({ errors: errors.array() });
-    }
-    const data = matchedData(req);
+  // Authors to offer in the filter of this project.
+  const getFeedbackAuthors = async (req, res) => {
+    assertValid(req);
+    const { project_id: projectId } = matchedData(req);
 
-    let feedback = await feedbackData(data.feedback_id);
-
-    feedback.file.key = await getURLFileFromS3(feedback.file.key);
-
-    let files = await Files.find({ feedback_id: data.feedback_id });
-    for (const file of files) {
-      file.key = await getURLFileFromS3(file.key);
-    }
-    res.status(200).json({
-      message: "Feedback récupéré",
-      data: { feedback: feedback, files: files },
-    });
+    const data = await service.getAuthors(projectId);
+    return ApiResponse.ok(res, { messageKey: "feedback.authorsListed", data });
   };
 
-  const updateFeedback = async (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(422).json({ errors: errors.array() });
-    }
-    const data = matchedData(req);
-
-    let feedback = await Feedback.findByIdAndUpdate(data.feedback_id, data, {
-      new: true,
-    });
-
-    await storeFeedbackHistory(data, feedback._id, req.user._id);
-
-    res.status(200).json({
-      message: "Feedback modifié",
-    });
+  const showFeedback = async (req, res) => {
+    const data = await service.getDetail(req.feedback._id);
+    return ApiResponse.ok(res, { messageKey: "feedback.fetched", data });
   };
 
-  const assignFeedback = async (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(422).json({ errors: errors.array() });
-    }
-    const data = matchedData(req);
+  const updateFeedback = async (req, res) => {
+    assertValid(req);
 
-    let feedback = await Feedback.findByIdAndUpdate(
-      data.feedback_id,
-      { assignTo: data.assignTo },
-      {
-        new: true,
-      }
-    );
-
-    await storeFeedbackHistory(data, feedback._id, req.user._id);
-
-    res.status(200).json({
-      message: "Feedback assigné",
+    await service.update({
+      feedback: req.feedback,
+      changes: matchedData(req),
+      actorId: req.user._id,
     });
+
+    return ApiResponse.ok(res, { messageKey: "feedback.updated" });
+  };
+
+  const deleteFeedback = async (req, res) => {
+    await service.remove(req.feedback);
+    return ApiResponse.ok(res, { messageKey: "feedback.deleted" });
+  };
+
+  const sendFeedbackToIntegration = async (req, res) => {
+    assertValid(req);
+    const { integration, list_id: listId } = matchedData(req);
+
+    await service.sendToIntegration({ feedback: req.feedback, integration, listId });
+    return ApiResponse.ok(res, { messageKey: "feedback.sentToIntegration" });
+  };
+
+  const getFeedbackHistory = async (req, res) => {
+    const data = await service.getHistory(req.feedback._id);
+    return ApiResponse.ok(res, { messageKey: "feedback.historyListed", data });
   };
 
   return {
     getFeedbackParams,
     storeFeedback,
+    storeGuestFeedback,
     getFeedbackPerProject,
+    getFeedbackAuthors,
     showFeedback,
     updateFeedback,
-    assignFeedback,
-    storeFeedbackMember,
+    deleteFeedback,
+    sendFeedbackToIntegration,
+    getFeedbackHistory,
   };
 }

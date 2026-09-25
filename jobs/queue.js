@@ -17,9 +17,6 @@ function queueWorker(queueName) {
 
 const recordChunksQueues = queueWorker("recording_chunk_store");
 const feedbackStoreQueues = queueWorker("feedback");
-const feedbackStoreInIntegrationQueues = queueWorker(
-  "feedbackSaveInIntegration"
-);
 
 const mailingQueues = queueWorker("mailing");
 
@@ -31,7 +28,7 @@ export const storeChunkJob = async (data) => {
       data: { chunk: dt, project: data.project_id },
     });
   }
-  await recordChunksQueues.addBulk(queues); // ajout un à un mais performant
+  await recordChunksQueues.addBulk(queues); // bulk insert, one job per chunk
 };
 
 export const storeFeedbackJob = async (data) => {
@@ -47,22 +44,7 @@ export const storeFeedbackJob = async (data) => {
   }
 };
 
-export const storeFeedbackInIntegrationJob = async (data) => {
-  try {
-    let attachments = Array.from(data.attachments);
-    await feedbackStoreInIntegrationQueues.add(
-      `feedback_save_in_${data.feedback.integration}_${Date.now()}`,
-      {
-        file: data.file,
-        attachments: attachments,
-        feedback: data.feedback,
-      }
-    );
-  } catch (error) {
-    throw new Error(error);
-  }
-};
 
 export const mailingJob = async (mail_data) => {
-  await mailingQueues.add(`send_mail_at_${Date.now()}`, mail_data); // ajout un à un mais performant
+  await mailingQueues.add(`send_mail_at_${Date.now()}`, mail_data); // one job per email
 };

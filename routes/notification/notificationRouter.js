@@ -1,13 +1,14 @@
 import express from "express";
-const NotificationRouter = express.Router();
 import notificationController from "../../controllers/notification/notificationController.js";
-const { getNotifications } = notificationController();
 import paginateData from "../../helpers/pagination.js";
 import { validatePaginationQuery } from "../../validator/generalValidator.js";
-NotificationRouter.get(
-  "get",
-  validatePaginationQuery,
-  paginateData,
-  getNotifications
-);
+import { handle } from "../../middleware/errorHandler.js";
+
+const NotificationRouter = express.Router();
+const { getNotifications } = notificationController();
+
+// The path lacked its leading slash ("get"), which Express 5 does not match
+// against "/get": the route was unreachable.
+NotificationRouter.get("/get", validatePaginationQuery, paginateData, handle(getNotifications));
+
 export default NotificationRouter;

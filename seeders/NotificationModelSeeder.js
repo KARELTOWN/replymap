@@ -55,7 +55,7 @@ async function NotificationModelSeeder() {
       },
       {
         name: "ajout feedback",
-        title: "Nouveau feedback : #title (#priority)",
+        title: "Nouveau feedback : #title",
         unique: "AF",
         content:
           "<strong>Type :</strong> #type<br><strong>Projet :</strong> #project<br><strong>Titre :</strong> #title<br><strong>Description :</strong> #description<br><strong>Statut :</strong> #status<br><strong>",
@@ -64,8 +64,7 @@ async function NotificationModelSeeder() {
         name: "modification feedback",
         title: "Mise à jour du feedback : #title",
         unique: "MF",
-        content:
-          "<div>#type</div> <br> <div>#status</div> <div>#priority</div> <div>#assignTo</div>",
+        content: "<div>#type</div> <br> <div>#status</div>",
       },
       {
         name: "quitter le projet",

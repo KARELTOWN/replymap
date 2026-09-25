@@ -1,341 +1,144 @@
-import { matchedData, validationResult } from "express-validator";
-import {
-  redisDeleteAllkey,
-  redisDeleteKey,
-  redisDeleteMultipleKeys,
-  redisGetKey,
-  redisSetKey,
-} from "../../config/redis.js";
-import Project from "../../models/Project.js";
-import crypto from "crypto";
-import moment from "moment";
-import UserProject from "../../models/UserProject.js";
-import {
-  ProjectModelFilter,
-  createProjectNotification,
-  inviteUserNotification,
-  projectData,
-  quitProjectNotification,
-  user_in_projects,
-} from "../../services/project/projectService.js";
-import User from "../../models/User.js";
-import { encrypt, createTokenString, decrypt } from "../../helpers/encrypt.js";
-import integrationService from "../../services/integration/integrationService.js";
-const { integrationLoginUrl } = integrationService();
+import { matchedData } from "express-validator";
+import ApiResponse from "../../shared/http/apiResponse.js";
+import { assertValid } from "../../middleware/errorHandler.js";
+import projectService from "../../services/project/projectService.js";
+import installationService from "../../services/project/installationService.js";
+import { requestHost } from "../../shared/net/host.js";
+
+const service = projectService();
+
+// HTTP layer of projects and their team. Rules live in projectService.
+//
+// Payload shapes (`data.project`, `data.projects`, `data.members`...) are kept
+// as they were, so the dashboard and the embedded widget read them unchanged.
 
 export default function projectController() {
-  const createProject = async (req, res, next) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(422).json({ errors: errors.array() });
-      }
-      const data = matchedData(req);
-      const exist_link = await Project.exists({
-        link: data.link,
-        created_by: req.user._id,
-      });
-      if (exist_link) {
-        res.status(403).json({ message: "Le lien existe déjà" });
-      }
-      data.tracking_id = crypto.randomUUID();
-      let project = new Project({ ...data, created_by: req.user._id });
-      await project.save();
-      await UserProject.insertOne({
-        user_id: req.user._id,
-        project_id: project._id,
-      });
-
-      await createProjectNotification(req.user, data.libelle);
-
-      // await redisDeleteMultipleKeys([
-      //   `${req.user._id}_projects_page_*`,
-      //   `projects_page_*`,
-      // ]);
-
-      res.status(200).json({
-        message: "Projet créé",
-        data: {
-          project: {
-            _id: project._id,
-            libelle: project.libelle,
-            link: project.link,
-            active: project.active,
-            createdAt: project.createdAt,
-            tracking_code: project.tracking_code,
-            track: project.track,
-            creator: true,
-          },
-        },
-      });
-    } catch (error) {
-      next(error);
-    }
+  const createProject = async (req, res) => {
+    assertValid(req);
+    const data = await service.create({ user: req.user, payload: matchedData(req) });
+    return ApiResponse.created(res, { messageKey: "project.created", data });
   };
 
-  const showProject = async (req, res, next) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(422).json({ errors: errors.array() });
-      }
-      const data = matchedData(req);
-      let project;
-      // let cache_key = `project_${data.id}`;
-      // let cached_project = await redisGetKey(cache_key);
-      // if (cached_project) {
-      //   project = JSON.parse(cached_project);
-      // } else {
-      project = await projectData(data.id);
-      // }
-      if (!project) {
-        res.status(403).json({ message: "Projet non trouvé" });
-      } else {
-        // redisSetKey(cache_key, project);
-        res.status(200).json({
-          message: "Projet récupéré",
-          data: {
-            libelle: project.libelle,
-            link: project.link,
-            active: project.active,
-            track: project.track,
-          },
-        });
-      }
-    } catch (error) {
-      next(error);
-    }
+  const showProject = async (req, res) => {
+    assertValid(req);
+    const { id } = matchedData(req);
+
+    // The calling website is read from the request, never from the body: it is
+    // what decides whether this particular site is still allowed to run.
+    const data = await service.showPublic(id, requestHost(req));
+    return ApiResponse.ok(res, { messageKey: "project.fetched", data });
   };
 
-  const getProjects = async (req, res, next) => {
-    try {
-      const { limit, skip, page } = req.pagination;
-      let data;
-      // let cache_key;
-      // const admin = isAdmin(req);
-      // if (admin) {
-      //   cache_key = `projects_page_${page}_limit_${limit}`;
-      // } else {
-      //   cache_key = `${req.user._id}_projects_page_${page}_limit_${limit}`;
-      // }
-      // let cached_project_list = await redisGetKey(cache_key);
-      // if (cached_project_list) {
-      //   data = JSON.parse(cached_project_list);
-      // } else {
-      const result = await ProjectModelFilter(req, {}, skip, limit);
-      const { total_project, project_list } = result;
-      data = {
-        projects: project_list,
-        total: total_project,
-        page: page,
-        limit: limit,
-        totalPages: Math.ceil(total_project / limit),
-      };
-      // redisSetKey(cache_key, data);
-      // }
-      res.status(200).json({
-        message: "Projets récupérées",
-        data: data,
-      });
-    } catch (error) {
-      next(error);
-    }
+  // "Is my script working?", answered from what the project has received.
+  const getInstallation = async (req, res) => {
+    assertValid(req);
+    const { project_id: projectId } = matchedData(req);
+
+    const data = await installationService.status(projectId);
+    return ApiResponse.ok(res, { messageKey: "project.installationFetched", data });
   };
 
-  const updateProject = async (req, res, next) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(422).json({ errors: errors.array() });
-      }
-      const data = matchedData(req);
-      let project = await Project.findByIdAndUpdate(
-        data.project_id,
-        {
-          $set: {
-            ...data,
-          },
-        },
-        {
-          new: true,
-        }
-      );
+  // The same question asked of the website itself, on demand: the server loads
+  // the page and looks for the snippet.
+  const testInstallation = async (req, res) => {
+    assertValid(req);
+    const { project_id: projectId } = matchedData(req);
 
-      res.status(200).json({
-        message: "Projet modifié",
-        data: {
-          project: {
-            _id: project._id,
-            libelle: project.libelle,
-            link: project.link,
-            active: project.active,
-            createdAt: project.createdAt,
-            tracking_code: project.tracking_code,
-            track: project.track,
-            creator: String(project.created_by) === String(req.user._id),
-          },
-        },
-      });
-    } catch (error) {
-      next(error);
-    }
+    const data = await installationService.testPage(projectId);
+    return ApiResponse.ok(res, { messageKey: "project.installationTested", data });
   };
 
-  const filterProjects = async (req, res, next) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(422).json({ errors: errors.array() });
-      }
-      const data = matchedData(req);
+  // Switching one website off, or back on, from the project sheet.
+  const updateInstalledHost = async (req, res) => {
+    assertValid(req);
+    const { project_id: projectId, host, blocked } = matchedData(req);
 
-      const { limit, skip, page } = req.pagination;
-      let search_libelle, search_link;
-      let query = {};
-
-      search_libelle = { libelle: { $regex: data.search, $options: "i" } };
-      search_link = { link: { $regex: data.search, $options: "i" } };
-      query.$or = [search_libelle, search_link];
-
-      let start_date, end_date;
-      if (data.start_date && data.end_date) {
-        start_date = moment(data.start_date).toDate();
-        end_date = moment(data.end_date).toDate();
-        query.createdAt = { $gte: start_date, $lte: end_date };
-      } else if (data.start_date && !data.end_date) {
-        start_date = moment(data.start_date).toDate();
-        query.createdAt = { $gte: start_date };
-      } else if (!data.start_date && data.end_date) {
-        end_date = moment(data.end_date).toDate();
-        query.createdAt = { $lte: end_date };
-      }
-
-      const result = await ProjectModelFilter(req, query, skip, limit);
-      const { total_project, project_list } = result;
-
-      res.status(200).json({
-        message: "Projets filtrés",
-        data: {
-          projects: project_list,
-          total: total_project,
-          page: page,
-          limit: limit,
-          totalPages: Math.ceil(total_project / limit),
-        },
-      });
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  const inviteUser = async (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(422).json({ errors: errors.array() });
-    }
-    const data = matchedData(req);
-
-    let user = await User.findOne({ email: data.email });
-
-    let exist = await UserProject.exists({
-      project_id: data.project_id,
-      user_id: user._id,
+    const data = await installationService.setHostBlocked({
+      user: req.user,
+      projectId,
+      host,
+      blocked,
     });
-    if (exist) {
-      res.status(403).json({
-        message: "Utilisateur déjà associé au projet",
-      });
-    }
-    data.user_id = user._id;
-    await UserProject.insertOne(data);
-
-    await inviteUserNotification(data.project_id, user);
-
-    res.status(200).json({
-      message: "Utilisateur ajouté au projet",
-    });
+    return ApiResponse.ok(res, { messageKey: "project.hostUpdated", data });
   };
 
-  const quitProject = async (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(422).json({ errors: errors.array() });
-    }
-    const data = matchedData(req);
-
-    let quitProject = await UserProject.deleteMany({
-      project_id: data.project_id,
-      user_id: data.user_id ? data.user_id : req.user._id,
-    });
-    if (quitProject.deletedCount === 0) {
-      res.status(403).json({
-        message: "Utilisateur non associé au projet",
-      });
-    }
-
-    await quitProjectNotification(data.project_id, data.user_id);
-
-    res.status(200).json({
-      message: "Utilisateur retiré du projet",
-    });
+  const getProjects = async (req, res) => {
+    assertValid(req);
+    const data = await service.list({ user: req.user, pagination: req.pagination });
+    return ApiResponse.ok(res, { messageKey: "project.listed", data });
   };
 
-  const projectMember = async (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(422).json({ errors: errors.array() });
-    }
-    const data = matchedData(req);
-    let project = await projectData(data.project_id);
-
-    let projects_users = await user_in_projects(
-      data.project_id,
-      project.created_by
-    );
-
-    res.status(200).json({
-      message: "Get successfully",
-      data: projects_users,
+  const filterProjects = async (req, res) => {
+    assertValid(req);
+    const data = await service.list({
+      user: req.user,
+      filters: matchedData(req, { locations: ["body"] }),
+      pagination: req.pagination,
     });
+    return ApiResponse.ok(res, { messageKey: "project.listed", data });
   };
 
-  const projectAllMembers = async (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(422).json({ errors: errors.array() });
-    }
-    const data = matchedData(req);
+  const updateProject = async (req, res) => {
+    assertValid(req);
+    const { project_id: projectId, ...changes } = matchedData(req);
 
-    let members = await user_in_projects(data.project_id);
-    let member_is_in_project = false;
-  
-      let user_id = req.user._id
-      console.log("user_id", user_id);
-      let find = members.find((e) => e._id.toString() === user_id.toString());
-      console.log("find", find);
+    const data = await service.update({ user: req.user, projectId, changes });
+    return ApiResponse.ok(res, { messageKey: "project.updated", data });
+  };
 
-      find && find !== undefined
-        ? (member_is_in_project = true)
-        : (member_is_in_project = false);
-    
-    res.status(200).json({
-      message: "Get successfully",
-      data: {
-        members,
-        member_is_in_project,
-      },
-    });
+  const inviteUser = async (req, res) => {
+    assertValid(req);
+    const { project_id: projectId, email } = matchedData(req);
+
+    await service.addMember({ user: req.user, projectId, email });
+    return ApiResponse.ok(res, { messageKey: "project.memberAdded" });
+  };
+
+  const quitProject = async (req, res) => {
+    assertValid(req);
+    const { project_id: projectId, user_id: userId } = matchedData(req);
+
+    await service.removeMember({ user: req.user, projectId, userId });
+    return ApiResponse.ok(res, { messageKey: "project.memberRemoved" });
+  };
+
+  const projectMember = async (req, res) => {
+    assertValid(req);
+    const { project_id: projectId } = matchedData(req);
+
+    const data = await service.guests(projectId);
+    return ApiResponse.ok(res, { messageKey: "project.membersListed", data });
+  };
+
+  const projectAllMembers = async (req, res) => {
+    assertValid(req);
+    const { project_id: projectId } = matchedData(req);
+
+    const data = await service.members(projectId);
+    return ApiResponse.ok(res, { messageKey: "project.membersListed", data });
+  };
+
+  const projectMembership = async (req, res) => {
+    assertValid(req);
+    const { project_id: projectId } = matchedData(req);
+
+    const data = await service.membership({ user: req.user, projectId });
+    return ApiResponse.ok(res, { messageKey: "project.membershipFetched", data });
   };
 
   return {
     createProject,
     getProjects,
     showProject,
+    getInstallation,
+    testInstallation,
+    updateInstalledHost,
     filterProjects,
     updateProject,
     inviteUser,
     quitProject,
     projectMember,
     projectAllMembers,
+    projectMembership,
   };
 }

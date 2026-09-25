@@ -1,13 +1,18 @@
 import express from "express";
-const eventRouter = express.Router();
 import eventController from "../../controllers/event/eventController.js";
-import { validateStoreEvent, editEventType, validateEventFilter } from "../../validator/event/eventValidator.js";
+import { validateStoreEvent, validateEventFilter } from "../../validator/event/eventValidator.js";
 import isauthentificate from "../../middleware/isAuthentificate.js";
 import { blacklist } from "../../middleware/blacklist.js";
 import { validateLimitQuery, validatePaginationQuery } from "../../validator/generalValidator.js";
 import paginateData from "../../helpers/pagination.js";
+import { requireTrackedProject } from "../../middleware/trackedProject.js";
+import { handle } from "../../middleware/errorHandler.js";
+
+const eventRouter = express.Router();
 const { createEvents, getIssues, filterIssues, getEventTypes } = eventController();
-eventRouter.post("/store", editEventType, validateStoreEvent, createEvents);
+
+// Ingestion: active project, registered origin and capped volume.
+eventRouter.post("/store", requireTrackedProject, validateStoreEvent, handle(createEvents));
 
 eventRouter.get(
   "/get",
@@ -15,7 +20,7 @@ eventRouter.get(
   blacklist,
   validateLimitQuery,
   paginateData,
-  getIssues
+  handle(getIssues)
 );
 
 eventRouter.put(
@@ -25,14 +30,9 @@ eventRouter.put(
   validatePaginationQuery,
   paginateData,
   validateEventFilter,
-  filterIssues
+  handle(filterIssues)
 );
 
-eventRouter.get(
-  "/get-type",
-  isauthentificate,
-  blacklist,
-  getEventTypes
-)
+eventRouter.get("/get-type", isauthentificate, blacklist, handle(getEventTypes));
 
 export default eventRouter;

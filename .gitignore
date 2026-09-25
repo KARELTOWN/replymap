@@ -1,4 +1,13 @@
 node_modules/
 .git
-.env
 package-lock.json
+
+# Secrets : seule la version chiffrée de secrets/ est versionnée.
+.env
+.env.*
+!.env.example
+.secrets.keys.json
+
+# Données collectées : enregistrements de session et fichiers temporaires
+# d'envoi n'ont rien à faire dans le dépôt.
+storage/

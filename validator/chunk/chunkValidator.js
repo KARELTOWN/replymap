@@ -1,41 +1,16 @@
 import { body } from "express-validator";
-import Session from "../../models/Session.js";
-import Project from "../../models/Project.js";
-import validator from "validator";
-import { checkProjectExist } from "../../services/project/projectService.js";
-import { checkSessionExist } from "../../services/session/sessionService.js";
+
+// Shape of a chunk upload. That every session belongs to the project is
+// checked by the service, in one query for the whole batch: the previous
+// version queried the database once per chunk, inside the validator.
+
+const MAX_BATCH = 200;
+
 export const validateStoreChunk = [
-  body("project_id")
-    .notEmpty()
-    .withMessage("Le libelle est obligatoire")
-    .custom(async (value) => {
-      if (value) {
-        let project_exist = await checkProjectExist(value);
-        if (!project_exist) {
-          throw new Error("Le projet n'existe pas");
-        }
-        return true;
-      }
-    }),
-  body("events").custom(async (value) => {
-    if (Array.isArray(value) && value.length > 0) {
-      for (const event of value) {
-        const session_exist = await checkSessionExist(event.session_id);
-        if (!session_exist) {
-          throw new Error(
-            `La session avec l'ID ${event.session_id} n'existe pas.`
-          );
-        }
-        if (!event.uniqueId || !validator.isUUID(event.uniqueId)) {
-          throw new Error("Identifiant d'événement invalide.");
-        }
-        else if (event.events.length == 0 || !event.timestamp) {
-          throw new Error("Chunk invalide");
-        }
-      }
-      return true;
-    }
-    throw new Error("Invalide events");
-  }),
-  // body("timestamp").notEmpty().withMessage("Timestamp obligatoire"),
+  body("project_id").isMongoId().withMessage("validation.invalidProjectId"),
+  body("events").isArray({ min: 1, max: MAX_BATCH }).withMessage("validation.eventsRequired"),
+  body("events.*.session_id").isMongoId().withMessage("validation.invalidSessionId"),
+  body("events.*.uniqueId").isUUID().withMessage("validation.invalidEventId"),
+  body("events.*.timestamp").notEmpty().withMessage("validation.timestampRequired"),
+  body("events.*.events").isArray({ min: 1 }).withMessage("validation.eventsRequired"),
 ];
