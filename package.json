@@ -28,5 +28,8 @@
     "vite": "^7.0.6",
     "web-vitals": "^5.1.0"
   },
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "prettier": "^3.9.9"
+  }
 }

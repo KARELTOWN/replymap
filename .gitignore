@@ -1,3 +1,11 @@
 node_modules/
 .git
 package-lock.json
+# Secrets : aucun fichier d'environnement ne part dans le depot.
+# Seul .env.example, qui ne contient que des noms de variables, est versionne.
+.env
+.env.*
+!.env.example
+.secrets.keys.json
+*.pem
+*.key
