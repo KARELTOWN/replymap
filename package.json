@@ -53,5 +53,8 @@
     "user-agent": "^1.0.4",
     "uuid": "^11.1.0",
     "validator": "^13.15.15"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.9"
   }
 }
