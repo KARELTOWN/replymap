@@ -76,7 +76,7 @@ Nothing of this is left to goodwill: `.githooks/` holds the hooks that run it.
 | Moment | What runs                                                                                                                      |
 | ------ | ------------------------------------------------------------------------------------------------------------------------------ |
 | commit | no `.env` or secret staged · prettier on what is committed · the checker on the whole folder · types when a typed file changes |
-| push   | the unit tests of all four folders                                                                                             |
+| push   | the unit tests of this folder (`node scripts/test-all.js` runs the four)                                                       |
 
 Installed once per clone, in each of the four folders:
 

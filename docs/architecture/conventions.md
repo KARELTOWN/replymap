@@ -102,10 +102,18 @@ git config core.hooksPath .githooks
    `tsconfig`; a folder without TypeScript has its staged JavaScript parsed
    instead.
 
-**Before a push**, the unit tests of **all four folders** run
-(`node scripts/test-all.js`): the widget speaks to the API and the dashboard
-reads its answers, so pushing one folder can break another. A folder with no
-tests is reported, never counted as a failure.
+**Before a push**, the unit tests of **this folder** run. Running the four
+folders here was the first version, and it meant pushing the API waited on the
+dashboard's test runner — noise for a change that could not touch it.
+
+The command that runs everything still exists, and is the one to call before
+opening a merge request:
+
+```bash
+node scripts/test-all.js      # from back/, the four folders at once
+```
+
+A folder with no tests is reported, never counted as a failure.
 
 `--no-verify` exists and is sometimes the right call; it is never the habit.
 
