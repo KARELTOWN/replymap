@@ -1,26 +1,16 @@
 import './assets/main.css'
-// Import Swiper styles
-import 'swiper/css'
-import 'swiper/css/navigation'
-import 'swiper/css/pagination'
-import 'jsvectormap/dist/jsvectormap.css'
-import 'flatpickr/dist/flatpickr.css'
-import 'rrweb-player/dist/style.css';
-import { createPinia } from 'pinia'
-
-import flatPickr from 'vue-flatpickr-component'
 
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
-import VueApexCharts from 'vue3-apexcharts'
 
+// This application only serves the sign-in screen. It still loaded the
+// stylesheets and plugins inherited from the dashboard: charts, carousel, date
+// picker, vector maps and the rrweb session player, none of them used here.
 const app = createApp(App)
-const pinia = createPinia()
-app.use(router)
-app.use(pinia)
-app.use(VueApexCharts)
 
-app.component('flat-pickr', flatPickr)
+app.use(router)
+app.use(createPinia())
 
 app.mount('#app')

@@ -6,7 +6,13 @@
           <div class="w-full max-w-md pt-10 mx-auto">
           </div>
           <div class="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
-            <div>
+            <div v-if="checkingSession" class="flex flex-col items-center gap-3 py-10">
+              <svg class="animate-spin" width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="9" stroke="#465FFF" stroke-width="3" stroke-linecap="round" stroke-dasharray="40" />
+              </svg>
+              <p class="text-sm text-gray-500 dark:text-gray-400">Vérification de la session...</p>
+            </div>
+            <div v-else>
               <div class="mb-5 sm:mb-8">
                 <h1 class="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
                   Connexion
@@ -14,6 +20,15 @@
                 <p class="text-sm text-gray-500 dark:text-gray-400">
                   Entrez votre email et mot de passe pour vous connecter!
                 </p>
+                <p v-if="destinationHost" class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                  Vous allez ouvrir une session sur
+                  <span class="font-semibold">{{ destinationHost }}</span>
+                </p>
+              </div>
+
+              <div v-if="relayRefusal"
+                class="mb-5 rounded-lg border border-error-500 bg-error-50 px-4 py-3 text-sm text-error-600">
+                {{ relayMessage }}
               </div>
               <div>
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
@@ -171,7 +186,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import CommonGridShape from '@/components/common/CommonGridShape.vue'
 import FullScreenLayout from '@/components/layout/FullScreenLayout.vue'
 import { fetchPost } from '@/composables/request'
@@ -181,33 +196,111 @@ import 'vue-toast-notification/dist/theme-sugar.css';
 import { handleCatchError, handleLoginError } from '@/utils/handleAppError'
 import { errorNotify, successNotify } from '@/utils/notification'
 import { useRoute, useRouter } from 'vue-router'
-import setCookie from '@/composables/cookie'
+import { setStoredSession, renewFromCookie } from '@/composables/session'
+import { isRelayAllowed, relayRefusalMessage } from '@/composables/verifyOrigin'
+import type { RelayRefusal } from '@/composables/verifyOrigin'
+import { computed } from 'vue'
 //validator YUP
 const schemaLogin = validateLogin()
 const router = useRouter()
-// ✅ Erreurs de validation
-const errors = ref({})
-const errorsBack = ref([])
+// Validation errors
+const errors = ref<{ email?: string; password?: string }>({})
 
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
-// const keepLoggedIn = ref(false)
+// A loader is shown during the silent session check, so the sign-in form
+// does not flash each time the popup opens for an already signed-in user.
+const checkingSession = ref(true)
+// Reason the relay was refused, shown in plain text rather than as a mere
+// notification: the sign-in window has nothing else left to offer.
+const relayRefusal = ref<RelayRefusal | null>(null)
+const relayMessage = computed(() => relayRefusalMessage(relayRefusal.value ?? undefined))
 const togglePasswordVisibility = () => {
   showPassword.value = !showPassword.value
 }
 
 const route = useRoute()
 
+const projectId = () =>
+  typeof route.query.project_id === 'string' ? route.query.project_id : undefined
+const fromUrl = () => (typeof route.query.from === 'string' ? route.query.from : undefined)
+
+// Domain that will receive the session, shown to the user before they type
+// their credentials.
+const destinationHost = computed(() => {
+  const from = fromUrl()
+  if (!from) return null
+  try {
+    return new URL(from).host
+  } catch {
+    return null
+  }
+})
+
+// What travels to the customer's site is never this window's own token: the
+// API mints a session for the widget, tied to that project and refused
+// everywhere else. It lasts long enough not to ask the visitor again every
+// quarter of an hour, since the widget cannot reach our session cookie.
+const widgetToken = async (project: string, token: string): Promise<string | null> => {
+  const result = await fetchPost('auth/widget-token', { project_id: project })
+  if (!result.ok) return null
+  const body = await result.json().catch(() => ({}))
+  return body?.data?.token ?? null
+}
+
+const relayToken = async (token: string): Promise<boolean> => {
+  const from = fromUrl()
+  const project = projectId()
+  if (!from || !window.opener) return false
+
+  const decision = await isRelayAllowed(project, from, token)
+  if (!decision.allowed) {
+    relayRefusal.value = decision.reason ?? 'invalid'
+    return false
+  }
+
+  const relayed = project ? await widgetToken(project, token) : null
+  if (!relayed) {
+    relayRefusal.value = 'invalid'
+    return false
+  }
+
+  window.opener.postMessage({ token: relayed }, new URL(from).origin)
+  window.close()
+  return true
+}
+
+// Silent check: when a session is open (signed in here or in the dashboard,
+// which share the refresh cookie), a fresh token is relayed directly without
+// ever showing the sign-in form.
+onMounted(async () => {
+  try {
+    const freshToken = await renewFromCookie()
+    if (freshToken) {
+      const relayed = await relayToken(freshToken)
+      if (relayed) return
+    }
+  } catch (err) {
+    console.error('Silent session check failed', err)
+  }
+  checkingSession.value = false
+})
+
 const handleSubmit = async () => {
   try {
     errors.value = {}
+    relayRefusal.value = null
     const data = await schemaLogin.validate({
       email: email.value,
       password: password.value,
     }, { abortEarly: false })
     const result = await fetchPost("auth/login", data)
-    const response = await handleLoginError(result)
+    const response = await handleLoginError(result) as {
+      status?: boolean
+      errors?: { email?: string; password?: string }
+      data?: { token: string }
+    }
     if (response.status) {
       if (response.errors) {
         errors.value = response.errors
@@ -216,9 +309,14 @@ const handleSubmit = async () => {
     }
     else {
       if (response?.data) {
+        // The refresh token stays in its HttpOnly cookie.
+        const { token } = response.data
+        if (token) setStoredSession({ token })
         successNotify("Connexion réussie")
-        window.opener.postMessage({ token: response.data?.token }, route.query.from)
-        window.close()
+        const relayed = await relayToken(token)
+        if (!relayed && relayRefusal.value) {
+          errorNotify(relayMessage.value)
+        }
       }
 
     }
@@ -227,7 +325,7 @@ const handleSubmit = async () => {
   catch (err) {
     const result = handleCatchError(err)
     if (result) {
-      errors.value = result
+      errors.value = Array.isArray(result) ? {} : result
     }
   }
 

@@ -12,7 +12,7 @@ const router = createRouter({
       name: 'Signin',
       component: () => import('../views/Auth/Signin.vue'),
       meta: {
-        title: 'Signin',
+        title: 'Connexion',
       },
     },
   ],
@@ -21,6 +21,6 @@ const router = createRouter({
 export default router
 
 router.beforeEach((to, from, next) => {
-  document.title = `${to.meta.title} | Replay MAP`
+  document.title = `${to.meta.title} | BugReveal`
   return next()
 })
