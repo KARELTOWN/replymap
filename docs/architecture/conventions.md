@@ -76,9 +76,54 @@ instance.
 
 - one intent per commit;
 - the message says what changes and why, not which files moved;
-- `npm run lint:conventions`, `npm test` and `npm run type-check` pass before
-  a pull request;
 - a change never increases the violation count of the checker.
+
+### Hooks
+
+The rules above are not left to goodwill. Each of the four folders carries
+`.githooks/`, installed once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+**Before a commit**, in the folder being committed:
+
+1. **no secret leaves the machine** — any staged `.env*` (except
+   `.env.example`), `.secrets*`, key or certificate refuses the commit. A
+   `.gitignore` rule does nothing for a file already tracked; this does.
+2. **prettier formats what is about to be committed**, then re-stages it. A
+   file that also carries unstaged changes is left alone rather than having
+   held-back work quietly staged.
+3. **the checker runs on the whole folder** — no file over 450 lines, no
+   comment in French, no controller importing a repository or a model, no
+   service importing a model.
+4. **the types are checked** when the commit touches a `.ts`, a `.vue` or a
+   `tsconfig`; a folder without TypeScript has its staged JavaScript parsed
+   instead.
+
+**Before a push**, the unit tests of **all four folders** run
+(`node scripts/test-all.js`): the widget speaks to the API and the dashboard
+reads its answers, so pushing one folder can break another. A folder with no
+tests is reported, never counted as a failure.
+
+`--no-verify` exists and is sometimes the right call; it is never the habit.
+
+### Branches
+
+| Branch | What it deploys |
+| ------ | --------------- |
+| `develop` | the dev environment |
+| `staging` | the staging environment |
+| `prod` | production |
+
+They are deployment branches: one merges into them, one does not work in them.
+
+### Never committed
+
+`.env` and every variant of it, `.secrets.keys.json`, private keys and
+certificates. Only `.env.example` — names of variables, no values — and the
+encrypted `secrets/*.enc` are versioned.
 
 ## Dependencies
 

@@ -29,15 +29,23 @@ const ACCENTED = /[éèêëàâçùûôîïœÉÈÊÀÇÔÎÛ]/;
 const FRENCH_WORDS =
   /\b(le|la|les|un|une|des|du|de|au|aux|et|ou|est|sont|pas|pour|dans|sur|avec|sans|que|qui|quoi|donc|mais|car|ce|cette|ces|son|sa|ses|leur|nous|vous|ils|elles|par|plus|moins|tout|tous|toute|toutes|être|avoir|faire|quand|alors|ainsi|sinon|chaque|aucun|aucune|déjà|encore|jamais|toujours)\b/i;
 
+// Build output and vendored code: not ours, and not what the rules are about.
 const IGNORED_DIRECTORIES = new Set([
   "node_modules",
   "dist",
+  "dist-electron",
+  "build",
+  "release",
   ".git",
+  ".output",
+  ".nuxt",
   "storage",
   "secrets",
-  "public",
   "coverage",
 ]);
+
+// A bundled or minified file is build output wherever it sits.
+const isBuildArtefact = (filePath) => /\.(min|bundle)\.(js|css)$/.test(filePath);
 
 const SOURCE_EXTENSIONS = new Set([".js", ".mjs", ".ts", ".vue"]);
 
@@ -53,7 +61,10 @@ const collectFiles = (root) => {
     for (const entry of entries) {
       if (entry.isDirectory()) {
         if (!IGNORED_DIRECTORIES.has(entry.name)) walk(path.join(directory, entry.name));
-      } else if (SOURCE_EXTENSIONS.has(path.extname(entry.name))) {
+      } else if (
+        SOURCE_EXTENSIONS.has(path.extname(entry.name)) &&
+        !isBuildArtefact(entry.name)
+      ) {
         files.push(path.join(directory, entry.name));
       }
     }
@@ -86,6 +97,29 @@ const commentLines = (content) => {
     // Trailing comment on a line of code.
     const inline = line.match(/\s\/\/\s(.+)$/);
     if (inline) found.push({ number: index + 1, text: inline[1].trim() });
+  });
+
+  return found.concat(htmlCommentLines(content));
+};
+
+// The comments of a Vue template. They were the blind spot of the checker:
+// only JavaScript comments were read, so `<!-- ... -->` could say anything in
+// any language and never be seen.
+const htmlCommentLines = (content) => {
+  const found = [];
+  let inComment = false;
+
+  content.split(/\r?\n/).forEach((line, index) => {
+    const trimmed = line.trim();
+    if (!inComment && !trimmed.includes("<!--")) return;
+
+    const text = trimmed.replace(/<!--/, "").replace(/-->/, "").trim();
+    // Commented-out markup is dead code, not prose: the language rule has
+    // nothing to say about it, and flagging it only trains people to ignore
+    // the checker.
+    const isMarkup = /<[a-zA-Z/]/.test(text) || /^[:@v-]/.test(text);
+    if (text && !isMarkup) found.push({ number: index + 1, text });
+    inComment = trimmed.includes("<!--") ? !trimmed.includes("-->") : !trimmed.includes("-->");
   });
 
   return found;

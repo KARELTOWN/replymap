@@ -11,16 +11,18 @@ disagrees with it, the code is wrong and the gap is tracked in
 
 ## The four repositories
 
-| Repository | Role                                                    | Rules it follows |
-| ---------- | ------------------------------------------------------- | ---------------- |
+| Repository | Role                                                    | Its handbook |
+| ---------- | ------------------------------------------------------- | ------------ |
 | `back`     | REST API, queues, integrations                           | [backend.md](./backend.md) |
-| `record`   | Tracking and feedback widget embedded on customer sites  | [backend.md](./backend.md) |
+| `record`   | Tracking and feedback widget embedded on customer sites  | [widget.md](./widget.md) |
 | `front`    | Agency dashboard                                         | [frontend.md](./frontend.md) |
-| `sso`      | Sign-in window only                                      | [frontend.md](./frontend.md) |
+| `sso`      | Sign-in window only                                      | [sso.md](./sso.md) |
 
-`record` follows the backend rules. It is browser code, but it is layered code:
-a capture module that decides *what* to send has the same shape as a service, a
-module that talks to the API has the same shape as a repository.
+Each folder has its own page, and each one builds on a shared base: `record`
+follows the backend's layering (a module that decides *what* to send has the
+shape of a service, a module that talks to the API has the shape of a
+repository), `sso` follows the dashboard's. `conventions.md` applies to all
+four.
 
 ## Principles
 
@@ -45,6 +47,8 @@ service. Messages live in the locale files.
 
 - [backend.md](./backend.md) — layers, responsibilities, response contract
 - [frontend.md](./frontend.md) — dashboard structure, state, components
+- [widget.md](./widget.md) — the embedded widget: boot, collections, privacy
+- [sso.md](./sso.md) — the sign-in window and its token relay
 - [conventions.md](./conventions.md) — naming, comments, file size, tests, git
 - [error-codes.md](./error-codes.md) — the error code catalogue
 - [notifications.md](./notifications.md) — every email, its trigger and its recipients
@@ -56,10 +60,25 @@ Rules that a script can check are checked by a script. The rest is what code
 review is for.
 
 ```bash
-npm run lint:conventions     # file size, comment language, layering
-npm test                     # behaviour
-npm run secrets -- audit     # no secret tracked by git
+npm run lint:conventions           # this folder: file size, comment language, layering
+node scripts/check-conventions.js ../record ../front ../sso
+npm test                           # behaviour of this folder
+node scripts/test-all.js           # behaviour of all four folders
+npm run secrets -- audit           # no secret tracked by git
 ```
 
-The checker is the source of truth for the remaining debt. Run it before
-opening a pull request; a change must never increase its count.
+Nothing of this is left to goodwill: `.githooks/` holds the hooks that run it.
+
+| Moment | What runs |
+| ------ | --------- |
+| commit | no `.env` or secret staged · prettier on what is committed · the checker on the whole folder · types when a typed file changes |
+| push   | the unit tests of all four folders |
+
+Installed once per clone, in each of the four folders:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+The checker is the source of truth for the remaining debt. A change must never
+increase its count.
