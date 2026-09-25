@@ -1,13 +1,13 @@
 #!/bin/sh
 #
-# Pre-push: the unit tests of every folder of BugReveal must pass.
+# Pre-push: the unit tests of this repository must pass.
 #
-# The four folders are four repositories: pushing one of them can break another
-# (the widget speaks to the API, the dashboard reads its answers), so the whole
-# set is run rather than the repository being pushed.
+# This folder only. Running the four folders here was the first version, and it
+# meant pushing the API waited on the dashboard's test runner — noise for a
+# change that could not touch it. The command that runs everything still exists
+# and is the one to call before opening a merge request:
 #
-# When the sibling folders are not there — a lone clone — only this repository's
-# own tests run.
+#     node scripts/test-all.js
 #
 # Installed once per clone:
 #     git config core.hooksPath .githooks
@@ -18,29 +18,11 @@ cd "$(git rev-parse --show-toplevel)"
 
 say() { printf '%s\n' "$1" >&2; }
 
-runner=""
-if [ -f scripts/test-all.js ]; then
-  runner="scripts/test-all.js"
-elif [ -f ../back/scripts/test-all.js ]; then
-  runner="../back/scripts/test-all.js"
-fi
-
-if [ -n "$runner" ]; then
-  say "· tests de tous les dossiers…"
-  if ! node "$runner"; then
-    say ""
-    say "✖ Push annulé : des tests échouent."
-    say "  Relancez-les avec :  node $runner"
-    say "  Pour passer outre :  git push --no-verify"
-    exit 1
-  fi
-  exit 0
-fi
-
-# Fallback: this repository alone.
 [ -f package.json ] || exit 0
 
 test_script=$(node -p "JSON.parse(require('fs').readFileSync('package.json','utf8')).scripts?.test ?? ''" 2>/dev/null || echo "")
+
+# "" or what `npm init` leaves behind: there is nothing to run.
 case "$test_script" in
   ""|*"no test specified"*)
     say "· aucun test dans ce dépôt, push autorisé."
