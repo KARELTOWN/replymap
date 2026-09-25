@@ -82,7 +82,7 @@
                       <label for="email" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
                         Email<span class="text-error-500">*</span>
                       </label>
-                      <input v-model="email" type="email" id="email" name="email" placeholder="info@gmail.com"
+                      <input v-model="email" type="email" id="email" name="email" placeholder="vous@exemple.com"
                         class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800" />
                       <p v-if="errors.email" style="color: red">{{ errors.email }}</p>
                     </div>
@@ -93,7 +93,7 @@
                       </label>
                       <div class="relative">
                         <input v-model="password" :type="showPassword ? 'text' : 'password'" id="password"
-                          placeholder="Enter your password"
+                          placeholder="Votre mot de passe"
                           class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800" />
                         <span @click="togglePasswordVisibility"
                           class="absolute z-30 text-gray-500 -translate-y-1/2 cursor-pointer right-4 top-1/2 dark:text-gray-400">
@@ -182,7 +182,7 @@
 import { ref } from 'vue'
 import CommonGridShape from '@/components/common/CommonGridShape.vue'
 import FullScreenLayout from '@/components/layout/FullScreenLayout.vue'
-import { fetchPost } from '@/composables/request'
+import { fetchPost, setSession } from '@/composables/request'
 import authValidator from '@/validator/auth'
 const { validateLogin } = authValidator()
 import 'vue-toast-notification/dist/theme-sugar.css';
@@ -193,7 +193,7 @@ import setCookie from '@/composables/cookie'
 //validator YUP
 const schemaLogin = validateLogin()
 const router = useRouter()
-// ✅ Erreurs de validation
+// Validation errors
 const errors = ref<{ email?: string; password?: string }>({})
 const errorsBack = ref([])
 
@@ -223,7 +223,9 @@ const handleSubmit = async () => {
     else {
       if (response?.data) {
         successNotify("Connexion réussie")
-        localStorage.setItem('bugreveal_app_token', JSON.stringify(response.data))
+        // The refresh token stays in its HttpOnly cookie: only the access token
+        // and the account reference are kept here.
+        setSession({ token: response.data.token, data: response.data.data })
         router.push({ path: "/" })
       }
 

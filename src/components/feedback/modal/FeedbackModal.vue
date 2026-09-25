@@ -1,103 +1,127 @@
 <template>
     <Modal v-if="props.open === true">
         <template #body>
+            <!-- A sheet on a phone, a card from `lg`. The capture is the subject,
+                 so it gets the room; what can be read or edited sits beside it,
+                 under a header that carries the context once, not twice. -->
             <div
-                class="no-scrollbar relative w-full max-w-full overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-5 mx-5">
-                <!-- Overlay -->
-                <!-- Modal -->
-                <div class="bg-white rounded-lg shadow-xl w-full max-w-6xl h-[80vh] overflow-hidden flex z-50">
+                class="relative mx-0 flex h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl dark:bg-gray-900 sm:mx-4 sm:h-[88vh] sm:rounded-2xl lg:h-[85vh]">
 
-                    <!-- Bouton de fermeture -->
-                    <button @click="$emit('close')" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+                <header
+                    class="flex items-start gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-800 sm:px-6 sm:py-4">
+                    <div class="min-w-0 flex-1">
+                        <h2 class="truncate text-base font-semibold text-gray-800 dark:text-white/90 sm:text-lg"
+                            :title="feedbackSelect_data?.title">
+                            {{ feedbackSelect_data?.title || 'Feedback' }}
+                        </h2>
 
-                    <!-- Partie gauche : contenu principal -->
-                    <div class="w-2/3 p-6 overflow-y-auto border-r">
-                        <div class="flex justify-between cursor-pointer">
-                            <h2 class="text-2xl font-bold text-gray-800 mb-4">{{ feedbackSelect_data?.title }} <Badge
-                                    color="primary">Crée le {{ formatTimestampToDate(feedbackSelect_data?.createdAt) }}
-                                </Badge>
-                            </h2>
-                            <h3 v-if="feedbackSelect_data?.session_id">Session : <Badge color="primary"
-                                    @click="seeSession(feedbackSelect_data?.session_id?._id)">
-                                    {{ feedbackSelect_data?.session_id?.uniqueId }} </Badge>
-                            </h3>
+                        <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-gray-500 dark:text-gray-400">
+                            <span v-if="feedbackSelect_data?.type?.libelle"
+                                class="rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-700 dark:bg-white/[0.06] dark:text-gray-300">
+                                {{ feedbackSelect_data.type.libelle }}
+                            </span>
+                            <span v-if="feedbackSelect_data?.status?.libelle"
+                                class="rounded-full bg-brand-50 px-2 py-0.5 font-medium text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
+                                {{ feedbackSelect_data.status.libelle }}
+                            </span>
+                            <span v-if="author.name" :title="author.email">
+                                {{ author.name }}
+                                <span v-if="author.guest"
+                                    class="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-[11px] text-gray-500 dark:bg-white/[0.06] dark:text-gray-400">
+                                    invité
+                                </span>
+                            </span>
+                            <span>{{ formatTimestampToDate(feedbackSelect_data?.createdAt) }}</span>
+                            <button v-if="feedbackSelect_data?.session_id" type="button"
+                                class="font-medium text-brand-500 hover:underline"
+                                @click="seeSession(feedbackSelect_data?.session_id?._id)">
+                                Voir la session
+                            </button>
                         </div>
-                        <div v-if="getFileExtension(feedbackSelect_data?.file?.type) === 'image'">
-                            <img :src="feedbackSelect_data?.file?.key" alt="Image du feedback"
-                                class="w-full h-64 object-contain rounded-md mb-4" />
-                        </div>
-                        <div v-else>
-                            <video :src="feedbackSelect_data?.file?.key" autoplay="true" controls="true"></video>
-
-                        </div>
-
                     </div>
 
-                    <!-- Partie droite : onglets -->
-                    <div class="w-1/3 flex flex-col">
-                        <!-- Tabs -->
-                        <div class="flex border-b">
-                            <button @click="activeTab = 'details'" :class="tabClass('details')">Détails</button>
-                            <!-- <button @click="activeTab = 'comments'" :class="tabClass('comments')">Commentaires</button> -->
-                            <button @click="activeTab = 'history'" :class="tabClass('history')">Historique</button>
-                            <button @click="activeTab = 'fichiers'" :class="tabClass('fichiers')">Fichiers</button>
+                    <button type="button" aria-label="Fermer" @click="$emit('close')"
+                        class="shrink-0 rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 dark:hover:bg-white/[0.06]">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8"
+                                stroke-linecap="round" />
+                        </svg>
+                    </button>
+                </header>
+
+                <div class="flex min-h-0 flex-1 flex-col lg:flex-row">
+                    <!-- Capture -->
+                    <div
+                        class="flex min-h-[38vh] shrink-0 items-center justify-center border-b border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-950 lg:min-h-0 lg:flex-1 lg:border-b-0 lg:border-r lg:p-6">
+                        <p v-if="!feedbackSelect_data?.file?.key"
+                            class="rounded-lg border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                            Aucune capture n'est jointe à ce feedback.
+                        </p>
+
+                        <button v-else-if="captureKind === 'image'" type="button" title="Agrandir la capture"
+                            class="group relative flex h-full w-full items-center justify-center"
+                            @click="showCapture = true">
+                            <img :src="feedbackSelect_data.file.key" alt="Capture du feedback"
+                                class="max-h-full max-w-full rounded-lg object-contain shadow-sm ring-1 ring-black/5 transition group-hover:brightness-95" />
+                            <span
+                                class="absolute bottom-2 right-2 rounded-md bg-gray-900/70 px-2 py-1 text-xs font-medium text-white opacity-0 transition group-hover:opacity-100">
+                                Agrandir
+                            </span>
+                        </button>
+
+                        <video v-else :src="feedbackSelect_data.file.key" controls
+                            class="max-h-full w-full rounded-lg shadow-sm ring-1 ring-black/5"></video>
+
+                        <FileFrame v-if="feedbackSelect_data?.file?.key" :file="feedbackSelect_data.file"
+                            :open="showCapture" @close="showCapture = false" />
+                    </div>
+
+                    <!-- Détails et fichiers -->
+                    <div class="flex min-h-0 flex-1 flex-col lg:w-[380px] lg:flex-none xl:w-[420px]">
+                        <div class="flex shrink-0 border-b border-gray-200 px-2 dark:border-gray-800">
+                            <button type="button" @click="activeTab = 'details'" :class="tabClass('details')">
+                                Détails
+                            </button>
+                            <button type="button" @click="activeTab = 'fichiers'" :class="tabClass('fichiers')">
+                                Fichiers
+                                <span v-if="fileCount"
+                                    class="ml-1 rounded-full bg-gray-100 px-1.5 text-xs text-gray-600 dark:bg-white/[0.06] dark:text-gray-300">
+                                    {{ fileCount }}
+                                </span>
+                            </button>
                         </div>
 
-                        <!-- Contenu des tabs -->
-                        <div class="flex-1 overflow-y-auto p-4">
-                            <!-- Tab Détails -->
-                            <div v-if="activeTab === 'details'" class="space-y-4">
-                                <FeedbackDetail />
+                        <div class="min-w-0 flex-1 overflow-y-auto p-4 sm:p-5">
+                            <div v-if="activeTab === 'details'" class="space-y-5">
+                                <FeedbackDetail @deleted="$emit('close')" />
                             </div>
-
-                            <!-- Tab Commentaires -->
-                            <!-- <div v-if="activeTab === 'comments'" class="space-y-4">
-                                <FeedbackComment />
-                            </div> -->
-
-                            <!-- Tab Historique -->
-                            <div v-if="activeTab === 'history'" class="space-y-3 text-sm text-gray-700">
-                                <FeedbackHistory />
-                            </div>
-
-                            <div v-if="activeTab === 'fichiers'" class="space-y-3 text-sm text-gray-700">
+                            <div v-else class="text-sm text-gray-700 dark:text-gray-300">
                                 <FeedbackFiles />
                             </div>
-
                         </div>
                     </div>
                 </div>
             </div>
         </template>
     </Modal>
-
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import Modal from '@/components/profile/Modal.vue'
 import { feedbackStore } from '@/stores/feedback/feedbackStore.ts';
 import { storeToRefs } from 'pinia';
 import FeedbackDetail from './FeedbackDetail.vue'
-const storeFeedback = feedbackStore()
-import { projectStore } from '@/stores/project/projectStore';
-const storeProject = projectStore()
-const { getProjectMember } = storeProject
 import FeedbackFiles from './FeedbackFiles.vue';
-import FeedbackComment from './FeedbackComment.vue';
-import FeedbackHistory from './FeedbackHistory.vue';
-const { feedbackSelect_data, project_id } = storeToRefs(storeFeedback)
-
-const { showFeedback, feedbackParams } = storeFeedback
-import Badge from '@/components/ui/Badge.vue';
+import FileFrame from '@/components/Element/FileFrame.vue';
 import { formatTimestampToDate } from '@/utils/format';
+import { feedbackAuthor } from '@/utils/authorLabel';
 import { useRouter } from 'vue-router';
+
+const storeFeedback = feedbackStore()
+const { feedbackSelect_data, feedbackSelect_files, project_id } = storeToRefs(storeFeedback)
+const { showFeedback, feedbackParams } = storeFeedback
+
 onMounted(() => {
     feedbackParams()
 })
@@ -107,23 +131,33 @@ const props = defineProps({
     open: Boolean
 })
 
-
 watch(
     () => props.feedback,
-    async (newvalue, oldvalue) => {
+    async (newvalue) => {
         if (newvalue && newvalue !== undefined) {
             await showFeedback()
-            getProjectMember(project_id.value)
         }
     }
 )
 
 const activeTab = ref('details')
+const showCapture = ref(false)
+
+const fileCount = computed(() => feedbackSelect_files.value?.length ?? 0)
+
+// Guest feedback has no account behind it: the email typed in the widget is
+// the identity, and the badge says so.
+const author = computed(() => feedbackAuthor(feedbackSelect_data.value))
+
+// The stored type is a MIME type ("image/png", "video/webm").
+const captureKind = computed(() =>
+    (feedbackSelect_data.value?.file?.type ?? '').startsWith('image/') ? 'image' : 'video',
+)
 
 function tabClass(tab) {
     return activeTab.value === tab
-        ? 'flex-1 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 py-2'
-        : 'flex-1 text-sm text-gray-500 py-2 hover:text-blue-600'
+        ? 'flex items-center gap-1 border-b-2 border-brand-500 px-3 py-2.5 text-sm font-semibold text-brand-600 dark:text-brand-400'
+        : 'flex items-center gap-1 border-b-2 border-transparent px-3 py-2.5 text-sm font-medium text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
 }
 
 const router = useRouter()
@@ -133,13 +167,4 @@ const seeSession = (session) => {
         router.push({ path: '/session/detail', query: { project: project_id.value, session: session } })
     }
 }
-
-const getFileExtension = (key) => {
-    if (key) {
-        const info = key.split('/')
-        console.log('info', info)
-        return info[0]
-    }
-}
-
 </script>

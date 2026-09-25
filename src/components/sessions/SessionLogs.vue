@@ -44,7 +44,7 @@ const goToEvent = (timestamp) => {
     if (player.value) {
         if (formatSessionDate.value) {
             let relativeTime = timestamp - formatSessionDate.value
-            // 2. Vérifier bornes pour éviter d'aller hors replay
+            // 2. Check bounds so the replay is never overrun
             if (relativeTime < 0) { relativeTime = 0 };
             player.value.goto(relativeTime)
         }

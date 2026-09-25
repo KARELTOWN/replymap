@@ -1,4 +1,4 @@
-import { fetchGet, fetchPost, fetchPut } from '@/composables/request'
+import { fetchGet, fetchPatch, fetchPost, fetchPut } from '@/composables/request'
 import { handleAppError, handleCatchError } from '@/utils/handleAppError'
 import { defineStore } from 'pinia'
 import { reactive, ref } from 'vue'
@@ -15,6 +15,8 @@ export const projectStore = defineStore('project-store', () => {
   const limit = ref(15)
   const totalPages = ref(0)
   const projectSuccess = ref(false)
+  // Tells a list still loading from a list that is really empty.
+  const loading = ref(false)
   const search_form = reactive({
     search: '',
     start_date: '',
@@ -25,12 +27,70 @@ export const projectStore = defineStore('project-store', () => {
   let openModalInvitation = ref(false)
   const projectMembers = ref([])
 
+  // Installation of the tracking script: what the project has received, and
+  // what the check run against the website found. Both belong to the project
+  // sheet, which is the only place they are read.
+  const installation: any = ref(null)
+  const installationLoading = ref(false)
+  const installationTest: any = ref(null)
+  const installationTesting = ref(false)
+
+  const getInstallation = async (project_id: string) => {
+    installation.value = null
+    installationTest.value = null
+    installationLoading.value = true
+    try {
+      const result = await fetchGet(`project/installation/${project_id}`)
+      const response = (await handleAppError(result)) as { status: boolean; data?: any }
+      if (response.status === false && response.data) installation.value = response.data
+    } catch (err) {
+      handleCatchError(err)
+    } finally {
+      installationLoading.value = false
+    }
+  }
+
+  const testInstallation = async (project_id: string) => {
+    installationTesting.value = true
+    try {
+      const result = await fetchPost(`project/installation/test/${project_id}`, {})
+      const response = (await handleAppError(result)) as { status: boolean; data?: any }
+      if (response.status === false && response.data) installationTest.value = response.data
+    } catch (err) {
+      handleCatchError(err)
+    } finally {
+      installationTesting.value = false
+    }
+  }
+
+  // Switching one detected website off, or back on. The list is refreshed from
+  // the API rather than patched locally: the server decides, and a refusal must
+  // not leave the switch showing a state that was never applied.
+  const hostUpdating = ref('')
+
+  const setHostBlocked = async (project_id: string, host: string, blocked: boolean) => {
+    hostUpdating.value = host
+    try {
+      const result = await fetchPatch(`project/installation/host/${project_id}`, { host, blocked })
+      const response = (await handleAppError(result)) as { status: boolean; data?: any }
+      if (response.status === false) {
+        successNotify(blocked ? 'Site désactivé' : 'Site réactivé')
+        await getInstallation(project_id)
+      }
+    } catch (err) {
+      handleCatchError(err)
+    } finally {
+      hostUpdating.value = ''
+    }
+  }
+
   const updatePagination = () => {
     total.value += 1
     totalPages.value = Math.ceil(total.value / limit.value)
   }
 
   const getProjects = async () => {
+    loading.value = true
     try {
       const result = await fetchGet(`project/get?limit=${limit.value}&page=${page.value}`)
       const response = await handleAppError(result) as { status: boolean; data?: any; errors: any }
@@ -45,10 +105,13 @@ export const projectStore = defineStore('project-store', () => {
       }
     } catch (err) {
       handleCatchError(err)
+    } finally {
+      loading.value = false
     }
   }
 
   const filterProjects = async (data:any) => {
+    loading.value = true
     try {
       search_errors.value = {}
       const result = await fetchPost(`project/filter?limit=${limit.value}&page=${page.value}`, data)
@@ -68,6 +131,8 @@ export const projectStore = defineStore('project-store', () => {
       }
     } catch (err) {
       handleCatchError(err)
+    } finally {
+      loading.value = false
     }
   }
 
@@ -190,6 +255,7 @@ export const projectStore = defineStore('project-store', () => {
     createProject,
     updateProject,
     getProjects,
+    loading,
     errors,
     projects,
     tracking_code,
@@ -204,6 +270,14 @@ export const projectStore = defineStore('project-store', () => {
     selectProject,
     openModal,
     openModalInvitation,
+    installation,
+    installationLoading,
+    installationTest,
+    installationTesting,
+    getInstallation,
+    testInstallation,
+    setHostBlocked,
+    hostUpdating,
     inviteUser,
     projectMembers,
     getProjectMember,

@@ -12,6 +12,8 @@ export const eventStore = defineStore('event-store', () => {
   const limit:any = ref(15)
   const totalPages:any = ref(0)
   const eventSuccess:any = ref(false)
+  // Tells a list still loading from a list that is really empty.
+  const loading = ref(false)
   const search_form:any = reactive({
     search: '',
     start_date: '',
@@ -35,6 +37,7 @@ export const eventStore = defineStore('event-store', () => {
   }
 
   const getEvents = async () => {
+    loading.value = true
     try {
       const result = await fetchGet(`event/get?limit=${limit.value}&page=${page.value}`)
       const response = await handleAppError(result) as { status: boolean; data?: { events: any[]; total: number; page: number; limit: number; totalPages: number } }
@@ -49,10 +52,13 @@ export const eventStore = defineStore('event-store', () => {
       }
     } catch (err) {
       handleCatchError(err)
+    } finally {
+      loading.value = false
     }
   }
 
   const filterEvents = async () => {
+    loading.value = true
     try {
       search_errors.value = {}
       const result = await fetchPut(
@@ -75,11 +81,14 @@ export const eventStore = defineStore('event-store', () => {
       }
     } catch (err) {
       handleCatchError(err)
+    } finally {
+      loading.value = false
     }
   }
 
   return {
     getEvents,
+    loading,
     errors,
     events,
     total,

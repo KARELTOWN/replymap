@@ -6,7 +6,7 @@ export const fileStore = defineStore('file-store', () => {
   const downloadFile = async (fileUrl:any, name:any) => {
     try {
       infoNotify('Téléchargement en cours')
-      const response = await fetch(encodeURI(fileUrl))
+      const response = await fetch(fileUrl)
       const blob = await response.blob()
       saveAs(blob, name)
       infoNotify('Téléchargement terminé')

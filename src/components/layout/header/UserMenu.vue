@@ -1,7 +1,7 @@
 <template>
   <div class="relative" ref="dropdownRef">
     <button class="flex items-center text-gray-700 dark:text-gray-400" @click.prevent="toggleDropdown">
-      <span class="mr-3 overflow-hidden rounded-full h-11 w-11">
+      <span class="mr-1 h-9 w-9 overflow-hidden rounded-full sm:mr-3 sm:h-11 sm:w-11">
         <img src="/images/user/avatar.png" alt="User" />
       </span>
 
@@ -12,7 +12,7 @@
 
     <!-- Dropdown Start -->
     <div v-if="dropdownOpen"
-      class="absolute right-0 mt-[17px] flex w-[260px] flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark">
+      class="absolute right-0 z-50 mt-[17px] flex w-[260px] max-w-[calc(100vw-1.5rem)] flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark">
       <!-- <div>
         <span class="block font-medium text-gray-700 text-theme-sm dark:text-gray-400">
           Musharof Chowdhury

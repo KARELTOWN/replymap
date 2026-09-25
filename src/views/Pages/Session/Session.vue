@@ -1,48 +1,43 @@
 <template>
   <AdminLayout>
-    <PageBreadcrumb :pageTitle="currentPageTitle" />
-    <div class="space-y-5 sm:space-y-6">
-      <ComponentCard title="Sessions">
-        <div>
-          <SearchPanel />
-        </div>
-        <SessionList />
-        <div class="grid grid-cols-2">
-          <div>
-            <Pagination :paginator="sessions" :current_page="page" :totalPages="totalPages" @page-change="fetchNext" />
-          </div>
-          <div>
-            <strong>Total : </strong> {{ total }}
-          </div>
+    <PageHeader title="Sessions"
+      description="Les parcours enregistrés sur vos projets. Ouvrez-en un pour le rejouer pas à pas." />
 
-        </div>
-      </ComponentCard>
+    <div class="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
+      <SearchPanel />
+
+      <div class="mt-5">
+        <TableSkeleton v-if="loading" :columns="5" />
+        <EmptyState v-else-if="sessions.length === 0" title="Aucune session enregistrée"
+          description="Les sessions apparaissent dès que le script de suivi est posé sur votre site et qu'un visiteur le parcourt." />
+        <SessionList v-else />
+      </div>
+
+      <ListFooter :paginator="sessions" :total="total" :current-page="page" :limit="limit" :total-pages="totalPages"
+        @page-change="fetchNext" />
     </div>
   </AdminLayout>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
-import PageBreadcrumb from "@/components/common/PageBreadcrumb.vue";
 import AdminLayout from "@/components/layout/AdminLayout.vue";
-import ComponentCard from "@/components/common/ComponentCard.vue";
+import PageHeader from "@/components/common/PageHeader.vue";
+import EmptyState from "@/components/common/EmptyState.vue";
+import TableSkeleton from "@/components/common/TableSkeleton.vue";
+import ListFooter from "@/components/common/ListFooter.vue";
 import SessionList from "@/components/sessions/SessionList.vue";
-const currentPageTitle = ref("Sessions");
 import SearchPanel from '@/components/sessions/SearchPanel.vue'
-import Pagination from "@/components/pagination/Pagination.vue";
-const openModal = ref(false)
-
 import { sessionStore } from "@/stores/session/sessionStore";
 import { storeToRefs } from "pinia";
+import { onMounted } from "vue";
+
 const store = sessionStore()
-const {
-  sessions,
-  total,
-  page,
-  totalPages } = storeToRefs(store)
+const { sessions, total, page, limit, totalPages, loading } = storeToRefs(store)
 const { getSessions } = store
 
-const fetchNext = async (nextpage: any) => {
+onMounted(() => getSessions())
+
+const fetchNext = async (nextpage: number) => {
   page.value = nextpage
   await getSessions()
 }

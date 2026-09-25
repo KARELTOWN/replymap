@@ -19,11 +19,30 @@ export const sessionStore = defineStore('session-store', () => {
   const canGetChunk:any = ref(true)
   const search_errors:any = ref({})
   const errorMessage:any = ref('')
+  // Tells a list still loading from a list that is really empty.
+  const loading = ref(false)
   const search_form:any = reactive({
     project_id: '',
+    account: '',
     start_date: '',
     end_date: '',
   })
+
+  // People a session can be attributed to: the members who left feedback from
+  // one. A visitor stays anonymous until then.
+  const visitors:any = ref([])
+
+  const getVisitors = async () => {
+    try {
+      const result = await fetchGet('session/visitors')
+      const response = await handleAppError(result) as { status: boolean; data?: any }
+      if (response.status === false && Array.isArray(response.data)) {
+        visitors.value = response.data
+      }
+    } catch (err) {
+      handleCatchError(err)
+    }
+  }
 
   const loggers:any = ref([])
   const player:any = ref(null)
@@ -34,6 +53,7 @@ export const sessionStore = defineStore('session-store', () => {
   }
 
   const getSessions = async () => {
+    loading.value = true
     try {
       const result = await fetchGet(`session/get?limit=${limit.value}&page=${page.value}`)
       const response = await handleAppError(result) as { status: boolean; data?: any; errors: any }
@@ -48,10 +68,13 @@ export const sessionStore = defineStore('session-store', () => {
       }
     } catch (err) {
       handleCatchError(err)
+    } finally {
+      loading.value = false
     }
   }
 
   const filterSessions = async (data:any) => {
+    loading.value = true
     try {
       search_errors.value = {}
       const result = await fetchPost(`session/filter?limit=${limit.value}&page=${page.value}`, data)
@@ -71,6 +94,8 @@ export const sessionStore = defineStore('session-store', () => {
       }
     } catch (err) {
       handleCatchError(err)
+    } finally {
+      loading.value = false
     }
   }
 
@@ -110,6 +135,26 @@ export const sessionStore = defineStore('session-store', () => {
     }
   }
 
+  // The path of the session: pages visited and forms sent, as a graph the
+  // page animates. It is read on its own, because it is built from events and
+  // not from the recording.
+  const flow: any = ref(null)
+  const flowLoading = ref(false)
+
+  const getFlow = async (session_id: string) => {
+    flow.value = null
+    flowLoading.value = true
+    try {
+      const result = await fetchGet(`session/flow/${session_id}`)
+      const response = (await handleAppError(result)) as { status: boolean; data?: any }
+      if (response.status === false && response.data) flow.value = response.data
+    } catch (err) {
+      handleCatchError(err)
+    } finally {
+      flowLoading.value = false
+    }
+  }
+
   const showErrors = async (data:any) => {
     try {
       data.is_error = false
@@ -133,6 +178,7 @@ export const sessionStore = defineStore('session-store', () => {
   }
   return {
     getSessions,
+    loading,
     errors,
     sessions,
     total,
@@ -144,6 +190,8 @@ export const sessionStore = defineStore('session-store', () => {
     session,
     session_errors,
     showErrors,
+    visitors,
+    getVisitors,
     canGetChunk,
     chunk_skip,
     chunk_limit,
@@ -153,6 +201,9 @@ export const sessionStore = defineStore('session-store', () => {
     errorMessage,
     session_errors_limit,
     player,
-    loggers
+    loggers,
+    flow,
+    flowLoading,
+    getFlow,
   }
 })

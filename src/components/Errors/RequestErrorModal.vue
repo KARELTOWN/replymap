@@ -48,11 +48,6 @@
 
                     </div>
 
-                    <div class="mt-4" v-if="request?.type?.libelle === 'web_vitals'">
-                        <Button variant="outline" class="mb-4" @click="metrics = !metrics">Comprendre ces métriques</Button>
-                        <PerformanceMetrics v-if="metrics === true" :data="request.data" />
-                    </div>
-
                     <div class="mt-6 text-right">
                         <button @click="$emit('close')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md">
                             Fermer
@@ -70,7 +65,6 @@ import Modal from '../profile/Modal.vue';
 
 import { formatTimestampToDate } from '@/utils/format';
 import Button from '../ui/Button.vue';
-import PerformanceMetrics from './PerformanceMetrics.vue';
 const props = defineProps({
     request: {
         type: Object || null,
@@ -78,7 +72,6 @@ const props = defineProps({
     }
 })
 const emits = defineEmits(['close'])
-let metrics = ref(false)
 const request = computed(() => {
     if (props.request !== null && props.request !== undefined && props.request) {
         return props.request

@@ -37,8 +37,27 @@
         </div>
     </div>
 
-    <div>
-        <div id="player" />
+    <div class="flex flex-col gap-4 xl:flex-row xl:items-start">
+        <!-- The replay sits in its own frame: it draws the customer's site,
+             which has its own white background, so without a border it melted
+             into the page and nothing showed where the recording started. -->
+        <div
+            class="min-w-0 flex-1 overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950">
+            <div
+                class="flex items-center justify-between gap-3 border-b border-gray-200 px-4 py-2.5 dark:border-gray-800">
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    Replay de la session
+                </p>
+                <p v-if="session?.uniqueId" class="truncate text-xs text-gray-500 dark:text-gray-400">
+                    {{ session.uniqueId }}
+                </p>
+            </div>
+            <div class="flex justify-center overflow-x-auto p-3">
+                <div id="player" />
+            </div>
+        </div>
+        <SessionTimeline class="w-full xl:w-[340px] xl:shrink-0" :events="timeline" :current-time="currentTime"
+            @seek="seekTo" />
     </div>
 
 </template>
@@ -56,6 +75,7 @@ const errorMessage = ref('')
 import { sessionStore } from "@/stores/session/sessionStore";
 import { storeToRefs } from "pinia";
 import ReplayWorker from '@/composables/replay-worker?worker'
+import SessionTimeline from './SessionTimeline.vue'
 import { api, getAppToken } from '@/composables/request';
 const store = sessionStore()
 const { session, player, loggers } = storeToRefs(store)
@@ -63,7 +83,7 @@ import { getReplayConsolePlugin } from '@rrweb/rrweb-plugin-console-replay';
 
 onMounted(async () => {
     try {
-        await nextTick(); // attend que le DOM soit mis à jour
+        await nextTick(); // wait for the DOM to update
         session_id.value = route.query.session
         project_id.value = route.query.project
 
@@ -82,6 +102,51 @@ onMounted(async () => {
 })
 
 
+// The replay is drawn at a fixed width; below 850px it overflowed the page on
+// a phone or a tablet. It now takes the width of its container, and follows it
+// when the window is resized.
+const PLAYER_MAX_WIDTH = 850
+const PLAYER_MIN_WIDTH = 320
+
+const playerWidth = (element: HTMLElement) => {
+    const available = element.parentElement?.clientWidth ?? element.clientWidth
+    return Math.max(PLAYER_MIN_WIDTH, Math.min(PLAYER_MAX_WIDTH, available || PLAYER_MAX_WIDTH))
+}
+
+const resizePlayer = () => {
+    const playerElement = document.getElementById('player')
+    if (!playerElement || !player.value) return
+    player.value.$set({ width: playerWidth(playerElement) })
+    player.value.triggerResize()
+}
+
+// Errors and steps of the path, placed on the timeline of the recording. rrweb marks
+// them as custom events (type 5); their offset is measured from the first event
+// of the session.
+const timeline: any = ref([])
+const currentTime = ref(0)
+const firstTimestamp = ref(0)
+
+const collectTimeline = (events: any[]) => {
+    if (!events?.length) return
+    if (!firstTimestamp.value) firstTimestamp.value = events[0].timestamp
+
+    for (const event of events) {
+        if (event.type !== 5) continue
+        timeline.value.push({
+            tag: event.data?.tag,
+            payload: event.data?.payload ?? {},
+            offset: Math.max(0, event.timestamp - firstTimestamp.value),
+        })
+    }
+    timeline.value.sort((left: any, right: any) => left.offset - right.offset)
+}
+
+const seekTo = (offset: number) => {
+    if (!player.value) return
+    // A second before the event, so what caused it is visible too.
+    player.value.goto(Math.max(0, offset - 1000))
+}
 
 const initializePlayer = (events: any) => {
     const playerElement = document.getElementById("player");
@@ -91,7 +156,9 @@ const initializePlayer = (events: any) => {
             props: {
                 events: events,
                 autoPlay: false,
-                width: 850,
+                width: playerWidth(playerElement),
+                showController: true,
+                UNSAFE_domOverlay: true,
                 // plugins: [
                 //     getReplayConsolePlugin({
                 //         level: ['info', 'log', 'warn', 'error'],
@@ -100,20 +167,17 @@ const initializePlayer = (events: any) => {
             },
 
         });
-        player.value.addEventListener('event-cast', (event: any) => {
-            if (event.type === 6) { // console event
-                loggers.value.push({
-                    level: event.data.payload.level,
-                    payload: event.data.payload.payload,
-                    trace: event.data.payload.trace,
-                    timestamp: event.timestamp
-                });
-            }
-        });
+        window.addEventListener('resize', resizePlayer)
+
+        // The panel follows the playhead: an event is shown when the replay
+        // reaches it, instead of every error being dumped on screen at once.
+        player.value.addEventListener('ui-update-current-time', (event: any) => {
+            currentTime.value = event?.payload ?? 0
+        })
     }
-
-
 }
+
+
 
 const readChunksContinuously = async () => {
     try {
@@ -125,6 +189,7 @@ const readChunksContinuously = async () => {
                 if (!session.value?.metadata) {
                     session.value = session_data
                 }
+                collectTimeline(events)
                 if (!player.value) {
                     initializePlayer(events)
                 }
@@ -141,7 +206,10 @@ const readChunksContinuously = async () => {
             }
             else if (type === 'error') {
                 loading.value = false
-                errorMessage.value = 'Erreur de chargement de la session'
+                errorMessage.value =
+                    e.data?.code === 'NOT_FOUND'
+                        ? "Cette session n'existe plus. Les sessions qui n'ont rien enregistré sont supprimées automatiquement quelques minutes après leur ouverture."
+                        : 'Erreur de chargement de la session'
             }
         }
         worker.postMessage({
@@ -158,6 +226,10 @@ const readChunksContinuously = async () => {
 }
 
 onUnmounted(() => {
+    window.removeEventListener('resize', resizePlayer)
+    timeline.value = []
+    currentTime.value = 0
+    firstTimestamp.value = 0
     session_id.value = ''
     project_id.value = ''
     player.value = null

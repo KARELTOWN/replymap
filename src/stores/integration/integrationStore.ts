@@ -5,16 +5,15 @@ import { defineStore } from 'pinia'
 import { reactive, ref, renderSlot } from 'vue'
 
 export const integrationStore = defineStore('integration-store', () => {
+  // MVP: Trello is the only integration implemented end to end. The other keys
+  // were empty placeholders, with no matching route or service in the API.
   const integrationLogins:any = reactive({
     trello: '',
-    slack: '',
-    discord: '',
-    assana: '',
-    clickup: '',
   })
 
   const labels:any = ref([])
   const boards = ref([])
+  const lists:any = ref([])
 
   const integrationsList = reactive([
     {
@@ -91,6 +90,22 @@ export const integrationStore = defineStore('integration-store', () => {
     }
   }
 
+  // No notification here: the lists are also read when a feedback opens, where
+  // "no board chosen yet" is an ordinary state, not an error to report.
+  const getBoardLists = async (data:any) => {
+    try {
+      const result = await fetchPost(`integration/get_board_lists`, data)
+      const body = await result.json().catch(() => ({}))
+      lists.value = result.ok ? (body?.data ?? []) : []
+      return result.ok ? null : (body?.error?.code ?? 'REQUEST_FAILED')
+    } catch (err) {
+      handleCatchError(err)
+      lists.value = []
+      return 'REQUEST_FAILED'
+    }
+  }
+
+
   const createBoardLabel = async (data:any) => {
     try {
       integrationSuccess.value = false
@@ -114,6 +129,25 @@ export const integrationStore = defineStore('integration-store', () => {
   const reconnexion = ref(false)
   const errors:any = ref({})
   const defaultBoard = ref(null)
+  const statusMapping:any = ref([])
+
+  const updateStatusMapping = async (data:any) => {
+    try {
+      errors.value = {}
+      const result = await fetchPost(`integration/status_mapping`, data)
+      const response = await handleAppError(result) as { status: boolean; data?: any; errors: any }
+      if (response.status === false) {
+        if (response?.data) {
+          statusMapping.value = response.data
+          successNotify('Correspondance mise à jour')
+        }
+      } else if (response.errors) {
+        errors.value = response.errors
+      }
+    } catch (err) {
+      handleCatchError(err)
+    }
+  }
 
   const getBoards = async (data:any) => {
     try {
@@ -139,29 +173,22 @@ export const integrationStore = defineStore('integration-store', () => {
           {
             defaultBoard.value = res.data?.default
           }
+          statusMapping.value = res.data?.status_mapping || []
         }
       } else {
-        if (response.status === 422) {
-          if (res.errors.length > 0) {
-            for (const element of res.errors) {
-              if (
-                element.path === 'project_id' &&
-                (element.msg === 'expired' || element.msg === 'not_found')
-              ) {
-                reconnexion.value = true
-                errorNotify("L'intégration a expiré. Veuillez la reconnecter")
-                continue
-              } else {
-                errors.value[element.path] = element.msg
-              }
-            }
+        // The API names the reason with a stable code: an expired or missing
+        // connection means the user has to authorise the tool again.
+        const code = res?.error?.code
+        if (code === 'INTEGRATION_EXPIRED' || code === 'INTEGRATION_NOT_CONNECTED') {
+          reconnexion.value = true
+          errorNotify(res.error.message)
+        } else if (response.status === 422) {
+          for (const detail of res?.error?.details ?? []) {
+            if (detail?.field) errors.value[detail.field] = detail.message
           }
-        } else if (response.status == 403) {
-          errorNotify(res.message)
-        } else if (response.status == 404) {
-          errorNotify(res.message)
+          errorNotify(res?.error?.message ?? "Une erreur s'est produite")
         } else {
-          errorNotify("Une erreur s'est produite")
+          errorNotify(res?.error?.message ?? "Une erreur s'est produite")
         }
       }
     } catch (err:any) {
@@ -183,6 +210,10 @@ export const integrationStore = defineStore('integration-store', () => {
     updateIntegration,
     defaultBoard,
     getBoardLabels,
-    labels, createBoardLabel
+    labels, createBoardLabel,
+    getBoardLists,
+    lists,
+    statusMapping,
+    updateStatusMapping,
   }
 })

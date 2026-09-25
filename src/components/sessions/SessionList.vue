@@ -1,103 +1,71 @@
 <template>
+    <!-- The whole row opens the replay: an eye button in a last column made the
+         target smaller than the row it belonged to. The duration is read as a
+         duration (1 min 45 s), not rounded to minutes, where every session
+         shorter than a minute showed "0". -->
     <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         <div class="max-w-full overflow-x-auto custom-scrollbar">
             <table class="min-w-full">
                 <thead>
                     <tr class="border-b border-gray-200 dark:border-gray-700">
-                        <th class="px-5 py-3 text-left w-3/11 sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">ID</p>
-                        </th>
-                        <th class="px-5 py-3 text-left w-3/11 sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Utilisateur ID</p>
-                        </th>
-                        <th class="px-5 py-3 text-left w-3/11 sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Ancien visiteur</p>
-                        </th>
-                        <th class="px-5 py-3 text-left w-3/11 sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Début</p>
-                        </th>
-                        <th class="px-5 py-3 text-left w-2/11 sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Fin</p>
-                        </th>
-                        <th class="px-5 py-3 text-left w-2/11 sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Durée (minutes)</p>
-                        </th>
-                        <th class="px-5 py-3 text-left w-2/11 sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Projet</p>
-                        </th>
-                        <!-- <th class="px-5 py-3 text-left w-2/11 sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Erreurs de requêtes
-                            </p>
-                        </th>
-                        <th class="px-5 py-3 text-left w-2/11 sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Erreurs de consoles
-                            </p>
-                        </th>
-                        <th class="px-5 py-3 text-left w-2/11 sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Rages click</p>
-                        </th> -->
-                        <th class="px-5 py-3 text-left w-2/11 sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Action</p>
+                        <th v-for="column in columns" :key="column.label" :class="['px-5 py-3 text-left sm:px-6', column.hide]">
+                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">{{ column.label }}</p>
                         </th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                    <tr v-for="(session, index) in sessions" :key="index"
-                        class="border-t border-gray-100 dark:border-gray-800">
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                    <tr v-for="session in sessions" :key="session._id" @click="openDetail(session)"
+                        class="cursor-pointer transition hover:bg-gray-50 dark:hover:bg-white/[0.03]"
+                        :title="`Rejouer ${session.uniqueId}`">
                         <td class="px-5 py-4 sm:px-6">
-                            <p class="text-gray-500 text-theme-sm text-sm/6 dark:text-gray-400">
-                                <Badge color="primary">
-                                    {{ session.uniqueId }}
-                                </Badge>
+                            <span
+                                class="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
+                                {{ session.uniqueId }}
+                            </span>
+                        </td>
+
+                        <!-- A session carries a random browser identifier until a
+                             feedback comes out of it: then it takes the name of the
+                             member who sent it. -->
+                        <td class="px-5 py-4 sm:px-6">
+                            <p v-if="session.account"
+                                class="truncate text-sm font-medium text-gray-800 dark:text-white/90"
+                                :title="session.account.email">
+                                {{ personName(session.account) }}
+                            </p>
+                            <p v-else class="truncate font-mono text-xs text-gray-500 dark:text-gray-400"
+                                :title="session.user_id">
+                                Anonyme · {{ String(session.user_id).slice(0, 8) }}
                             </p>
                         </td>
-                        <td class="px-5 py-4 sm:px-6">
-                            <p class="text-gray-500 text-theme-sm text-sm/6 dark:text-gray-400">
-                                {{ session.user_id }}
-                            </p>
-                        </td>
-                        <td class="px-5 py-4 sm:px-6">
-                            <p class="text-gray-500 text-theme-sm dark:text-gray-400">
-                                <Badge color="info">
-                                    {{ session.first_visit === false ?
-                                        'OUI' : 'NON' }}
-                                </Badge>
-                            </p>
-                        </td>
-                        <td class="px-5 py-4 sm:px-6">
-                            <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{ format(session.startedAt) }}
-                            </p>
-                        </td>
-                        <td class="px-5 py-4 sm:px-6">
-                            <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{ format(session.endedAt) }} </p>
-                        </td>
-                        <td class="px-5 py-4 sm:px-6">
-                            <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{ dureeSession(session.startedAt,
-                                session.endedAt) }} </p>
+
+                        <td class="hidden px-5 py-4 sm:px-6 xl:table-cell">
+                            <span class="rounded-full px-2 py-0.5 text-xs font-medium" :class="session.first_visit === false
+                                ? 'bg-gray-100 text-gray-600 dark:bg-white/[0.06] dark:text-gray-300'
+                                : 'bg-success-50 text-success-700 dark:bg-success-500/15 dark:text-success-500'">
+                                {{ session.first_visit === false ? 'Déjà venu' : 'Première visite' }}
+                            </span>
                         </td>
 
                         <td class="px-5 py-4 sm:px-6">
-                            <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{ session.project_id.libelle }}
+                            <p class="text-sm text-gray-700 dark:text-gray-300">{{ day(session.startedAt) }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ hour(session.startedAt) }}</p>
+                        </td>
+
+                        <td class="hidden px-5 py-4 sm:px-6 md:table-cell">
+                            <p class="text-sm text-gray-700 dark:text-gray-300">
+                                {{ duration(session.startedAt, session.endedAt) }}
                             </p>
                         </td>
-                        <!-- <td class="px-5 py-4 sm:px-6">
-                            <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{ session.requestError }}</p>
+
+                        <td class="hidden px-5 py-4 sm:table-cell sm:px-6">
+                            <p class="truncate text-sm text-gray-700 dark:text-gray-300">
+                                {{ session.project_id?.libelle }}
+                            </p>
                         </td>
-                        <td class="px-5 py-4 sm:px-6">
-                            <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{ session.consoleError }}</p>
-                        </td>
-                        <td class="px-5 py-4 sm:px-6">
-                            <p class="text-gray-500 text-theme-sm dark:text-gray-400">{{ session.rageClick }}</p>
-                        </td> -->
-                        <td>
-                            <button type="button" @click="openDetail(session)"
-                                class="text-brand-500 hover:text-brand-600 dark:text-brand-400">
-                                <svg class="fill-gray-400 dark:fill-gray-300" width="30" height="30" viewBox="0 0 20 20"
-                                    fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path fill-rule="evenodd" clip-rule="evenodd"
-                                        d="M10.0002 13.8619C7.23361 13.8619 4.86803 12.1372 3.92328 9.70241C4.86804 7.26761 7.23361 5.54297 10.0002 5.54297C12.7667 5.54297 15.1323 7.26762 16.0771 9.70243C15.1323 12.1372 12.7667 13.8619 10.0002 13.8619ZM10.0002 4.04297C6.48191 4.04297 3.49489 6.30917 2.4155 9.4593C2.3615 9.61687 2.3615 9.78794 2.41549 9.94552C3.49488 13.0957 6.48191 15.3619 10.0002 15.3619C13.5184 15.3619 16.5055 13.0957 17.5849 9.94555C17.6389 9.78797 17.6389 9.6169 17.5849 9.45932C16.5055 6.30919 13.5184 4.04297 10.0002 4.04297ZM9.99151 7.84413C8.96527 7.84413 8.13333 8.67606 8.13333 9.70231C8.13333 10.7286 8.96527 11.5605 9.99151 11.5605H10.0064C11.0326 11.5605 11.8646 10.7286 11.8646 9.70231C11.8646 8.67606 11.0326 7.84413 10.0064 7.84413H9.99151Z" />
-                                </svg>
-                            </button>
+
+                        <td class="px-5 py-4 text-right sm:px-6">
+                            <span class="text-xs font-medium text-brand-500">Rejouer →</span>
                         </td>
                     </tr>
                 </tbody>
@@ -107,51 +75,44 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
 import { sessionStore } from "@/stores/session/sessionStore";
 import { storeToRefs } from "pinia";
 import moment from 'moment';
-import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import Badge from '../ui/Badge.vue';
+
 const store = sessionStore()
-const { errors,
-    sessions,
-    total,
-    page,
-    limit,
-    totalPages } = storeToRefs(store)
+const { sessions } = storeToRefs(store)
 
-const { getSessions } = store
-const format = (data) => {
-    if (data) {
-        return moment(data).format('DD-MM-YYYY HH:mm:ss')
-    }
-    return ''
+const columns = [
+    { label: 'Session', hide: '' },
+    { label: 'Visiteur', hide: '' },
+    { label: 'Visite', hide: 'hidden xl:table-cell' },
+    { label: 'Début', hide: '' },
+    { label: 'Durée', hide: 'hidden md:table-cell' },
+    { label: 'Projet', hide: 'hidden sm:table-cell' },
+    { label: '', hide: '' },
+]
+
+const personName = (account) =>
+    `${account.firstname ?? ''} ${account.lastname ?? ''}`.trim() || account.email
+
+const day = (date) => (date ? moment(date).format('DD/MM/YYYY') : '—')
+const hour = (date) => (date ? moment(date).format('HH:mm:ss') : '')
+
+const duration = (start, end) => {
+    if (!start || !end) return 'En cours'
+
+    const seconds = moment(end).diff(moment(start), 'seconds')
+    if (seconds < 60) return `${seconds} s`
+    return `${Math.floor(seconds / 60)} min ${String(seconds % 60).padStart(2, '0')} s`
 }
+
 const router = useRouter()
-onMounted(async () => {
-    await handleSessions()
-})
-
-const handleSessions = async () => {
-    try {
-        await getSessions()
-    } catch (err) {
-    }
-}
 
 const openDetail = (session) => {
-    router.push({ path: '/session/detail', query: { project: session.project_id._id, session: session._id } })
-}
-
-const dureeSession = (start, end) => {
-    if (end && start) {
-        const start_date = moment(start)
-        const end_date = moment(end)
-        return end_date.diff(start_date, "minutes")
-    }
-    return '---'
-
+    router.push({
+        path: '/session/detail',
+        query: { project: session.project_id?._id, session: session._id },
+    })
 }
 </script>

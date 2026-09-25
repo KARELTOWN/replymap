@@ -1,6 +1,6 @@
 <template>
   <aside :class="[
-    'fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-99999 border-r border-gray-200',
+    'fixed left-0 top-16 z-50 flex h-[calc(100vh-4rem)] flex-col overflow-y-auto border-r border-gray-200 bg-white px-5 text-gray-900 transition-all duration-300 ease-in-out dark:border-gray-800 dark:bg-gray-900 lg:top-0 lg:h-screen',
     {
       'lg:w-[290px]': isExpanded || isMobileOpen || isHovered,
       'lg:w-[90px]': !isExpanded && !isHovered,
@@ -9,8 +9,10 @@
       'lg:translate-x-0': true,
     },
   ]" @mouseenter="!isExpanded && (isHovered = true)" @mouseleave="isHovered = false">
+    <!-- On a phone the logo is in the header, right next to the menu button:
+         the drawer would show it a second time. -->
     <div :class="[
-      'flex',
+      'hidden py-4 lg:flex',
       !isExpanded && !isHovered ? 'lg:justify-center' : 'justify-center',
     ]">
       <router-link to="/">
@@ -160,9 +162,7 @@ import {
   PageIcon,
   TableIcon,
   ListIcon,
-  PlugInIcon,
 } from "../../icons";
-import SidebarWidget from "./SidebarWidget.vue";
 import BoxCubeIcon from "@/icons/BoxCubeIcon.vue";
 import { useSidebar } from "@/composables/useSidebar";
 
@@ -174,13 +174,16 @@ const menuGroups = [
   {
     title: "",
     items: [
+      // The dashboard was a submenu with a single item: two clicks to reach the
+      // home page. Three entries also shared the same icon, which made the collapsed
+      // menu unreadable.
       {
         icon: GridIcon,
-        name: "Tableau de bord",
-        subItems: [{ name: "Statistiques", path: "/", pro: false }],
+        name: "Vue d'ensemble",
+        path: "/",
       },
       {
-        icon: CalenderIcon,
+        icon: BoxCubeIcon,
         name: "Projets",
         path: "/projets",
       },
@@ -190,15 +193,18 @@ const menuGroups = [
         path: "/sessions",
       },
       {
-        icon: GridIcon,
-        name: "Evénements",
+        icon: TableIcon,
+        name: "Événements",
         path: "/evenements",
       },
       {
-        icon: GridIcon,
+        icon: ChatIcon,
         name: "Feedbacks",
         path: "/feedbacks",
       },
+      // No menu entry for integrations: the settings belong to a project, and
+      // are opened from the project list. Reached from the menu, the page had
+      // no project to configure.
     ],
   },
 

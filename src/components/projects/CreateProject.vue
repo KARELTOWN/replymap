@@ -1,156 +1,162 @@
 <template>
-  <Modal v-if="isOpen">
-    <template #body>
-      <div
-        class="no-scrollbar relative w-full max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
-        <h5 class="mb-2 font-semibold text-gray-800 modal-title text-theme-xl dark:text-white/90 lg:text-2xl">
-          {{ selectProject ? 'Modifier le Projet' : 'Ajouter un Projet' }}
-        </h5>
-        <form class="flex flex-col custom-scrollbar max-h-[458px] overflow-y-auto p-2" @submit.prevent="handleSubmit">
-          <div class="mt-8">
-            <div>
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                Nom du Projet
-              </label>
-              <input v-model="libelle" type="text"
-                class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800" />
-              <p v-if="errors.libelle" style="color: red">{{ errors.libelle }}</p>
-
-            </div>
-
-            <div class="mt-6">
-              <div>
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"> Lien </label>
-                <div class="relative">
-                  <span
-                    class="absolute left-0 top-1/2 inline-flex h-11 -translate-y-1/2 items-center justify-center border-r border-gray-200 py-3 pl-3.5 pr-3 text-gray-500 dark:border-gray-800 dark:text-gray-400">
-                    URL
-                  </span>
-                  <input v-model="link" type="url" placeholder="Exemple : https://replaymap.com"
-                    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pl-[90px] text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800" />
-                  <p v-if="errors.link" style="color: red">{{ errors.link }}</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="mt-6" v-if="tracking_code && !selectProject">
-              <div>
-                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"> Script </label>
-                <em>Intégrer ce script dans le pied de page de votre site (FOOTER)</em>
-                <div class="relative">
-                  <button @click="copyScript(tracking_code)" type="button"
-                    class="absolute right-0 top-1/2 inline-flex -translate-y-1/2 cursor-pointer items-center gap-1 border-l border-gray-200 py-3 pl-3.5 pr-3 text-sm font-medium text-gray-700 dark:border-gray-800 dark:text-gray-400">
-                    <svg class="fill-current" width="20" height="20" viewBox="0 0 20 20" fill="none"
-                      xmlns="http://www.w3.org/2000/svg">
-                      <path fill-rule="evenodd" clip-rule="evenodd"
-                        d="M6.58822 4.58398C6.58822 4.30784 6.81207 4.08398 7.08822 4.08398H15.4154C15.6915 4.08398 15.9154 4.30784 15.9154 4.58398L15.9154 12.9128C15.9154 13.189 15.6916 13.4128 15.4154 13.4128H7.08821C6.81207 13.4128 6.58822 13.189 6.58822 12.9128V4.58398ZM7.08822 2.58398C5.98365 2.58398 5.08822 3.47942 5.08822 4.58398V5.09416H4.58496C3.48039 5.09416 2.58496 5.98959 2.58496 7.09416V15.4161C2.58496 16.5207 3.48039 17.4161 4.58496 17.4161H12.9069C14.0115 17.4161 14.9069 16.5207 14.9069 15.4161L14.9069 14.9128H15.4154C16.52 14.9128 17.4154 14.0174 17.4154 12.9128L17.4154 4.58398C17.4154 3.47941 16.52 2.58398 15.4154 2.58398H7.08822ZM13.4069 14.9128H7.08821C5.98364 14.9128 5.08822 14.0174 5.08822 12.9128V6.59416H4.58496C4.30882 6.59416 4.08496 6.81801 4.08496 7.09416V15.4161C4.08496 15.6922 4.30882 15.9161 4.58496 15.9161H12.9069C13.183 15.9161 13.4069 15.6922 13.4069 15.4161L13.4069 14.9128Z"
-                        fill="" />
-                    </svg>
-                    <div>{{ copyText }}</div>
-                  </button>
-                  <input v-model="tracking_code" type="text"
-                    class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent py-3 pl-4 pr-[90px] text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800" />
-                </div>
-              </div>
-            </div>
-
-            <div class="mt-6" v-if="selectProject">
-              <div>
-                <label class="mb-1.5 block text-md font-medium text-gray-700 dark:text-gray-400">
-                  <strong>Fonctionnalitées</strong>
-                </label>
-                <div>
-                  <p v-if="errors.track" style="color: red">{{ errors.track }}</p>
-                </div>
-                <div class="grid grid-cols-1">
-                  <div class="mb-3">
-                    <div class="text-sm text-gray-500"><em>Activer l'enregistrement d'écran pour voir un directe ce que
-                        font les
-                        visiteurs sur votre site</em></div>
-                    <div class="flex flex-items gap-5"><label for="active_recording">Enregistrer l'écran</label> <input
-                        type='checkbox' :checked="track.active_recording"
-                        @change="track.active_recording = !track.active_recording" id="active_recording"></div>
-                  </div>
-                  <div class="mb-3">
-                    <div class="text-sm text-gray-500"><em>Activer le suivi des erreurs : Erreurs de requêtes, erreurs
-                        javascript,
-                        erreurs de la console ...</em></div>
-                    <div class="flex flex-items gap-5"><label for="active_track_errors">Tracker les erreurs</label>
-                      <input type='checkbox' :checked="track.active_track_errors"
-                        @change="track.active_track_errors = !track.active_track_errors" id="active_track_errors">
-                    </div>
-                  </div>
-
-                  <div class="mb-3">
-                    <div class="text-sm text-gray-500"><em>Activer le suivi des événements: Rageclick, Rebond, Pages
-                        visités par
-                        sessions, etc ...</em></div>
-                    <div class="flex flex-items gap-5"><label for="active_event_issues">Tracker les événements</label>
-                      <input type='checkbox' :checked="track.active_event_issues"
-                        @change="track.active_event_issues = !track.active_event_issues" id="active_event_issues">
-                    </div>
-                  </div>
-
-                  <div class="mb-3">
-                    <div class="text-sm text-gray-500"><em>Activer le suivi des performances, pour détecter les requêtes
-                        qui prennent du temps (>= 1 seconde)</em></div>
-                    <div class="flex flex-items gap-5"><label for="active_performance_issues">Tracker les
-                        performances</label>
-                      <input type='checkbox'
-                        @change="track.active_performance_issues = !track.active_performance_issues"
-                        :checked="track.active_performance_issues" id="active_performance_issues">
-                    </div>
-                  </div>
-
-                </div>
-
-
-              </div>
-            </div>
-
-          </div>
-
-          <div class="flex items-center gap-3 mt-6 modal-footer sm:justify-end">
-            <button @click="closeModal"
-              class="flex w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] sm:w-auto">
-              Fermer
-            </button>
-
-            <button type="submit" :disabled="disableBtn"
-              class="btn btn-success btn-update-event flex w-full justify-center rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 sm:w-auto">
-              {{ selectProject ? 'Modifier' : 'Ajouter' }}
-            </button>
-          </div>
-        </form>
+  <ModalShell v-if="isOpen" :title="selectProject ? 'Modifier le projet' : 'Ajouter un projet'"
+    :description="selectProject ? 'Nom, adresse suivie et données collectées.' : 'Un projet correspond à un site à suivre.'"
+    @close="closeModal">
+    <form id="project-form" class="space-y-5" @submit.prevent="handleSubmit">
+      <div>
+        <label for="project-name" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Nom du projet
+        </label>
+        <input id="project-name" v-model="libelle" type="text" placeholder="Ex : Site vitrine du client"
+          :class="fieldClass" />
+        <p v-if="errors.libelle" class="mt-1 text-xs text-error-500">{{ errors.libelle }}</p>
       </div>
+
+      <div>
+        <label for="project-link" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Adresse du site
+        </label>
+        <input id="project-link" v-model="link" type="url" placeholder="https://exemple.com" :class="fieldClass" />
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          C'est le domaine autorisé à envoyer des données. Il ne pourra plus changer une fois la collecte commencée.
+        </p>
+        <p v-if="errors.link" class="mt-1 text-xs text-error-500">{{ errors.link }}</p>
+      </div>
+
+      <!-- The snippet is code: shown as such, on one selectable line, with a
+           copy button that says what it did. -->
+      <div v-if="tracking_code && !selectProject"
+        class="rounded-xl border border-brand-200 bg-brand-50 p-4 dark:border-brand-500/30 dark:bg-brand-500/10">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-sm font-medium text-gray-800 dark:text-white/90">Script de suivi</p>
+            <p class="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
+              Collez-le juste avant la fermeture de la balise &lt;/body&gt; de votre site.
+            </p>
+          </div>
+          <button type="button" @click="copyScript(tracking_code)"
+            class="shrink-0 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+            {{ copyText || 'Copier' }}
+          </button>
+        </div>
+        <pre
+          class="mt-3 overflow-x-auto rounded-lg bg-gray-900 p-3 text-xs leading-relaxed text-gray-100">{{ tracking_code }}</pre>
+      </div>
+
+      <!-- Nothing used to confirm the snippet had ever been installed. -->
+      <div v-if="selectProject">
+        <p class="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Installation du script</p>
+        <InstallationStatus :project-id="selectProject._id" :domain="selectProject.link" />
+      </div>
+
+      <div v-if="selectProject">
+        <p class="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Ce que BugReveal collecte</p>
+        <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">
+          Chaque collecte peut être coupée sans toucher au script déjà installé.
+        </p>
+
+        <div class="divide-y divide-gray-100 rounded-xl border border-gray-200 dark:divide-gray-800 dark:border-gray-800">
+          <label v-for="option in trackingOptions" :key="option.key"
+            class="flex cursor-pointer items-start gap-3 p-4 transition hover:bg-gray-50 dark:hover:bg-white/[0.03]">
+            <input type="checkbox" class="mt-1 h-4 w-4 shrink-0 accent-brand-500" :checked="track[option.key] !== false"
+              @change="track[option.key] = !track[option.key]" />
+            <span class="min-w-0">
+              <span class="block text-sm font-medium text-gray-800 dark:text-white/90">{{ option.title }}</span>
+              <span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">{{ option.description }}</span>
+            </span>
+          </label>
+        </div>
+        <p v-if="errors.track" class="mt-1 text-xs text-error-500">{{ errors.track }}</p>
+      </div>
+
+      <!-- Who may write: a decision of the project owner, until now fixed in
+           the code — leaving feedback required an invitation on the project. -->
+      <div v-if="selectProject">
+        <p class="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Qui peut envoyer un retour</p>
+        <label
+          class="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 p-4 transition hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-white/[0.03]">
+          <input type="checkbox" class="mt-1 h-4 w-4 shrink-0 accent-brand-500" v-model="allow_guest_feedback" />
+          <span class="min-w-0">
+            <span class="block text-sm font-medium text-gray-800 dark:text-white/90">
+              Accepter les retours sans compte BugReveal
+            </span>
+            <span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
+              Le visiteur indique seulement son email dans le widget. Sans cette option, il faut
+              être membre invité du projet.
+            </span>
+          </span>
+        </label>
+      </div>
+    </form>
+
+    <template #footer>
+      <button type="button" @click="closeModal"
+        class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03]">
+        Fermer
+      </button>
+      <button type="submit" form="project-form" :disabled="disableBtn"
+        class="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60">
+        {{ selectProject ? 'Enregistrer' : 'Créer le projet' }}
+      </button>
     </template>
-  </Modal>
+  </ModalShell>
 </template>
 
 <script setup>
+import { ref, onMounted, watchEffect, watch } from 'vue'
+import ModalShell from '@/components/ui/ModalShell.vue'
+import InstallationStatus from './InstallationStatus.vue'
+import { projectStore } from '@/stores/project/projectStore'
+import { storeToRefs } from 'pinia'
 
-import { ref, reactive, onMounted, watchEffect, watch } from 'vue'
-import Modal from '@/components/profile/Modal.vue'
-
-import { projectStore } from "@/stores/project/projectStore";
-import { storeToRefs } from "pinia";
 const store = projectStore()
-const { errors,
-  projectSuccess,
-  tracking_code, selectProject } = storeToRefs(store)
+const { errors, projectSuccess, tracking_code, selectProject } = storeToRefs(store)
 const { createProject, updateProject } = store
+
+const fieldClass =
+  'dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90'
+
+// What each collection does, said in the user's terms rather than in the
+// field names of the API — et surtout, ce qu'elle collecte vraiment : les
+// erreurs JavaScript étaient annoncées ici alors qu'elles dépendaient en fait
+// d'une autre case, et les lenteurs promettaient des « traitements » qui n'ont
+// jamais été remontés. « Comportements » a disparu : ce qu'elle couvrait n'a de
+// sens que dans une session, donc elle suit l'enregistrement.
+const trackingOptions = [
+  {
+    key: 'active_recording',
+    title: 'Enregistrement des sessions',
+    description:
+      'Rejouez le parcours du visiteur, écran par écran.',
+  },
+  {
+    key: 'active_track_errors',
+    title: 'Erreurs',
+    description:
+      'Erreurs JavaScript, promesses rejetées et requêtes en échec.',
+  },
+  {
+    key: 'active_performance_issues',
+    title: 'Lenteurs',
+    description:
+      'Requêtes réseaux de votre application qui dépassent trois secondes.',
+  },
+]
+
 const isOpen = ref(false)
 const libelle = ref('')
 const link = ref('')
+const track = ref({})
+const allow_guest_feedback = ref(false)
+
 const props = defineProps({
   open: {
     type: Boolean,
-    required: true
-  }
+    required: true,
+  },
 })
 
 const emits = defineEmits(['close'])
-let track = ref({})
 
 onMounted(() => {
   errors.value = {}
@@ -159,19 +165,16 @@ onMounted(() => {
 
 watch(
   () => selectProject.value,
-  (newValue, oldvalue) => {
-    console.log('newvalue', newValue)
+  (newValue) => {
     if (newValue) {
       libelle.value = newValue.libelle
       link.value = newValue.link
-      track.value = newValue.track
+      track.value = { ...newValue.track }
+      allow_guest_feedback.value = newValue.allow_guest_feedback === true
+    } else {
+      resetModalFields()
     }
-    else {
-      libelle.value = ''
-      link.value = ''
-      track.value = {}
-    }
-  }
+  },
 )
 
 watchEffect(() => {
@@ -190,6 +193,7 @@ const resetModalFields = () => {
   libelle.value = ''
   link.value = ''
   track.value = {}
+  allow_guest_feedback.value = false
 }
 
 const disableBtn = ref(false)
@@ -198,50 +202,38 @@ const handleSubmit = async () => {
   try {
     disableBtn.value = true
     if (selectProject.value == '') {
-      await createProject({
-        libelle: libelle.value,
-        link: link.value
-      })
+      await createProject({ libelle: libelle.value, link: link.value })
       disableBtn.value = false
 
       if (projectSuccess.value === true) {
         libelle.value = ''
         link.value = ''
       }
-    }
-    else {
-      console.log('events', {
-        libelle: libelle.value,
-        link: link.value,
-        track: track.value,
-        project_id: selectProject.value._id,
-      })
+    } else {
       disableBtn.value = false
-
       await updateProject({
         libelle: libelle.value,
         link: link.value,
         track: track.value,
+        allow_guest_feedback: allow_guest_feedback.value,
         project_id: selectProject.value._id,
       })
       if (projectSuccess.value === true) {
         closeModal()
       }
     }
-
-
   } catch (err) {
     disableBtn.value = false
   }
 }
+
 const copyText = ref('')
 
 const copyScript = (data) => {
   navigator.clipboard.writeText(data)
-  copyText.value = 'Copier!'
+  copyText.value = 'Copié !'
   setTimeout(() => {
     copyText.value = ''
-  }, 1000)
+  }, 1500)
 }
-
 </script>

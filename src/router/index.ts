@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory, useRoute } from 'vue-router'
+import { getSession, hasSessionCookie, refreshAccessToken } from '@/composables/request'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -11,7 +12,7 @@ const router = createRouter({
       name: 'Dashboard.vue',
       component: () => import('../views/Dashboard.vue'),
       meta: {
-        title: 'Dashboard',
+        title: "Vue d'ensemble",
         requiredAuth: true,
       },
     },
@@ -39,11 +40,13 @@ const router = createRouter({
       name: 'Session-detail',
       component: () => import('../views/Pages/Session/SessionDetail.vue'),
       meta: {
-        title: 'Session Detail',
+        title: 'Détail de session',
         requiredAuth: true,
       },
     },
     // Feedback
+    // The route was commented out while the side menu pointed to it: the
+    // "Feedbacks" entry led nowhere.
     {
       path: '/feedbacks',
       name: 'Feedbacks',
@@ -53,7 +56,7 @@ const router = createRouter({
         requiredAuth: true,
       },
     },
-    // Evénements
+    // Events
     {
       path: '/evenements',
       name: 'Evenements',
@@ -79,7 +82,7 @@ const router = createRouter({
       name: '404 Error',
       component: () => import('../views/Errors/FourZeroFour.vue'),
       meta: {
-        title: '404 Error',
+        title: 'Page introuvable',
         requiredAuth: true,
       },
     },
@@ -89,15 +92,7 @@ const router = createRouter({
       name: 'Signin',
       component: () => import('../views/Auth/Signin.vue'),
       meta: {
-        title: 'Signin',
-      },
-    },
-    {
-      path: '/recorder-login',
-      name: 'Recorder Signin',
-      component: () => import('../views/Auth/RecorderSignin.vue'),
-      meta: {
-        title: 'Recorder Signin',
+        title: 'Connexion',
       },
     },
     {
@@ -105,7 +100,7 @@ const router = createRouter({
       name: 'Signup',
       component: () => import('../views/Auth/Signup.vue'),
       meta: {
-        title: 'Signup',
+        title: 'Créer un compte',
       },
     },
     {
@@ -121,7 +116,7 @@ const router = createRouter({
       name: 'ResetPassword',
       component: () => import('../views/Auth/ResetPassword.vue'),
       meta: {
-        title: 'ResetPassword',
+        title: 'Mot de passe oublié',
       },
     },
     {
@@ -129,7 +124,7 @@ const router = createRouter({
       name: 'NewPassword',
       component: () => import('../views/Auth/NewPassword.vue'),
       meta: {
-        title: 'NewPassword',
+        title: 'Nouveau mot de passe',
       },
     },
     {
@@ -156,19 +151,16 @@ const router = createRouter({
 
 export default router
 
-router.beforeEach((to, from, next) => {
-  document.title = `${to.meta.title} | Replay MAP`
-  const bugreveal_app_token = localStorage.getItem('bugreveal_app_token')
-  const data = bugreveal_app_token !== null ? JSON.parse(bugreveal_app_token) : null
+// No access token but a session cookie (for instance a session opened in the
+// SSO window): the session is renewed silently instead of asking to sign in.
+router.beforeEach(async (to, from, next) => {
+  document.title = `${to.meta.title} | BugReveal`
+  let token = getSession()?.token
+  if (!token && hasSessionCookie()) {
+    token = (await refreshAccessToken()) ?? undefined
+  }
 
-  const token = data?.token
-  if (to.path == '/recorder-login') {
-    if (token) {
-      let url = to.query.from
-      window?.opener?.postMessage({ token }, url)
-      window?.close()
-    }
-  } else if (to.meta.requiredAuth && !token) {
+  if (to.meta.requiredAuth && !token) {
     return next('/signin')
   } else if (!to.meta.requiredAuth && token) {
     return next('/')

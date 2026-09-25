@@ -34,7 +34,11 @@ self.onmessage = async (e: MessageEvent) => {
             self.postMessage({ type: 'batch', events, session_data })
           }
         } else {
-          self.postMessage({ type: 'error' })
+          // The reason travels with the refusal: a session deleted because it
+          // recorded nothing is not the same thing as a server that failed, and
+          // the page used to say "loading error" for both.
+          const body = await result.json().catch(() => ({}))
+          self.postMessage({ type: 'error', code: body?.error?.code ?? 'REQUEST_FAILED' })
           break
         }
 

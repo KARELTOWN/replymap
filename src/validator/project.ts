@@ -10,11 +10,10 @@ export default function projectValidator() {
       link: yup
         .string()
         .required('Le lien est obligatoire')
-        // .url("Il doit s'agir d'un lien") // utilisé en production
         .test('is-url', 'Lien invalide', (value) => {
           if (!value) return false
           try {
-            // Essaie de construire un objet URL
+            // Try to build a URL object
             new URL(value)
             return true
           } catch {
@@ -33,11 +32,10 @@ export default function projectValidator() {
       link: yup
         .string()
         .required('Le lien est obligatoire')
-        // .url("Il doit s'agir d'un lien") // utilisé en production
         .test('is-url', 'Lien invalide', (value) => {
           if (!value) return false
           try {
-            // Essaie de construire un objet URL
+            // Try to build a URL object
             new URL(value)
             return true
           } catch {
@@ -46,6 +44,9 @@ export default function projectValidator() {
         }),
       project_id: yup.string().required('Le projet est obligatoire'),
       track: yup.object().required('Les fonctionnalités sont obligatoires'),
+      // Setting of the project itself: whether a visitor without a BugReveal
+      // account may leave feedback on it.
+      allow_guest_feedback: yup.boolean().default(false),
     })
   }
 

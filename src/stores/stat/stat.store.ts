@@ -16,9 +16,9 @@ export const useStatStore = defineStore('stat-store', () => {
         if (response?.data) {
           stat.value = response.data
           if (stat.value.user_country && stat.value.user_country.length > 0) {
-            let countryNames = stat.value.user_country.map((e:any) => {
-              e._id
-            })
+            // The previous form opened a block without a return: the map only received
+            // an array of undefined values.
+            const countryNames = stat.value.user_country.map((e: any) => e._id)
             mapsCountry.value = getManyCountryCoords(countryNames)
           }
         }
