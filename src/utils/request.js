@@ -1,4 +1,4 @@
-import { bugRevealToken } from "./cookie";
+import { getBugRevealToken } from "./cookie";
 
 export const fetchPostMember = (path, body) => {
   return fetch(`${import.meta.env.VITE_BACKEND_URL}/${path}`, {
@@ -6,7 +6,7 @@ export const fetchPostMember = (path, body) => {
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json;charset=utf-8",
-      Authorization: `Bearer ${bugRevealToken}`,
+      Authorization: `Bearer ${getBugRevealToken()}`,
     },
     body: JSON.stringify(body),
   });
@@ -27,7 +27,7 @@ export const fetchGetMember = (path, body) => {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${bugRevealToken}`,
+      Authorization: `Bearer ${getBugRevealToken()}`,
     },
     body: JSON.stringify(body),
   });
@@ -53,7 +53,7 @@ export const fetchPostWithFileForMember = (path, body) => {
   return fetch(`${import.meta.env.VITE_BACKEND_URL}/${path}`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${bugRevealToken}`,
+      Authorization: `Bearer ${getBugRevealToken()}`,
     },
     body: body,
   });

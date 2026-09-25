@@ -3,8 +3,10 @@ import { fetchPost } from "../utils/request.js";
 import { project_id } from "../record.js";
 import { v4 as uuidV4 } from "uuid";
 import { getSessionId } from "../utils/session.js";
+import { addReplayEvent } from "../utils/replayEvent.js";
 import dbtransaction from "../utils/indexDB.js";
 const { getEvents, saveEvents, deleteEventByKeys } = dbtransaction();
+import * as rrweb from "rrweb";
 
 const getIntercepts = async () => {
   try {
@@ -27,7 +29,7 @@ let intercepts = [];
 export default function interceptRequest() {
   const originalFetch = window.fetch;
 
-  //intercepter les requêtes avec FETCH
+  // intercept requests made with FETCH
   window.fetch = async (...args) => {
     try {
       let rrweb_timestamp = Date.now();
@@ -36,10 +38,13 @@ export default function interceptRequest() {
       const [url, config] = args;
 
       const response = await originalFetch(url, config);
+      const clonedResponse = response.clone();
+
       const end = performance.now();
-      // ISOLE LE HANDLE INTERCEPT DU THREAD PRINCIPAL
+      // keeps the intercept handling off the main thread
       setTimeout(() => {
         handleIntercept(
+          clonedResponse,
           response,
           url,
           config,
@@ -57,7 +62,62 @@ export default function interceptRequest() {
   };
 }
 
+// Fields never sent as is (passwords, tokens, payment, identity...)
+const SENSITIVE_FIELD_PATTERN =
+  /pass(word)?|token|secret|auth|card|cvv|cvc|iban|bic|bank|ssn|ccn|ccv/i;
+const MAX_CAPTURED_BODY_SIZE = 5 * 1024; // 5 Ko
+
+const redactSensitiveFields = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(redactSensitiveFields);
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, val]) => [
+        key,
+        SENSITIVE_FIELD_PATTERN.test(key)
+          ? "[redacted]"
+          : redactSensitiveFields(val),
+      ])
+    );
+  }
+  return value;
+};
+
+const truncateBody = (data) => {
+  const serialized = typeof data === "string" ? data : JSON.stringify(data);
+  if (!serialized || serialized.length <= MAX_CAPTURED_BODY_SIZE) return data;
+  const truncated = serialized.slice(0, MAX_CAPTURED_BODY_SIZE);
+  return typeof data === "string" ? `${truncated}... [tronqué]` : truncated;
+};
+
+const headersToPlainObject = (headers) => {
+  if (!headers) return {};
+  if (headers instanceof Headers) {
+    return Object.fromEntries(headers.entries());
+  }
+  if (Array.isArray(headers)) {
+    return Object.fromEntries(headers);
+  }
+  return { ...headers };
+};
+
+// Only captures calls to the website's own domain or to the BugReveal
+// backend: responses of third-party APIs (analytics, payment, etc.) may hold
+// data that is not ours to collect.
+const isCapturableUrl = (url) => {
+  try {
+    const target = new URL(url, window.location.origin);
+    return (
+      target.origin === window.location.origin || avoid_records_urls(url)
+    );
+  } catch {
+    return false;
+  }
+};
+
 async function handleIntercept(
+  clonedResponse,
   response,
   url,
   config,
@@ -66,13 +126,10 @@ async function handleIntercept(
   end
 ) {
   let session_id = getSessionId();
-
-  const clonedResponse = response.clone();
-
   if (!clonedResponse.ok) {
     const avoid_urls = avoid_records_urls(url);
 
-    if (avoid_urls === false) {
+    if (avoid_urls === false && isCapturableUrl(url)) {
       const contentType = clonedResponse.headers.get("Content-Type");
 
       let jsonData;
@@ -85,11 +142,17 @@ async function handleIntercept(
       } else {
         jsonData = await clonedResponse.text();
       }
+      jsonData = truncateBody(redactSensitiveFields(jsonData));
+
       const duration = (end - start) / 1000;
+      const headers = headersToPlainObject(config.headers);
+      delete headers.Authorization;
+      delete headers.authorization;
+
       const request_general = {
         url: url,
-        body: config.body,
-        headers: config.headers,
+        body: truncateBody(redactSensitiveFields(config.body)),
+        headers,
         method: config.method || "GET",
       };
       const request_response = {
@@ -98,7 +161,13 @@ async function handleIntercept(
         response: jsonData,
         duration: duration + "s",
       };
-
+      addReplayEvent("network-error", {
+        page_url: url,
+        status: response.status,
+        statusText: response.statusText,
+        method: config.method || "GET",
+        timestamp: rrweb_timestamp,
+      });
       intercepts.push({
         type: "request_errors",
         project: project_id,
@@ -135,15 +204,17 @@ const sendInterceptData = _.debounce(async () => {
   } catch (error) {
     console.log("Request save error", error);
   }
-}, 5000);
+}, 2000);
+
+const backURL = `${import.meta.env.VITE_BACKEND_URL}`;
 
 window.addEventListener("beforeunload", () => {
   try {
     if (intercepts.length > 0) {
-      navigator.sendBeacon(
-        "event/store",
-        JSON.stringify({ events: intercepts })
-      );
+      const blob = new Blob([JSON.stringify({ events: intercepts })], {
+        type: "application/json",
+      });
+      navigator.sendBeacon(`${backURL}/event/store`, blob);
     }
   } catch (err) {
     console.warn("Erreur beforeunload interceptRequest", err);
@@ -151,10 +222,7 @@ window.addEventListener("beforeunload", () => {
 });
 
 const avoid_records_urls = (url) => {
-  if (
-    url.includes("https://api.bugreveal.com") ||
-    url.includes("http://localhost")
-  ) {
+  if (typeof url === "string" && url.includes(backURL)) {
     return true;
   }
   return false;

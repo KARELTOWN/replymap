@@ -4,6 +4,7 @@ import { fetchPost } from "../utils/request";
 import { v4 } from "uuid";
 import dbtransaction from "../utils/indexDB.js";
 const { getEvents, saveEvents, deleteEventByKeys } = dbtransaction();
+const backURL = `${import.meta.env.VITE_BACKEND_URL}`;
 
 let performances = [];
 
@@ -30,18 +31,24 @@ export const observer = new PerformanceObserver(async (list) => {
   }, 0);
 });
 
+// Only the calls the application makes itself. `longtask` used to be observed
+// alongside: a long task carries neither `responseEnd` nor `fetchStart`, so its
+// duration came out as NaN and `NaN >= 3` is false — not a single one was ever
+// reported. Images, stylesheets and fonts are left out too: a slow logo is not
+// what one comes looking for here.
+const TRACKED_INITIATORS = { fetch: "Requête fetch", xmlhttprequest: "Requête XHR" };
+
+const SLOW_AFTER_SECONDS = 3;
+const VERY_SLOW_AFTER_SECONDS = 5;
+
 const processEntries = async (entries) => {
   try {
     for (const entry of entries) {
-      if (
-        (entry.entryType === "resource" || entry.entryType === "longtask") &&
-        !isRecordResource(entry)
-      ) {
+      const entryType = TRACKED_INITIATORS[entry.initiatorType];
+      if (entry.entryType === "resource" && entryType && !isRecordResource(entry)) {
         const timeToFetch = entry.responseEnd - entry.fetchStart;
         const timeInSecond = timeToFetch / 1000;
-        let entryType =
-          entry.entryType === "resource" ? "Ressource" : "Tâche longue";
-        if (timeInSecond >= 3) {
+        if (timeInSecond >= SLOW_AFTER_SECONDS) {
           let exist = await existPerformance(entry);
           if (exist === false) {
             let newPerformance = {
@@ -54,7 +61,7 @@ const processEntries = async (entries) => {
                 duration: timeInSecond,
                 type: entryType,
                 slow:
-                  timeInSecond >= 3 && timeInSecond <= 5 ? "Lent" : "Très lent",
+                  timeInSecond <= VERY_SLOW_AFTER_SECONDS ? "Lent" : "Très lent",
               },
               uniqueId: v4(),
             };
@@ -89,7 +96,7 @@ const isRecordResource = (entry) => {
   return entry.name.includes(`${import.meta.env.VITE_BACKEND_URL}`);
 };
 
-//envoyer les evenements vers le serveur backend pour stockage
+// send the events to the backend for storage
 const storePerformance = _.debounce(async () => {
   try {
     let data = await getPerformance();
@@ -112,10 +119,11 @@ window.addEventListener("unload", async () => {
   try {
     const performances = await getPerformance();
     if (performances.events_data.length > 0) {
-      navigator.sendBeacon(
-        "event/store",
-        JSON.stringify({ events: performances.events_data })
+      const blob = new Blob(
+        [JSON.stringify({ events: performances.events_data })],
+        { type: "application/json" }
       );
+      navigator.sendBeacon(`${backURL}/event/store`, blob);
       deleteEventByKeys(
         "replay_map_performance_issues",
         performances.events_keys

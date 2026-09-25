@@ -7,18 +7,19 @@ self.onmessage = async (e) => {
         method: param.method,
         headers: {
           "Content-Type": "application/json",
+          ...(param.token ? { Authorization: `Bearer ${param.token}` } : {}),
         },
         body: JSON.stringify(param.payload),
       });
       if (result.ok) {
         const response = await result.json();
-        self.postMessage({ type: "done", data: response });
+        self.postMessage({ type: "done", data: response, requestId: param.requestId });
       } else {
         const response = await result.json();
-        self.postMessage({ type: "error", error: response.message });
+        self.postMessage({ type: "error", error: response.message, requestId: param.requestId });
       }
     } catch (err) {
-      self.postMessage({ type: "error", error: err.message });
+      self.postMessage({ type: "error", error: err.message, requestId: param.requestId });
     }
   }
 

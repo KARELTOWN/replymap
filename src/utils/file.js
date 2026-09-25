@@ -2,7 +2,7 @@ import { deflate } from "pako";
 const blobToDataURL = (blob) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result); // Data URL ici
+    reader.onloadend = () => resolve(reader.result); // a data URL here
     reader.onerror = reject;
     reader.readAsDataURL(blob);
   });

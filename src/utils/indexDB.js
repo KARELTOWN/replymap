@@ -69,7 +69,7 @@ export default function dbtransaction() {
   const saveEvents = (table, data) => {
     return new Promise((resolve, reject) => {
       if (!Array.isArray(data) || data.length === 0) {
-        return resolve(); // rien à enregistrer, on résout quand même
+        return resolve(); // nothing to store, resolve anyway
       }
 
       const transaction = db.transaction(table, "readwrite");
@@ -90,7 +90,7 @@ export default function dbtransaction() {
   const deleteEventByKeys = (table, keys) => {
     return new Promise((resolve, reject) => {
       if (!Array.isArray(keys) || keys.length === 0) {
-        return resolve(); // rien à supprimer
+        return resolve(); // nothing to delete
       }
 
       const transaction = db.transaction(table, "readwrite");
@@ -105,7 +105,7 @@ export default function dbtransaction() {
         request.onsuccess = () => {
           completed++;
           if (completed === keys.length && !hasError) {
-            resolve(); // toutes les suppressions sont terminées
+            resolve(); // every deletion is done
           }
         };
 

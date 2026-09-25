@@ -19,5 +19,9 @@ export default function setCookieUser() {
   return { user: user_id, first_visit: first_visit };
 }
 
-export const bugRevealToken =
+export const getBugRevealToken = () =>
   JSON.parse(localStorage.getItem("bugreveal_record_app_user")) || null;
+
+// A token the API refuses (expired after 2 h, or revoked at sign-out) is
+// dropped, so the widget offers to sign in again.
+export const clearBugRevealToken = () => localStorage.removeItem("bugreveal_record_app_user");

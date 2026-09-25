@@ -4,9 +4,10 @@ import * as rrweb from "rrweb";
 import { fetchGet, fetchPost } from "../utils/request";
 import { getIpAdress } from "../utils/ipAdress";
 import { project_id } from "../record.js";
-import setCookieUser, { bugRevealToken } from "../utils/cookie.js";
+import setCookieUser, { getBugRevealToken } from "../utils/cookie.js";
 import { getSessionId } from "../utils/session.js";
 import { maskSelector } from "../utils/maskSelector.js";
+
 import pako from "pako";
 import dbtransaction from "../utils/indexDB.js";
 import { getRecordConsolePlugin } from "@rrweb/rrweb-plugin-console-record";
@@ -38,22 +39,19 @@ export default async function initializeRecord() {
   let stopRecording = null;
   const maxRetryCreateSession = 2;
   let retryCreateSession = 0;
-  const INACTIVITY_LIMIT = 3 * 60 * 1000;
+  const INACTIVITY_LIMIT = 30 * 1000;
+  // A session lasts 30 min at most, even with continuous activity: beyond
+  // that, it is closed and a new one opened automatically so nothing is lost
+  // (there was no cap before, a session could last forever).
+  const MAX_SESSION_DURATION = 30 * 60 * 1000;
   let inactivityTimeout = null;
+  let maxDurationTimeout = null;
   let retryFetchSessionInfo = 0;
   let maxFetchSessionInfo = 2;
 
   const setInactivityTimeout = () => {
-    return setTimeout(async () => {
-      localStorage.removeItem("track_bug_session_id");
-      if (typeof stopRecording === "function") {
-        stopRecording(); // Arrête rrweb.record()
-      }
-      if (session_id !== null) {
-        await stopSession(session_id);
-      }
-      session_id = null;
-      await startSession();
+    return setTimeout(() => {
+      rotateSession();
     }, INACTIVITY_LIMIT);
   };
 
@@ -64,41 +62,69 @@ export default async function initializeRecord() {
     inactivityTimeout = setInactivityTimeout();
   };
 
+  // Computed from the real start of the session (not the current page load):
+  // a session resumed after navigation must not restart for a full 30 minutes.
+  const setMaxDurationTimeout = (startedAtMs) => {
+    const elapsed = Date.now() - startedAtMs;
+    const remaining = Math.max(MAX_SESSION_DURATION - elapsed, 0);
+    return setTimeout(() => {
+      rotateSession();
+    }, remaining);
+  };
+
+  let chunkWorker = null;
+  const getChunkWorker = () => {
+    if (!chunkWorker) {
+      const blob = new Blob([recordWorker], { type: "application/javascript" });
+      chunkWorker = new Worker(URL.createObjectURL(blob));
+      chunkWorker.onerror = (e) => {
+        console.error("Erreur dans le worker :", e.message);
+        console.error("Fichier source :", e.filename);
+        console.error("Ligne :", e.lineno, "Colonne :", e.colno);
+      };
+    }
+    return chunkWorker;
+  };
+
   const uploadChunk = async (chunks) => {
     if (!project_id) return;
 
     const payload = { project_id, events: chunks.events_data };
+    const requestId = uuidV4();
     try {
-      const blob = new Blob([recordWorker], { type: "application/javascript" });
-      const worker = new Worker(URL.createObjectURL(blob));
+      const worker = getChunkWorker();
 
-      worker.postMessage({
-        param: {
-          url: `${backURL}/chunk/store`,
-          payload: payload,
-          token: bugRevealToken,
-          method: "POST",
-        },
-        action: "storeChunk",
-      });
-      worker.onmessage = (e) => {
-        const { type, data, error } = e.data;
+      const handleMessage = (e) => {
+        const { type, error, requestId: responseId } = e.data;
+        if (responseId !== requestId) return;
+        worker.removeEventListener("message", handleMessage);
         if (type === "done") {
-          session_events = [];
           deleteEventByKeys("replay_map_record_events", chunks.events_keys);
         } else if (type === "error") {
           console.error(error);
         }
       };
-      worker.onerror = (e) => {
-        console.error("Erreur dans le worker :", e.message);
-        console.error("Fichier source :", e.filename);
-        console.error("Ligne :", e.lineno, "Colonne :", e.colno);
-      };
+      worker.addEventListener("message", handleMessage);
+
+      worker.postMessage({
+        param: {
+          url: `${backURL}/chunk/store`,
+          payload: payload,
+          token: getBugRevealToken(),
+          method: "POST",
+          requestId,
+        },
+        action: "storeChunk",
+      });
     } catch (error) {
       console.error(error);
     }
   };
+
+  // A chunk closes on whichever comes first: enough events, or enough time.
+  const CHUNK_MAX_EVENTS = 100;
+  const CHUNK_MAX_AGE_MS = 10000;
+  let firstEventAt = Date.now();
 
   const saveChunk = _.debounce(async () => {
     const data = await getSessionEvents();
@@ -113,46 +139,52 @@ export default async function initializeRecord() {
   const record = () => {
     try {
       let lastMouseMove = 0;
-
       stopRecording = rrweb.record({
         emit: function (event) {
-          const defaultLog = console.log["__rrweb_original__"]
-            ? console.log["__rrweb_original__"]
-            : console.log;
+          if (event.type === 2 || event.type === 4 || event.type === 3 || event.type === 5) {
 
-          resetInactivityTimeout();
+            resetInactivityTimeout();
 
-          const MOUSE_INTERVAL = 500;
+            const MOUSE_INTERVAL = 500;
 
-          if (event.type === "mousemove") {
-            const now = Date.now();
-            if (now - lastMouseMove < MOUSE_INTERVAL) return;
-            lastMouseMove = now;
-          }
+            // rrweb: type 3 = IncrementalSnapshot, data.source 1 = MouseMove
+            const isMouseMove = event.type === 3 && event.data?.source === 1;
+            if (isMouseMove) {
+              const now = Date.now();
+              if (now - lastMouseMove < MOUSE_INTERVAL) return;
+              lastMouseMove = now;
+            }
 
-          const lastEvent = events[events.length - 1];
-          // Cela empêche l’enregistrement d’un événement identique consécutif.
-          if (!_.isEqual(lastEvent, event)) {
+            // rrweb already guarantees emitted events are unique: a deep comparison
+            // (_.isEqual) here would be expensive on the hot path for next to no gain
+            // (the timestamp nearly always differs).
             events.push(event);
-          }
+            if (events.length === 1) firstEventAt = Date.now();
 
-          if (events.length >= 100) {
-            console.log("events.length", events.length);
-            session_events.push({
-              session_id: session_id,
-              events: events,
-              timestamp: Date.now(),
-              uniqueId: uuidV4(),
-            });
-            events = [];
-            let session_events_to_send = session_events;
-            session_events = [];
-            setTimeout(() => {
-              saveSessionEvents(session_events_to_send).catch((err) => {
-                console.warn("Erreur save session events", err);
+            // A chunk used to be sent only once 100 events had piled up. A
+            // visitor who reads a page quietly reaches that number slowly, or
+            // never: the session had nothing recorded for minutes, looked empty
+            // to the maintenance task, and was deleted while it was still
+            // being watched. Time closes the chunk too.
+            const bufferIsOld = Date.now() - firstEventAt >= CHUNK_MAX_AGE_MS;
+
+            if (events.length >= CHUNK_MAX_EVENTS || bufferIsOld) {
+              session_events.push({
+                session_id: session_id,
+                events: events,
+                timestamp: Date.now(),
+                uniqueId: uuidV4(),
               });
-              saveChunk();
-            }, 0);
+              events = [];
+              let session_events_to_send = session_events;
+              session_events = [];
+              setTimeout(() => {
+                saveSessionEvents(session_events_to_send).catch((err) => {
+                  console.warn("Erreur save session events", err);
+                });
+                saveChunk();
+              }, 0);
+            }
           }
         },
         maskInputOptions: {
@@ -194,10 +226,13 @@ export default async function initializeRecord() {
         try {
           const response = await fetchGet(`session/show/${session_id}`);
           if (response.ok) {
-            session_info = response.json();
-            isEnded = session_info.endedAt ? true : false;
+            session_info = await response.json();
+            isEnded = session_info?.data?.session?.endedAt ? true : false;
             if (isEnded === false) {
               record();
+              maxDurationTimeout = setMaxDurationTimeout(
+                new Date(session_info.data.session.startedAt).getTime()
+              );
               break;
             } else {
               localStorage.removeItem("track_bug_session_id");
@@ -262,6 +297,7 @@ export default async function initializeRecord() {
             JSON.stringify(session_id)
           );
           record();
+          maxDurationTimeout = setMaxDurationTimeout(session_data.startedAt);
         } catch (error) {
           retryCreateSession++;
           console.log(
@@ -293,6 +329,64 @@ export default async function initializeRecord() {
     }
   };
 
+  // Sends the pending batch of events right away (without waiting for the
+  // saveChunk debounce) before cutting the session, so nothing is lost.
+  const flushPendingEvents = async () => {
+    if (events.length > 0) {
+      session_events.push({
+        session_id,
+        events,
+        timestamp: Date.now(),
+        uniqueId: uuidV4(),
+      });
+      events = [];
+    }
+    if (session_events.length > 0) {
+      const toSend = session_events;
+      session_events = [];
+      try {
+        await saveSessionEvents(toSend);
+      } catch (err) {
+        console.warn("Erreur save session events avant rotation", err);
+      }
+    }
+    try {
+      const data = await getSessionEvents();
+      if (data && data.events_data.length > 0) {
+        await uploadChunk(data);
+      }
+    } catch (err) {
+      console.warn("Erreur upload avant rotation de session", err);
+    }
+  };
+
+  // Single entry point to close the current session and open a new one: used
+  // by the inactivity timer, the 30-minute cap, and triggered from outside when
+  // a feedback is submitted.
+  const rotateSession = async () => {
+    clearTimeout(inactivityTimeout);
+    clearTimeout(maxDurationTimeout);
+
+    await flushPendingEvents();
+
+    if (typeof stopRecording === "function") {
+      stopRecording(); // stops rrweb.record()
+      stopRecording = null;
+    }
+
+    localStorage.removeItem("track_bug_session_id");
+    const endingSession = session_id;
+    session_id = null;
+    sessionCreate = false;
+    retryCreateSession = 0;
+    if (endingSession !== null) {
+      await stopSession(endingSession);
+    }
+
+    await startSession();
+    inactivityTimeout = setInactivityTimeout();
+  };
+
   window.addEventListener("beforeunload", () => {
     try {
       if (events.length > 0) {
@@ -302,10 +396,11 @@ export default async function initializeRecord() {
           timestamp: Date.now(),
           uniqueId: uuidV4(),
         });
-        navigator.sendBeacon(
-          "/chunk/store",
-          JSON.stringify({ project_id, events: session_events })
+        const blob = new Blob(
+          [JSON.stringify({ project_id, events: session_events })],
+          { type: "application/json" }
         );
+        navigator.sendBeacon(`${backURL}/chunk/store`, blob);
       }
     } catch (err) {
       console.warn("Erreur beforeunload session record", err);
@@ -313,4 +408,6 @@ export default async function initializeRecord() {
   });
 
   await startSession();
+
+  return { rotateSession };
 }

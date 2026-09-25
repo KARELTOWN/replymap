@@ -1,13 +1,29 @@
-import _ from "lodash";
 import { project_id } from "../record";
 import { fetchPost } from "../utils/request";
 import { v4 as UUID } from "uuid";
 import { getSessionId } from "../utils/session.js";
+import { addReplayEvent } from "../utils/replayEvent.js";
 import { onINP, onLCP, onCLS, onFCP, onTTFB } from "web-vitals";
 import dbtransaction from "../utils/indexDB.js";
 const { getEvents, saveEvents, deleteEventByKeys } = dbtransaction();
+import * as rrweb from "rrweb";
+import { describeElement } from "./describeElement.js";
 
-export default function eventTracker() {
+const backURL = `${import.meta.env.VITE_BACKEND_URL}`;
+
+/**
+ * Passive collection of what happens on the page.
+ *
+ * Two families, switched on independently by the project:
+ *
+ *   - **errors** (JavaScript errors and rejected promises) do not need a
+ *     recording session. They are worth having on a project that records
+ *     nothing, and they are attached to a session only when one exists;
+ *   - **behaviours** (pages visited, forms sent, forms refused) only make
+ *     sense inside a session: they describe a path, and a path without a
+ *     session to place it in has nothing to say.
+ */
+export default function eventTracker({ errors = true, behaviours = true } = {}) {
   const getEventsTrack = async () => {
     try {
       return await getEvents("replay_map_events_tracker");
@@ -26,14 +42,22 @@ export default function eventTracker() {
 
   let allEvents = [];
 
-  //suivi de l'internaute pour identifier les pages visités
+  // Track the visitor to know which pages were visited
 
   const consoleErrorTracker = () => {
-    //Intercepter les erreurs  : REFERENCEERROR, TYPEERROR, SYNTAXERROR, ...
-    // Ainsi que les échecs de chargements de resource
+    // Intercept errors: REFERENCEERROR, TYPEERROR, SYNTAXERROR, ...
+    // As well as resource loading failures
     window.addEventListener("error", (err) => {
       let rrweb_timestamp = Date.now();
       let session_id = getSessionId();
+
+      addReplayEvent("runtime_errors", {
+        page_url: window.location.href,
+        filename: err.filename,
+        line: err.line,
+        message: err.message,
+      });
+
       allEvents.push({
         type: "runtime_errors",
         project: project_id,
@@ -50,10 +74,18 @@ export default function eventTracker() {
       });
     });
 
+    // Capture unhandled exceptions and promises
     window.addEventListener("unhandledrejection", (err) => {
       let rrweb_timestamp = Date.now();
       let session_id = getSessionId();
-      //intercepter les erreurs de promesses non capturés
+
+      addReplayEvent("unhandled-promise-rejection", {
+        page_url: window.location.href,
+        message: err?.reason?.message || "Unknown error",
+        stack: err?.reason?.stack || "",
+      });
+
+      // intercept uncaught promise rejections
       allEvents.push({
         type: "unhandle_promise_rejection",
         project: project_id,
@@ -69,191 +101,202 @@ export default function eventTracker() {
     });
   };
 
-  //Suivi de l'internaute pour identifier les rages clicks au cours des sessions
-  const rageClickTracker = () => {
-    let events = [];
-    document.addEventListener("click", (e) => {
-      let session_id = getSessionId();
+  // Pages seen during the session, internal navigation included.
+  //
+  // A single-page application never reloads: without listening to the History
+  // API, a whole visit was recorded as one page. The type existed in the
+  // reference data and nothing ever emitted it.
+  const pageViewTracker = () => {
+    let lastUrl = null;
 
-      if (session_id) {
-        events.push({
-          target: getSelector(e.target),
-          timestamp: Date.now(),
-        });
-      }
-    });
+    const record = (from) => {
+      const session_id = getSessionId();
+      const url = window.location.href;
+      if (!session_id || url === lastUrl) return;
+      lastUrl = url;
 
-    setInterval(() => {
-      let session_id = getSessionId();
-
-      if (session_id) {
-        //récuperer les éléments stockés les 2 dernières secondes
-        const lastEvents = events.filter(
-          (e) => Date.now() - e.timestamp < 2000
-        );
-        let lastElements = lastEvents.map((item) => ({
-          target: item.target,
-          timestamp: item.timestamp, // <-- on garde aussi le timestamp rrweb
-        }));
-        // Compter le nombre de clics par élément
-        const clickCounts = new Map();
-        const clickTimestamps = new Map();
-
-        for (const { target, timestamp } of lastElements) {
-          const count = clickCounts.get(target) || 0;
-          clickCounts.set(target, count + 1);
-          // on garde le dernier timestamp rrweb pour ce target
-          clickTimestamps.set(target, timestamp);
-        }
-
-        let newData = 0;
-        for (const [item, count] of clickCounts.entries()) {
-          if (count >= 2) {
-            newData++;
-            allEvents.push({
-              type: "rage_click",
-              project: project_id,
-              session: session_id || null,
-              page_url: window.location.href,
-              data: {
-                target: item,
-                count: count,
-              },
-              // 🔑 utilise le timestamp rrweb (moment exact dans le replay)
-              timestamp: clickTimestamps.get(item),
-              uniqueId: UUID(),
-            });
-          }
-        }
-        if (newData > 0) {
-          events = [];
-          // let events_to_save = allEvents
-          // allEvents = []
-          // saveEventsTrack(events_to_save);
-        }
-      }
-    }, 2000);
-  };
-
-  // récupérer l'id ou la class à partir de l'élément target
-  const getSelector = (element) => {
-    if (element.id) return `#${element.id}`;
-    if (element.className && typeof element.className === "string") {
-      return `${element.tagName.toLowerCase()}.${element.className
-        .trim()
-        .split(/\s+/)
-        .join(".")}`;
-    }
-    return element.tagName.toLowerCase();
-  };
-
-  //envoyer les evenements vers le serveur backend pour stockage
-  const storeEvents = async (data) => {
-    const response = await fetchPost("event/store", {
-      events: data.events_data,
-    });
-    if (!response.ok) {
-      throw new Error("Erreur d'enregistrement des evenements");
-    } else {
-      deleteEventByKeys("replay_map_events_tracker", data.events_keys);
-    }
-  };
-
-  const waitForVitals = () =>
-    new Promise((resolve) => {
-      const vitals = {};
-      let count = 0;
-
-      const done = () => {
-        if (++count === 4) resolve(vitals);
+      const payload = {
+        page_url: url,
+        title: document.title,
+        from: from || null,
       };
-
-      // onINP((metric) => {
-      //   vitals.INP = metric.value;
-      //   done();
-      // });
-      onLCP((metric) => {
-        vitals.LCP = metric.value;
-        done();
-      });
-      onCLS((metric) => {
-        vitals.CLS = metric.value;
-        done();
-      });
-      onFCP((metric) => {
-        vitals.FCP = metric.value;
-        done();
-      });
-      onTTFB((metric) => {
-        vitals.TTFB_WEB_VITALS = metric.value;
-        done();
-      });
-    });
-
-  const pageLoadPerformance = () => {
-    window.addEventListener("load", async () => {
-      const vitals = await waitForVitals();
-
-      const [nav] = performance.getEntriesByType("navigation");
-      const data = {
-        PAGE_LOAD_TIME: nav.duration,
-        TTFB: nav.responseStart - nav.requestStart,
-        DNS_LOOKUP: nav.domainLookupEnd - nav.domainLookupStart,
-        TLS_HANDSHAKE: nav.connectEnd - nav.connectStart,
-        DOWNLOAD_RESPONSE: nav.responseEnd - nav.responseStart,
-        DOM_CONTENT_LOADED: nav.domContentLoadedEventEnd - nav.startTime,
-        LOAD_EVENT: nav.loadEventEnd - nav.startTime,
-        TTFB_WEB_VITALS: vitals.TTFB_WEB_VITALS || 0,
-        // INP: vitals.INP || 0,
-        LCP: vitals.LCP || 0,
-        CLS: vitals.CLS || 0,
-        FCP: vitals.FCP || 0,
-      };
-
-      let session_id = getSessionId();
-
-      const send_data = {
-        type: "web_vitals",
+      addReplayEvent("page-view", payload);
+      allEvents.push({
+        type: "page_view",
         project: project_id,
-        session: session_id || null,
-        page_url: window.location.href,
-        data: data,
+        session: session_id,
+        page_url: url,
+        data: payload,
         timestamp: Date.now(),
         uniqueId: UUID(),
+      });
+    };
+
+    record(document.referrer || null);
+
+    // History API: patched once, so a navigation made by the framework is seen.
+    for (const method of ["pushState", "replaceState"]) {
+      const original = history[method].bind(history);
+      history[method] = (...args) => {
+        const previous = window.location.href;
+        const result = original(...args);
+        record(previous);
+        return result;
       };
-      allEvents.push(send_data);
-    });
+    }
+    window.addEventListener("popstate", () => record(lastUrl));
+    window.addEventListener("hashchange", () => record(lastUrl));
   };
 
-  pageLoadPerformance();
-  consoleErrorTracker();
-  rageClickTracker();
-  setInterval(async () => {
-    const save = _.debounce(async () => {
-      try {
-        if (allEvents.length > 0) {
-          let events_to_save = allEvents;
-          allEvents = [];
-          await saveEventsTrack(events_to_save);
-          let toSave = await getEventsTrack();
-          if (toSave && toSave.events_data.length > 0) {
-            await storeEvents(toSave);
-          }
-        }
-      } catch (error) {
-        console.error("error", error);
+  // A form actually sent. With the pages visited, this is what the session
+  // flow is made of: one sees where the visitor went, and what they submitted
+  // on the way. The form, the page and the button that sent it are identified;
+  // nothing the visitor typed is ever read.
+  const formSubmitTracker = () => {
+    document.addEventListener(
+      "submit",
+      (event) => {
+        const session_id = getSessionId();
+        const form = event.target;
+        if (!session_id || !form) return;
+
+        const described = describeElement(form);
+        // `submitter` is the control that sent the form, when the browser
+        // knows it: a form submitted from code has none.
+        const submitter = event.submitter ? describeElement(event.submitter) : null;
+
+        const payload = {
+          page_url: window.location.href,
+          title: document.title,
+          form: described.selector,
+          form_id: form.id || form.name || null,
+          label: described.label,
+          submit: submitter?.selector || null,
+          submit_id: event.submitter?.id || event.submitter?.name || null,
+          submit_label: submitter?.label || null,
+        };
+
+        allEvents.push({
+          type: "form_submit",
+          project: project_id,
+          session: session_id,
+          page_url: window.location.href,
+          data: payload,
+          timestamp: Date.now(),
+          uniqueId: UUID(),
+        });
+        addReplayEvent("form-submit", payload);
+      },
+      true
+    );
+  };
+
+  // A form the browser refused to submit: the visitor tried, and something in
+  // the page said no. The fields are named, never their values.
+  const formErrorTracker = () => {
+    const invalidFields = new Map();
+
+    document.addEventListener(
+      "invalid",
+      (event) => {
+        const field = event.target;
+        if (!field?.form) return;
+        const fields = invalidFields.get(field.form) || [];
+        fields.push({
+          name: field.name || field.id || describeElement(field).selector,
+          reason: field.validationMessage || "invalide",
+        });
+        invalidFields.set(field.form, fields);
+      },
+      true
+    );
+
+    // The invalid events of one attempt fire just before the submit is
+    // cancelled: they are collected, then reported together.
+    document.addEventListener(
+      "submit",
+      (event) => {
+        setTimeout(() => invalidFields.delete(event.target), 0);
+      },
+      true
+    );
+
+    setInterval(() => {
+      const session_id = getSessionId();
+      if (!session_id || invalidFields.size === 0) return;
+
+      for (const [form, fields] of invalidFields.entries()) {
+        const payload = {
+          page_url: window.location.href,
+          form: describeElement(form).selector,
+          label: describeElement(form).label,
+          fields: fields.slice(0, 10),
+          count: fields.length,
+        };
+        addReplayEvent("form-error", payload);
+        allEvents.push({
+          type: "form_error",
+          project: project_id,
+          session: session_id,
+          page_url: window.location.href,
+          data: payload,
+          timestamp: Date.now(),
+          uniqueId: UUID(),
+        });
       }
+      invalidFields.clear();
     }, 2000);
-    save();
-  }, 2000);
+  };
+
+  // pageLoadPerformance();
+  if (errors) consoleErrorTracker();
+  if (behaviours) {
+    pageViewTracker();
+    formSubmitTracker();
+    formErrorTracker();
+  }
+
+  let flushInProgress = false;
+  const flush = async () => {
+    if (flushInProgress) return; // prevents concurrent runs on allEvents
+    flushInProgress = true;
+    try {
+      let events_to_save = allEvents;
+      allEvents = [];
+      if (events_to_save.length > 0) {
+        await saveEventsTrack(events_to_save);
+      }
+      let toSave = await getEventsTrack();
+
+      if (
+        toSave &&
+        Array.isArray(toSave.events_data) &&
+        toSave.events_data.length > 0
+      ) {
+        let firstTen = toSave.events_data.slice(0, 10);
+        let firstTenKeys = toSave.events_keys.slice(0, 10);
+        let newElements = {
+          events_data: firstTen,
+          events_keys: firstTenKeys,
+        };
+
+        await storeEvents(newElements);
+      }
+    } catch (error) {
+      console.error("error", error);
+    } finally {
+      flushInProgress = false;
+    }
+  };
+  setInterval(flush, 2000);
 
   window.addEventListener("beforeunload", () => {
     try {
       if (allEvents.length > 0) {
-        navigator.sendBeacon(
-          "event/store",
-          JSON.stringify({ events: allEvents })
-        );
+        const blob = new Blob([JSON.stringify({ events: allEvents })], {
+          type: "application/json",
+        });
+        navigator.sendBeacon(`${backURL}/event/store`, blob);
       }
     } catch (err) {
       console.warn("Erreur beforeunload eventTracker", err);
