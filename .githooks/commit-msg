@@ -1,0 +1,48 @@
+#!/bin/sh
+#
+# commit-msg: the message must be a conventional commit, as in horizon.
+#
+#     <type>(<scope>): <subject>
+#
+# The scope is optional; the subject is written in the imperative and says what
+# changes, not which files moved.
+#
+set -e
+
+subject=$(head -1 "$1")
+
+# A merge or a revert is written by git itself.
+case "$subject" in
+  "Merge "*|"Revert "*|"fixup!"*|"squash!"*) exit 0 ;;
+esac
+
+# Comment lines only: git is about to abort the commit anyway.
+[ -z "$(printf '%s' "$subject" | sed 's/^#.*//')" ] && exit 0
+
+types="feat|fix|chore|docs|refactor|test|ci|perf|style|build|hotfix"
+
+if ! printf '%s' "$subject" | grep -qE "^($types)(\([a-z0-9._-]+\))?!?: .+"; then
+  printf '%s\n' "" >&2
+  printf '%s\n' "✖ Commit annulé : le message ne suit pas la convention." >&2
+  printf '%s\n' "" >&2
+  printf '%s\n' "  Attendu :  <type>(<portée>): <sujet>" >&2
+  printf '%s\n' "  Types   :  feat fix chore docs refactor test ci perf style build hotfix" >&2
+  printf '%s\n' "" >&2
+  printf '%s\n' "  Exemples :" >&2
+  printf '%s\n' "    feat(session): affiche le parcours du visiteur" >&2
+  printf '%s\n' "    fix: le mot de passe actuel n'est plus une erreur de connexion" >&2
+  printf '%s\n' "" >&2
+  printf '%s\n' "  Reçu :  $subject" >&2
+  exit 1
+fi
+
+# Long enough to say something, short enough to be read in a log.
+length=$(printf '%s' "$subject" | wc -c)
+if [ "$length" -gt 72 ]; then
+  printf '%s\n' "" >&2
+  printf '%s\n' "✖ Commit annulé : la première ligne fait $length caractères, le maximum est 72." >&2
+  printf '%s\n' "  Le détail va dans le corps du message, après une ligne vide." >&2
+  exit 1
+fi
+
+exit 0

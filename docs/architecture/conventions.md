@@ -122,6 +122,43 @@ tests is reported, never counted as a failure.
 
 They are deployment branches: one merges into them, one does not work in them.
 
+Work happens on a branch named `<type>/<short-description>`, the same
+convention as horizon:
+
+`feat/` a new feature · `fix/` a bug · `chore/` maintenance, dependencies,
+tooling · `docs/` documentation only · `refactor/` no behaviour change ·
+`test/` tests · `ci/` pipelines · `perf/` performance · `hotfix/` an urgent
+production fix.
+
+```
+feat/parcours-de-session
+fix/rotation-du-jeton-de-rafraichissement
+chore/mise-a-jour-des-dependances
+```
+
+The pre-commit hook refuses a commit on a branch named anything else: a branch
+misnamed for twenty commits is a branch nobody renames any more.
+
+### Commit messages
+
+**Conventional commits**, as in horizon:
+
+```
+feat(session): affiche le parcours du visiteur
+
+- un noeud par page, une arete par deplacement
+- les formulaires envoyes sont une etape du chemin
+```
+
+- `<type>(<scope>): <subject>` — the scope is optional;
+- the subject is written in the imperative and says what changes and why, not
+  which files moved;
+- **72 characters** for the first line; everything else goes in the body, after
+  a blank line;
+- one intent per commit.
+
+The `commit-msg` hook refuses anything else.
+
 ### Never committed
 
 `.env` and every variant of it, `.secrets.keys.json`, private keys and
